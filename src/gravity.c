@@ -679,6 +679,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 const int mi = map_subdominant[i];
                 SET_ZERO
             }
+            // Encounter particles might alreadt be in subdominant list, but doesn't matter
             for (int i=0; i<shellN_encounter; i++){
                 const int mi = map_encounter[i];
                 SET_ZERO
@@ -716,14 +717,6 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 const int mi = map_dominant[i];
                 for (int j=i+1; j<shellN_dominant; j++){
                     const int mj = map_dominant[j];
-                    CALC_GRAV
-                }
-            }
-            // Dominant particles with encounter particles
-            for (int i=0; i<shellN_dominant; i++){
-                const int mi = map_dominant[i];
-                for (int j=0; j<shellN_encounter; j++){
-                    const int mj = map_encounter[j];
                     CALC_GRAV
                 }
             }
