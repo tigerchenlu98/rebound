@@ -149,6 +149,7 @@ static void reb_mercurana_record_collision(struct reb_simulation* const r, unsig
 
 // This function checks if there are any close encounters or physical collisions between particles in a given shell during a drift step of length dt. If a close encounter occures, particles are placed in deeper shells.
 static void reb_mercurana_encounter_predict(struct reb_simulation* const r, double dt, int shell){
+    printf("predict shell %d\n",shell);
     struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
     struct reb_particle* const particles = r->particles;
     const double* const dcrit = rim->dcrit[shell];
@@ -345,6 +346,8 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     }
     
     
+    printf("    shellN_encounter %d\n",rim->shellN_encounter[shell]);
+    printf("    shellN_encounter %d\n",rim->shellN_encounter[shell+1]);
     if (rim->collisions_N){
         unsigned int N_before = r->N;
         reb_collision_search(r); // will resolve collisions
@@ -386,19 +389,20 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
     }
     for (int i=0;i<shellN_encounter;i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_encounter[i];
-        if (inshell_dominant[mi]<shell){ // do not apply acceleration twice
+            printf("inter %d %e\n",mi,particles[mi].ax);
+        particles[mi].vx += y*particles[mi].ax;
+        particles[mi].vy += y*particles[mi].ay;
+        particles[mi].vz += y*particles[mi].az;
+    }
+    if (shell>0){ // No subdominant particles in shell 0 
+    for (int i=0;i<shellN_subdominant;i++){ // Apply acceleration. Jerk already applied.
+        const int mi = map_subdominant[i];
+        if (inshell_encounter[mi]<shell){ // do not apply acceleration twice
             particles[mi].vx += y*particles[mi].ax;
             particles[mi].vy += y*particles[mi].ay;
             particles[mi].vz += y*particles[mi].az;
         }
     }
-    for (int i=0;i<shellN_subdominant;i++){ // Apply acceleration. Jerk already applied.
-        const int mi = map_subdominant[i];
-        if (inshell_dominant[mi]<shell && inshell_encounter[mi]<shell){ // do not apply acceleration twice
-            particles[mi].vx += y*particles[mi].ax;
-            particles[mi].vy += y*particles[mi].ay;
-            particles[mi].vz += y*particles[mi].az;
-        }
     }
 }
 
@@ -537,6 +541,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         rim->t_drifted = realloc(rim->t_drifted, sizeof(double)*N);
         rim->maxdrift_encounter = realloc(rim->t_drifted, sizeof(double)*N);
         rim->maxdrift_dominant = realloc(rim->t_drifted, sizeof(double)*N);
+        rim->p0 = realloc(rim->p0, sizeof(struct reb_particle)*N);
         // shellN_active
         //rim->shellN_active = realloc(rim->shellN_active, sizeof(unsigned int)*rim->Nmaxshells);
 
@@ -646,8 +651,10 @@ void reb_integrator_mercurana_part2(struct reb_simulation* const r){
     //rim->shellN_active[0] = r->N_active==-1?r->N:r->N_active;
 
     double* t_drifted = rim->t_drifted;
+    struct reb_particle* p0 = rim->p0;
     for(int i=0; i<r->N; i++){
         t_drifted[i] = 0.;
+        p0[i] = r->particles[i];
     }
 
     if (rim->is_synchronized){
@@ -699,6 +706,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
         free(r->ri_mercurana.t_drifted);
         free(r->ri_mercurana.maxdrift_encounter);
         free(r->ri_mercurana.maxdrift_dominant);
+        free(r->ri_mercurana.p0);
     }
     r->ri_mercurana.allocatedN = 0;
     r->ri_mercurana.map_encounter = NULL;
@@ -711,6 +719,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     r->ri_mercurana.shellN_encounter = NULL;
     r->ri_mercurana.shellN_dominant = NULL;
     r->ri_mercurana.shellN_subdominant = NULL;
+    r->ri_mercurana.p0 = NULL;
     
     r->ri_mercurana.phi0 = REB_EOS_LF;
     r->ri_mercurana.phi1 = REB_EOS_LF;

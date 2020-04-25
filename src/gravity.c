@@ -679,7 +679,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 const int mi = map_subdominant[i];
                 SET_ZERO
             }
-            // Encounter particles might alreadt be in subdominant list, but doesn't matter
+            // Encounter particles might already be in subdominant list, but doesn't matter
             for (int i=0; i<shellN_encounter; i++){
                 const int mi = map_encounter[i];
                 SET_ZERO
