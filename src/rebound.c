@@ -381,7 +381,6 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     // ********** MERCURANA
     r->ri_mercurana.allocatedN = 0;
     r->ri_mercurana.dcrit = NULL;
-    r->ri_mercurana.inshell = NULL;
     r->ri_mercurana.shellN_encounter = NULL;
     r->ri_mercurana.shellN_dominant = NULL;
     r->ri_mercurana.shellN_subdominant = NULL;

@@ -493,7 +493,13 @@ struct reb_simulation_integrator_mercurana {
     unsigned int** map_encounter;   ///< Internal variable to map from shell to global particle index 
     unsigned int** map_dominant;    ///< Internal variable to map from shell to global particle index 
     unsigned int** map_subdominant; ///< Internal variable to map from shell to global particle index 
-    unsigned int* inshell;          ///< from global to shell
+    unsigned int* inshell_encounter;  ///< from global to shell
+    unsigned int* inshell_dominant;  ///< from global to shell
+    unsigned int* inshell_subdominant;  ///< from global to shell
+    double* maxdrift_encounter;
+    double* maxdrift_dominant;
+    double* t_drifted;
+    struct reb_particle* p0;
     unsigned int allocatedN;        ///< Allocated memory for various internal variables. 
     unsigned int* shellN_encounter; ///< Number of particles in each shell.
     unsigned int* shellN_dominant;  ///< Number of dominant particles in each shell.
