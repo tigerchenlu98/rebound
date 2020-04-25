@@ -427,16 +427,14 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
     double* t_drifted = rim->t_drifted;
     for (int i=0;i<shellN_dominant;i++){  // loop over all particles in shell (includes subshells)
         int mi = map_dominant[i]; 
-        if( inshell_dominant[mi]==shell && inshell_subdominant[mi]<=shell && inshell_encounter[mi]<=shell){
-            particles[mi].x += a*particles[mi].vx;
-            particles[mi].y += a*particles[mi].vy;
-            particles[mi].z += a*particles[mi].vz;
-            t_drifted[mi] += a;
-        }
+        particles[mi].x += a*particles[mi].vx;
+        particles[mi].y += a*particles[mi].vy;
+        particles[mi].z += a*particles[mi].vz;
+        t_drifted[mi] += a;
     }
     for (int i=0;i<shellN_subdominant;i++){  // loop over all particles in shell (includes subshells)
         int mi = map_subdominant[i]; 
-        if( inshell_dominant[mi]<shell && inshell_subdominant[mi]==shell && inshell_encounter[mi]<=shell){
+        if( inshell_subdominant[mi]==shell && inshell_encounter[mi]<=shell){
             particles[mi].x += a*particles[mi].vx;
             particles[mi].y += a*particles[mi].vy;
             particles[mi].z += a*particles[mi].vz;
@@ -445,7 +443,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
     }
     for (int i=0;i<shellN_encounter;i++){  // loop over all particles in shell (includes subshells)
         int mi = map_encounter[i]; 
-        if( inshell_dominant[mi]<shell && inshell_subdominant[mi]<shell && inshell_encounter[mi]==shell){
+        if( inshell_subdominant[mi]<shell && inshell_encounter[mi]==shell){
             particles[mi].x += a*particles[mi].vx;
             particles[mi].y += a*particles[mi].vy;
             particles[mi].z += a*particles[mi].vz;
