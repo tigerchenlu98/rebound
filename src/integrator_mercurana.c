@@ -149,7 +149,6 @@ static void reb_mercurana_record_collision(struct reb_simulation* const r, unsig
 
 // This function checks if there are any close encounters or physical collisions between particles in a given shell during a drift step of length dt. If a close encounter occures, particles are placed in deeper shells.
 static void reb_mercurana_encounter_predict(struct reb_simulation* const r, double dt, int shell){
-    printf("predict shell %d\n",shell);
     struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
     struct reb_particle* const particles = r->particles;
     const double* const dcrit = rim->dcrit[shell];
@@ -182,6 +181,18 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     rim->shellN_dominant[shell+1] = 0;
     rim->shellN_subdominant[shell+1] = 0;
 
+    for (int i=0; i<shellN_encounter; i++){
+        int mi = map_encounter[i]; 
+        inshell_encounter[mi] = shell;
+    }
+    for (int i=0; i<shellN_dominant; i++){
+        int mi = map_dominant[i]; 
+        inshell_dominant[mi] = shell;
+    }
+    for (int i=0; i<shellN_subdominant; i++){
+        int mi = map_subdominant[i]; 
+        inshell_subdominant[mi] = shell;
+    }
     if (shell==0){
         // Setup maps in outermost shell 
         rim->shellN_dominant[0] = rim->N_dominant;
@@ -200,9 +211,6 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         for (int i=0; i<r->N; i++){
             maxdrift_dominant[i] = 1e300; 
             maxdrift_encounter[i] = 1e300; 
-            inshell_encounter[i] = 0;
-            inshell_dominant[i] = 0;
-            inshell_subdominant[i] = 0;
         }
     }else{
         // Check for max_drift_violation 
@@ -307,7 +315,6 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                     inshell_subdominant[mj] = shell+1;
                     rim->map_subdominant[shell+1][rim->shellN_subdominant[shell+1]] = mj;
                     rim->shellN_subdominant[shell+1]++;
-                    printf("subdominant added s=%d %d \n",shell+1,mj);
                 }
             }else{ 
                 const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
@@ -348,8 +355,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     }
     
     
-    printf("    shellN_encounter %d\n",rim->shellN_encounter[shell]);
-    printf("    shellN_encounter %d\n",rim->shellN_encounter[shell+1]);
+    printf("  %.5f  shell, dom sub enc  %d    %d %d %d    %d %d %d\n",r->t,shell,rim->shellN_dominant[shell],rim->shellN_subdominant[shell],rim->shellN_encounter[shell],rim->shellN_dominant[shell+1],rim->shellN_subdominant[shell+1],rim->shellN_encounter[shell+1]);
     if (rim->collisions_N){
         unsigned int N_before = r->N;
         reb_collision_search(r); // will resolve collisions
@@ -385,14 +391,12 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
 
     for (int i=0;i<shellN_dominant;i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_dominant[i];
-            printf("inter dom s=%d %d %e\n",shell,mi,particles[mi].ax);
         particles[mi].vx += y*particles[mi].ax;
         particles[mi].vy += y*particles[mi].ay;
         particles[mi].vz += y*particles[mi].az;
     }
     for (int i=0;i<shellN_encounter;i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_encounter[i];
-            printf("inter enc s=%d %d %e\n",shell,mi,particles[mi].ax);
         particles[mi].vx += y*particles[mi].ax;
         particles[mi].vy += y*particles[mi].ay;
         particles[mi].vz += y*particles[mi].az;
@@ -401,7 +405,6 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
     for (int i=0;i<shellN_subdominant;i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_subdominant[i];
         if (inshell_encounter[mi]<shell){ // do not apply acceleration twice
-            printf("inter sub s=%d %d %e\n",shell,mi,particles[mi].ax);
             particles[mi].vx += y*particles[mi].ax;
             particles[mi].vy += y*particles[mi].ay;
             particles[mi].vz += y*particles[mi].az;

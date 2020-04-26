@@ -11,11 +11,12 @@ void heartbeat(struct reb_simulation* r){
 
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
-    r->dt = 2;
+    r->exact_finish_time = 0;
+    r->dt = 1.1;
     r->heartbeat = heartbeat;
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-7;
-    r->ri_mercurana.N_dominant = 0;
+    r->ri_mercurana.N_dominant = 1;
     
     struct reb_particle p1 = {0}; 
     p1.m = 1.;
