@@ -234,9 +234,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                             // Add mj to all higher shells as subdominant:
                             inshell_subdominant[mj] = shell;
                             printf("MAXDRIFT VIOLATION DOM-ENC triggered\n");
-TODO: 
- This following loop should only go over all the shell in which the particle is not in!
-                            for (int s=1; s<=shell; s++){
+                            for (int s=inshell_subdominant[mj]+1; s<=shell; s++){
                                 rim->map_subdominant[s][rim->shellN_subdominant[s]] = mj;
                                 rim->shellN_subdominant[s]++;
                             }
@@ -265,7 +263,7 @@ TODO:
                             // Add mj to all higher shells as encounter:
                             inshell_dominant[mj] = shell;
                             printf("MAXDRIFT VIOLATION DOM-DOM triggered\n");
-                            for (int s=1; s<=shell; s++){
+                            for (int s=inshell_dominant[mj]+1; s<=shell; s++){
                                 rim->map_dominant[s][rim->shellN_dominant[s]] = mj;
                                 rim->shellN_dominant[s]++;
                             }
@@ -302,7 +300,7 @@ TODO:
                             // Add mj to all higher shells as encounter:
                             inshell_encounter[mj] = shell;
                             printf("MAXDRIFT VIOLATION SUB-ENC triggered\n");
-                            for (int s=1; s<=shell; s++){
+                            for (int s=inshell_encounter[mj]+1; s<=shell; s++){
                                 rim->map_encounter[s][rim->shellN_encounter[s]] = mj;
                                 rim->shellN_encounter[s]++;
                             }
@@ -313,7 +311,7 @@ TODO:
                             if (inshell_encounter[mi]<shell){
                                 // Add mi to all higher shells as encounter:
                                 inshell_encounter[mi] = shell;
-                                for (int s=1; s<=shell; s++){
+                                for (int s=inshell_encounter[mi]+1; s<=shell; s++){
                                     rim->map_encounter[s][rim->shellN_encounter[s]] = mi;
                                     rim->shellN_encounter[s]++;
                                 }
@@ -340,7 +338,7 @@ TODO:
                             // Add mj to all higher shells as encounter:
                             inshell_dominant[mj] = shell;
                             printf("MAXDRIFT VIOLATION SUB-DOM triggered\n");
-                            for (int s=1; s<=shell; s++){
+                            for (int s=inshell_dominant[mj]+1; s<=shell; s++){
                                 rim->map_dominant[s][rim->shellN_dominant[s]] = mj;
                                 rim->shellN_dominant[s]++;
                             }
@@ -377,7 +375,7 @@ TODO:
                             // Add mj to all higher shells as encounter:
                             inshell_encounter[mj] = shell;
                             printf("MAXDRIFT VIOLATION ENC-ENC triggered\n");
-                            for (int s=1; s<=shell; s++){
+                            for (int s=inshell_encounter[mj]+1; s<=shell; s++){
                                 rim->map_encounter[s][rim->shellN_encounter[s]] = mj;
                                 rim->shellN_encounter[s]++;
                             }
@@ -406,7 +404,7 @@ TODO:
                             // Add mj to all higher shells as encounter:
                             inshell_dominant[mj] = shell;
                             printf("MAXDRIFT VIOLATION ENC-DOM triggered\n");
-                            for (int s=1; s<=shell; s++){
+                            for (int s=inshell_dominant[mj]+1; s<=shell; s++){
                                 rim->map_dominant[s][rim->shellN_dominant[s]] = mj;
                                 rim->shellN_dominant[s]++;
                             }
