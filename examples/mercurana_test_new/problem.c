@@ -12,7 +12,7 @@ void heartbeat(struct reb_simulation* r){
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     r->exact_finish_time = 0;
-    r->dt = 0.0001;
+    r->dt = 0.001;
     r->heartbeat = heartbeat;
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-7;

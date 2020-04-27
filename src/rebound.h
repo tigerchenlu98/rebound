@@ -2198,6 +2198,9 @@ struct reb_display_data {
     struct reb_particle* p_jh_copy;
     unsigned long allocated_N;
     unsigned long allocated_N_whfast;
+    double** dcrit;                 ///< Critical radii for MERCURANA
+    unsigned long allocated_N_mercurana;
+    unsigned long Nmaxshells_mercurana;
     unsigned int opengl_enabled;
     double scale;
     double mouse_x;
@@ -2205,6 +2208,7 @@ struct reb_display_data {
     double retina;
     pthread_mutex_t mutex;          /**< Mutex to guarantee non-flickering */
     int spheres;                    /**< Switches between point sprite and real spheres. */
+    int shells;                     /**< Switches between shells on and off (MERCURANA only). */
     int pause;                      /**< Pauses visualization, but keep simulation running */
     int wire;                       /**< Shows/hides orbit wires. */
     int onscreentext;               /**< Shows/hides onscreen text. */
@@ -2227,6 +2231,7 @@ struct reb_display_data {
     unsigned int box_shader_program;
     unsigned int box_shader_box_vao;
     unsigned int box_shader_cross_vao;
+    unsigned int box_shader_circle_vao;
     unsigned int box_shader_mvp_location;
     unsigned int box_shader_color_location;
     unsigned int point_shader_mvp_location;

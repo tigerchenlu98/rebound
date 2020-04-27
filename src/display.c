@@ -64,6 +64,7 @@ static const char* onscreenhelp[] = {
                 " (space) | Pause simulation",
                 " d       | Pause real-time visualization", 
                 "         | (the simulation continues)",
+                " o       | Toggle shells (MERCURANA only) ",
                 " s       | Toggle three dimensional spheres ",
                 "         | (looks better)/points (draws faster)",
                 " g       | Toggle ghost boxes",
@@ -337,6 +338,9 @@ static void reb_display_keyboard(GLFWwindow* window, int key, int scancode, int 
             case 'S':
                 data->spheres = (data->spheres+1)%3;
                 break;
+            case 'O':
+                data->shells = (data->shells+1)%2;
+                break;
             case 'G':
                 data->ghostboxes = !data->ghostboxes;
                 break;
@@ -467,6 +471,24 @@ static void reb_display(GLFWwindow* window){
                 glBindVertexArray(data->orbit_shader_particle_vao);
                 glUniformMatrix4fv(data->orbit_shader_mvp_location, 1, GL_TRUE, (GLfloat*) tmp2);
                 glDrawArraysInstanced(GL_LINE_STRIP, 0, data->orbit_shader_vertex_count, data->r_copy->N-1);
+                glBindVertexArray(0);
+            }
+            if (data->shells && data->r_copy->integrator==REB_INTEGRATOR_MERCURANA){ 
+                // Shells (MERCURANA)
+                glUseProgram(data->box_shader_program);
+                glBindVertexArray(data->box_shader_circle_vao);
+                glUniform4f(data->box_shader_color_location, 1.,0.,0.,1.);
+                for (int i=0; i<data->r_copy->N; i++){
+                    for (int j=0;j<data->Nmaxshells_mercurana;j++){
+                        matscale(tmp1,data->dcrit[j][i]);
+                        mattranslate(tmp2,data->particle_data[i].x,data->particle_data[i].y,data->particle_data[i].z);
+                        matmult(tmp2,tmp1,tmp3);
+                        matmult(view,tmp3,tmp1);
+                        matmult(projection,tmp1,tmp2);
+                        glUniformMatrix4fv(data->box_shader_mvp_location, 1, GL_TRUE, (GLfloat*) tmp2);
+                        glDrawArrays(GL_LINE_LOOP, 0, 256);
+                    }
+                }
                 glBindVertexArray(0);
             }
         }
@@ -610,6 +632,7 @@ void reb_display_init(struct reb_simulation * const r){
         data->retina = (double)fwidth/(double)wwidth;
     }
     data->spheres       = 0; 
+    data->shells        = 1; 
     data->pause         = 0; 
     data->multisample = 1; 
     if (data->r->integrator==REB_INTEGRATOR_WHFAST){
@@ -884,6 +907,28 @@ void reb_display_init(struct reb_simulation * const r){
     glVertexAttribPointer(pvp, 3, GL_FLOAT, GL_FALSE, sizeof(float)*7, NULL);
     glBindVertexArray(0);
     
+    // Create circle mesh
+    glUseProgram(data->box_shader_program);
+    glGenVertexArrays(1, &data->box_shader_circle_vao);
+    glBindVertexArray(data->box_shader_circle_vao);
+    GLuint cvp1 = glGetAttribLocation(data->box_shader_program,"vp");
+    glEnableVertexAttribArray(cvp1);
+    
+
+    float circle_data[3*256];
+    for (int i=0; i<256; i++){
+        circle_data[3*i+0] = sinf(M_PI*2./256.*i);
+        circle_data[3*i+1] = cosf(M_PI*2./256.*i);
+        circle_data[3*i+2] = 0;
+    };
+    GLuint circle_buffer;
+    glGenBuffers(1, &circle_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, circle_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(circle_data), circle_data, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(cvp1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glBindVertexArray(0);
+    
     // Create cross mesh
     glUseProgram(data->box_shader_program);
     glGenVertexArrays(1, &data->box_shader_cross_vao);
@@ -1104,6 +1149,25 @@ int reb_display_copy_data(struct reb_simulation* const r){
     }
     data->r_copy->ri_whfast.p_jh= data->p_jh_copy;
     
+    if (r->integrator==REB_INTEGRATOR_MERCURANA && r->ri_mercurana.allocatedN) {
+        if (r->N > data->allocated_N_mercurana){
+            if (data->dcrit){
+                for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
+                    free(data->dcrit[i]);
+                }
+            }
+            data->dcrit = realloc(data->dcrit, sizeof(double*)*(r->ri_mercurana.Nmaxshells));
+            for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
+                data->dcrit[i] = malloc(sizeof(double)*r->N);
+            }
+            data->allocated_N_mercurana = r->N;
+            data->Nmaxshells_mercurana = r->ri_mercurana.Nmaxshells;
+        }
+        for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
+            memcpy(data->dcrit[i], r->ri_mercurana.dcrit[i], r->N*sizeof(double));
+        }
+    }
+    
     return size_changed;
 }
 
@@ -1141,6 +1205,11 @@ void reb_display_prepare_data(struct reb_simulation* const r, int orbits){
             data->orbit_data[i-1].Omega = o.Omega;
             data->orbit_data[i-1].inc = o.inc;
             com = reb_get_com_of_pair(p,com);
+        }
+    }
+    if (data->shells && r->integrator==REB_INTEGRATOR_MERCURANA && r->ri_mercurana.allocatedN) {
+        for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
+            memcpy(data->dcrit[i], r->ri_mercurana.dcrit[i], r->N*sizeof(double));
         }
     }
 }
