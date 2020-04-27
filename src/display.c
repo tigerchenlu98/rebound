@@ -477,9 +477,13 @@ static void reb_display(GLFWwindow* window){
                 // Shells (MERCURANA)
                 glUseProgram(data->box_shader_program);
                 glBindVertexArray(data->box_shader_circle_vao);
-                glUniform4f(data->box_shader_color_location, 1.,0.,0.,1.);
                 for (int i=0; i<data->r_copy->N; i++){
                     for (int j=0;j<data->Nmaxshells_mercurana;j++){
+                        if (data->inshell_dominant[i]<j && data->inshell_subdominant[i]<j && data->inshell_encounter[i]<j){
+                            glUniform4f(data->box_shader_color_location, 1.,1.,1.,0.3);
+                        }else{
+                            glUniform4f(data->box_shader_color_location, 1.,0.,0.,1.0);
+                        }
                         matscale(tmp1,data->dcrit[j][i]);
                         mattranslate(tmp2,data->particle_data[i].x,data->particle_data[i].y,data->particle_data[i].z);
                         matmult(tmp2,tmp1,tmp3);
@@ -1160,6 +1164,9 @@ int reb_display_copy_data(struct reb_simulation* const r){
             for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
                 data->dcrit[i] = malloc(sizeof(double)*r->N);
             }
+            data->inshell_encounter = realloc(data->inshell_encounter, sizeof(unsigned int*)*(r->N));
+            data->inshell_dominant = realloc(data->inshell_dominant, sizeof(unsigned int*)*(r->N));
+            data->inshell_subdominant = realloc(data->inshell_subdominant, sizeof(unsigned int*)*(r->N));
             data->allocated_N_mercurana = r->N;
             data->Nmaxshells_mercurana = r->ri_mercurana.Nmaxshells;
         }
@@ -1211,6 +1218,9 @@ void reb_display_prepare_data(struct reb_simulation* const r, int orbits){
         for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
             memcpy(data->dcrit[i], r->ri_mercurana.dcrit[i], r->N*sizeof(double));
         }
+        memcpy(data->inshell_encounter, r->ri_mercurana.inshell_encounter, r->N*sizeof(unsigned int));
+        memcpy(data->inshell_dominant, r->ri_mercurana.inshell_dominant, r->N*sizeof(unsigned int));
+        memcpy(data->inshell_subdominant, r->ri_mercurana.inshell_subdominant, r->N*sizeof(unsigned int));
     }
 }
 

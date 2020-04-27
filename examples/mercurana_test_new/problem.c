@@ -12,7 +12,7 @@ void heartbeat(struct reb_simulation* r){
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     r->exact_finish_time = 0;
-    r->dt = 0.001;
+    r->dt = 0.1;
     r->heartbeat = heartbeat;
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-7;
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     }
 
     double E0 = reb_tools_energy(r);
-    reb_integrate(r,1000.);
+    reb_integrate(r,10000.);
     double E1 = reb_tools_energy(r);
     printf("dE/E = %e\n",fabs((E0-E1)/E0));
 }

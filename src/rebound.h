@@ -2201,6 +2201,9 @@ struct reb_display_data {
     double** dcrit;                 ///< Critical radii for MERCURANA
     unsigned long allocated_N_mercurana;
     unsigned long Nmaxshells_mercurana;
+    unsigned int* inshell_encounter;  ///< from global to shell
+    unsigned int* inshell_dominant;  ///< from global to shell
+    unsigned int* inshell_subdominant;  ///< from global to shell
     unsigned int opengl_enabled;
     double scale;
     double mouse_x;
