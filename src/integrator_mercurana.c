@@ -234,6 +234,8 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                             // Add mj to all higher shells as subdominant:
                             inshell_subdominant[mj] = shell;
                             printf("MAXDRIFT VIOLATION DOM-ENC triggered\n");
+TODO: 
+ This following loop should only go over all the shell in which the particle is not in!
                             for (int s=1; s<=shell; s++){
                                 rim->map_subdominant[s][rim->shellN_subdominant[s]] = mj;
                                 rim->shellN_subdominant[s]++;
@@ -307,6 +309,15 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                             particles[mj].x += drift*particles[mj].vx;
                             particles[mj].y += drift*particles[mj].vy;
                             particles[mj].z += drift*particles[mj].vz;
+                            // Also need to make mi particle encounter particle!
+                            if (inshell_encounter[mi]<shell){
+                                // Add mi to all higher shells as encounter:
+                                inshell_encounter[mi] = shell;
+                                for (int s=1; s<=shell; s++){
+                                    rim->map_encounter[s][rim->shellN_encounter[s]] = mi;
+                                    rim->shellN_encounter[s]++;
+                                }
+                            }
 
                         }else{
                             const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
@@ -339,7 +350,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
 
                         }else{
                             const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-                            maxdrift_encounter[mi] = MIN(maxdrift_encounter[mi],maxdrift);
+                            maxdrift_dominant[mi] = MIN(maxdrift_dominant[mi],maxdrift);
                             // mj remains unchanged
                         }
                     }
