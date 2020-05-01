@@ -147,12 +147,10 @@ static void reb_mercurana_record_collision(struct reb_simulation* const r, unsig
     rim->collisions_N++;
 }
 
-static double reb_drift_from_straight_line(struct reb_particle p, struct reb_particle p0, double t, double dt){
-    // move p by dt 
-    // move p0 by dt+t
-    double dx = p.x + dt*p.vx - (p0.x + (t+dt)*p0.vx); 
-    double dy = p.y + dt*p.vy - (p0.y + (t+dt)*p0.vy); 
-    double dz = p.z + dt*p.vz - (p0.z + (t+dt)*p0.vz); 
+static double reb_drift_from_straight_line(struct reb_particle p0, double dt0, struct reb_particle p1, double dt1){
+    double dx = p0.x + dt0*p0.vx - (p1.x + dt1*p1.vx); 
+    double dy = p0.y + dt0*p0.vy - (p1.y + dt1*p1.vy); 
+    double dz = p0.z + dt0*p0.vz - (p1.z + dt1*p1.vz); 
     return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
@@ -362,7 +360,9 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         for (int i=0; i<shellN_encounter; i++){
             int mi = map_encounter[i]; 
             for (int s=0;s<shell;s++){
-                double drift = reb_drift_from_straight_line(particles[mi],p0[s][mi],t_drifted[s],dt);
+                double dt0 = t_drifted[shell] + dt - t_drifted[s];
+                double dt1 = dt; 
+                double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_encounter[s][mi]){
                     printf("MAXDRIFT VIOLATION ENC-ENC triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
                     maxdrift_encounter[s][mi] = 1e300;
@@ -698,6 +698,11 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         rim->shellN_encounter = realloc(rim->shellN_encounter, sizeof(unsigned int)*rim->Nmaxshells);
         rim->shellN_dominant = realloc(rim->shellN_dominant, sizeof(unsigned int)*rim->Nmaxshells);
         rim->shellN_subdominant = realloc(rim->shellN_subdominant, sizeof(unsigned int)*rim->Nmaxshells);
+        for (int i=0;i<rim->Nmaxshells;i++){
+            rim->shellN_encounter[i] = 0;
+            rim->shellN_dominant[i] = 0;
+            rim->shellN_subdominant[i] = 0;
+        }
         
         // shellN_active
         //rim->shellN_active = realloc(rim->shellN_active, sizeof(unsigned int)*rim->Nmaxshells);

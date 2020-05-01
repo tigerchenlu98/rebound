@@ -6,7 +6,12 @@
 void heartbeat(struct reb_simulation* r){
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[0].x, r->particles[0].y, r->particles[0].vx, r->particles[0].vy);
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);
-    //printf("-------------\n");
+    for(int i=0;i<r->ri_mercurana.Nmaxshells;i++){
+        if (r->ri_mercurana.shellN_encounter){
+        printf("%2d %d\n",i, r->ri_mercurana.shellN_encounter[i]);
+        }
+    }
+    printf("-------------\n");
 }
 
 int main(int argc, char* argv[]) {
