@@ -496,10 +496,11 @@ struct reb_simulation_integrator_mercurana {
     unsigned int* inshell_encounter;  ///< from global to shell
     unsigned int* inshell_dominant;  ///< from global to shell
     unsigned int* inshell_subdominant;  ///< from global to shell
-    double* maxdrift_encounter;
-    double* maxdrift_dominant;
+    double** maxdrift_encounter;
+    double** maxdrift_dominant;
     double* t_drifted;
-    struct reb_particle* p0;
+    double* dt_drift;
+    struct reb_particle** p0;
     unsigned int allocatedN;        ///< Allocated memory for various internal variables. 
     unsigned int* shellN_encounter; ///< Number of particles in each shell.
     unsigned int* shellN_dominant;  ///< Number of dominant particles in each shell.
