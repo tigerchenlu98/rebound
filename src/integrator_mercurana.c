@@ -366,7 +366,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 if (drift>maxdrift_encounter[s][mi]){
                     printf("MAXDRIFT VIOLATION ENC-ENC triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
                     maxdrift_encounter[s][mi] = 1e300;
-                    for (int j=0; j<rim->shellN_encounter[s]; j++){ // shell 0
+                    for (int j=0; j<rim->shellN_encounter[s]; j++){ 
                         int mj = map_encounter[j]; 
                         if (mi==mj) continue;
                         // Not yet in current shell?

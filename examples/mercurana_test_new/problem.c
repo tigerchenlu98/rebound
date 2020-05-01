@@ -12,16 +12,19 @@ void heartbeat(struct reb_simulation* r){
         }
     }
     printf("-------------\n");
+    printf("%d\n", r->ri_mercurana.Nmaxshellsused);
+    printf("-------------\n");
 }
 
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     r->exact_finish_time = 0;
-    r->dt = 0.001;
+    r->dt = 0.01;
     r->heartbeat = heartbeat;
     r->integrator = REB_INTEGRATOR_MERCURANA;
-    r->ri_mercurana.kappa = 1e-7;
+    r->ri_mercurana.kappa = 1e-4;
     r->ri_mercurana.N_dominant = 0;
+    r->ri_mercurana.Nmaxshells = 20;
    
     if (0){ 
         struct reb_particle p1 = {0}; 
@@ -58,7 +61,7 @@ int main(int argc, char* argv[]) {
         p3.m = 1e-3;
         reb_add(r, p3); 
 
-        for (int i=0; i<100;i++){
+        for (int i=0; i<300;i++){
             double a = reb_random_uniform(0.8,1.2);
             double omega = reb_random_uniform(0.,M_PI*2);
             double f = reb_random_uniform(0.,M_PI*2.);
