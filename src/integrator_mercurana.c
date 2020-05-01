@@ -167,7 +167,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     unsigned int* map_dominant = rim->map_dominant[shell];
     unsigned int* map_subdominant = rim->map_subdominant[shell];
     
-    //double** maxdrift_dominant = rim->maxdrift_dominant;
+    double** maxdrift_dominant = rim->maxdrift_dominant;
     double** maxdrift_encounter = rim->maxdrift_encounter;
     // Note: no maxdrift_subdominant
     
@@ -479,6 +479,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     for (int i=0; i<shellN_encounter; i++){
         int mi = map_encounter[i]; 
         maxdrift_encounter[shell][mi] = 1e300; 
+        maxdrift_dominant[shell][mi] = 1e300; 
         p0[shell][mi] = particles[mi]; 
     }
     
