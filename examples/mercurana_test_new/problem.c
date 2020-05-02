@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
         p3.m = 1e-3;
         reb_add(r, p3); 
 
-        for (int i=0; i<300;i++){
+        for (int i=0; i<100;i++){
             double a = reb_random_uniform(0.8,1.2);
             double omega = reb_random_uniform(0.,M_PI*2);
             double f = reb_random_uniform(0.,M_PI*2.);
