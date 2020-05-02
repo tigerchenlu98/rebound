@@ -177,6 +177,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     
     double* t_drifted = rim->t_drifted;
     double* dt_drift = rim->dt_drift;
+    double buffer = 1.02;
     
     if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
         return;
@@ -240,6 +241,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                                 // Add mj to all higher shells as dominant:
                                 inshell_dominant[mj] = shell;
                                 printf("MAXDRIFT VIOLATION DOM-DOM triggered. moving particle.\n");
+                                rim->moved_particles++;
                                 for (int sa=mj_shell+1; sa<=shell; sa++){
                                     rim->map_dominant[sa][rim->shellN_dominant[sa]] = mj;
                                     rim->shellN_dominant[sa]++;
@@ -279,6 +281,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                                 // Add mj to all higher shells as subdominant:
                                 inshell_subdominant[mj] = shell;
                                 printf("MAXDRIFT VIOLATION DOM-SUB triggered. moving particle.\n");
+                                rim->moved_particles++;
                                 for (int sa=mj_shell+1; sa<=shell; sa++){
                                     rim->map_subdominant[sa][rim->shellN_subdominant[sa]] = mj;
                                     rim->shellN_subdominant[sa]++;
@@ -318,6 +321,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                                 // Add mj to all higher shells as dominant:
                                 inshell_dominant[mj] = shell;
                                 printf("MAXDRIFT VIOLATION SUB-DOM triggered. moving particle.\n");
+                                rim->moved_particles++;
                                 for (int sa=mj_shell+1; sa<=shell; sa++){
                                     rim->map_dominant[sa][rim->shellN_dominant[sa]] = mj;
                                     rim->shellN_dominant[sa]++;
@@ -357,6 +361,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                                 // Add mj to all higher shells as encounter:
                                 inshell_encounter[mj] = shell;
                                 printf("MAXDRIFT VIOLATION ENC-ENC triggered. moving particle.\n");
+                                rim->moved_particles++;
                                 for (int sa=mj_shell+1; sa<=shell; sa++){
                                     rim->map_encounter[sa][rim->shellN_encounter[sa]] = mj;
                                     rim->shellN_encounter[sa]++;
@@ -386,7 +391,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
                 reb_mercurana_record_collision(r,mi,mj);
             }
-            double dcritsum = dcrit[mi]+dcrit[mj];
+            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
             if (rmin2< dcritsum*dcritsum){ 
                 if (inshell_dominant[mi] == shell){
                     inshell_dominant[mi] = shell+1;
@@ -412,7 +417,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
                 reb_mercurana_record_collision(r,mi,mj);
             }
-            double dcritsum = dcrit[mi]+dcrit[mj];
+            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
             if (rmin2< dcritsum*dcritsum){ 
                 if (inshell_dominant[mi] == shell){
                     inshell_dominant[mi] = shell+1;
@@ -438,7 +443,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
                 reb_mercurana_record_collision(r,mi,mj);
             }
-            double dcritsum = dcrit[mi]+dcrit[mj];
+            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
             if (rmin2< dcritsum*dcritsum){ 
                 if (inshell_encounter[mi] == shell){
                     inshell_encounter[mi] = shell+1;

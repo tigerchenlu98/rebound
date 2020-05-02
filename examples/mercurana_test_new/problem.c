@@ -15,6 +15,7 @@ void heartbeat(struct reb_simulation* r){
     }
     printf("-------------\n");
     printf("maxshells %d\n", r->ri_mercurana.Nmaxshellsused);
+    printf("moved %d\n", r->ri_mercurana.moved_particles);
     double E1 = reb_tools_energy(r);
     printf("dE/E = %e\n",fabs((E0-E1)/E0));
     printf("-------------\n");
@@ -23,7 +24,7 @@ void heartbeat(struct reb_simulation* r){
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     r->exact_finish_time = 0;
-    r->dt = 0.012;
+    r->dt = 0.002;
     r->heartbeat = heartbeat;
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-4;
