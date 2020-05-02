@@ -177,7 +177,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     
     double* t_drifted = rim->t_drifted;
     double* dt_drift = rim->dt_drift;
-    double buffer = 1.02;
+    double buffer = 1.00;
     
     if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
         return;
@@ -226,7 +226,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_dominant[s][mi]){
-                    printf("MAXDRIFT VIOLATION DOM-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
+                    //printf("MAXDRIFT VIOLATION DOM-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
                     maxdrift_dominant[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_dominant[s]; j++){ 
                         int mj = map_dominant[j]; 
@@ -266,7 +266,8 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_encounter[s][mi]){
-                    printf("MAXDRIFT VIOLATION DOM-SUB triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
+                    //printf("MAXDRIFT VIOLATION DOM-SUB triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
+                    //printf("%.5f %.5f %.5f %.5f %.5f\n",dt0,dt1, t_drifted[shell],  dt,  t_drifted[s]);
                     maxdrift_encounter[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_subdominant[s]; j++){ 
                         int mj = map_subdominant[j]; 
@@ -306,7 +307,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_dominant[s][mi]){
-                    printf("MAXDRIFT VIOLATION SUB-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
+                    //printf("MAXDRIFT VIOLATION SUB-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
                     maxdrift_dominant[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_dominant[s]; j++){ 
                         int mj = map_dominant[j]; 
@@ -346,7 +347,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_encounter[s][mi]){
-                    printf("MAXDRIFT VIOLATION ENC-ENC triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
+                    //printf("MAXDRIFT VIOLATION ENC-ENC triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
                     maxdrift_encounter[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_encounter[s]; j++){ 
                         int mj = map_encounter[j]; 
@@ -587,6 +588,28 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
     unsigned int* inshell_dominant = rim->inshell_dominant;
     unsigned int* inshell_subdominant = rim->inshell_dominant;
     
+    if (shell+1<rim->Nmaxshells){ // does sub-shell exist? If so, do that first.
+        // Are there particles in it?
+        if (rim->shellN_encounter[shell+1]>0 || rim->shellN_dominant[shell+1]>0){
+            rim->Nmaxshellsused = MAX(rim->Nmaxshellsused, shell+2);
+            // advance all sub-shell particles
+            unsigned int n = rim->n1?rim->n1:rim->n0;
+            if (rim->n0>0 && shell==0){
+                n = rim->n0; // use different number of substeps for first shell
+            }
+            const double as = a/n;
+            reb_integrator_eos_preprocessor(r, as, shell+1, rim->phi1, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
+            for (int i=0;i<n;i++){
+                reb_integrator_eos_step(r, as, 1., 1., shell+1, rim->phi1, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
+            }
+            reb_integrator_eos_postprocessor(r, as, shell+1, rim->phi1, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
+        }else{
+            r->t += a;
+        }
+    }else{
+        r->t += a;
+    }
+    
     for (int i=0;i<shellN_dominant;i++){  // loop over all particles in shell (includes subshells)
         int mi = map_dominant[i]; 
         if( inshell_dominant[mi]==shell){
@@ -612,27 +635,6 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
         }
     }
     rim->t_drifted[shell] += a;
-    if (shell+1<rim->Nmaxshells){ // does sub-shell exist?
-        // Are there particles in it?
-        if (rim->shellN_encounter[shell+1]>0 || rim->shellN_dominant[shell+1]>0){
-            rim->Nmaxshellsused = MAX(rim->Nmaxshellsused, shell+2);
-            // advance all sub-shell particles
-            unsigned int n = rim->n1?rim->n1:rim->n0;
-            if (rim->n0>0 && shell==0){
-                n = rim->n0; // use different number of substeps for first shell
-            }
-            const double as = a/n;
-            reb_integrator_eos_preprocessor(r, as, shell+1, rim->phi1, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
-            for (int i=0;i<n;i++){
-                reb_integrator_eos_step(r, as, 1., 1., shell+1, rim->phi1, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
-            }
-            reb_integrator_eos_postprocessor(r, as, shell+1, rim->phi1, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
-        }else{
-            r->t += a;
-        }
-    }else{
-        r->t += a;
-    }
 }
 
 // Part 1 only contains logic for setting up all the data structures. 
