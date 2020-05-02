@@ -169,7 +169,6 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     
     double** maxdrift_dominant = rim->maxdrift_dominant;
     double** maxdrift_encounter = rim->maxdrift_encounter;
-    // Note: no maxdrift_subdominant
     
     unsigned int* inshell_encounter = rim->inshell_encounter;
     unsigned int* inshell_dominant = rim->inshell_dominant;
@@ -376,7 +375,8 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         }
     }
 
-    // (1) Dominant and dominant
+    // Check interactions in shell
+    // Dominant and dominant
     for (int i=0; i<shellN_dominant; i++){
         int mi = map_dominant[i]; 
         for (int j=i+1; j<shellN_dominant; j++){
@@ -402,7 +402,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         }
     }
     
-    // (2) Dominant and subdominant
+    // Dominant and subdominant
     for (int i=0; i<shellN_dominant; i++){
         int mi = map_dominant[i]; 
         for (int j=0; j<shellN_subdominant; j++){
@@ -428,7 +428,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         }
     }
     
-    // (4) Encounter and encounter
+    // Encounter and encounter
     for (int i=0; i<shellN_encounter; i++){
         int mi = map_encounter[i]; 
         for (int j=i+1; j<shellN_encounter; j++){
@@ -509,7 +509,6 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     }
     
     
-    //printf("  %.5f  shell, dom sub enc  %d    %d %d %d    %d %d %d\n",r->t,shell,rim->shellN_dominant[shell],rim->shellN_subdominant[shell],rim->shellN_encounter[shell],rim->shellN_dominant[shell+1],rim->shellN_subdominant[shell+1],rim->shellN_encounter[shell+1]);
     if (rim->collisions_N){
         unsigned int N_before = r->N;
         reb_collision_search(r); // will resolve collisions
@@ -540,8 +539,6 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
     int shellN_dominant = rim->shellN_dominant[shell];
     int shellN_subdominant = rim->shellN_subdominant[shell];
     unsigned int* inshell_encounter = rim->inshell_encounter;
-    //unsigned int* inshell_dominant = rim->inshell_dominant;
-    //unsigned int* inshell_subdominant = rim->inshell_dominant;
 
     for (int i=0;i<shellN_dominant;i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_dominant[i];
@@ -555,7 +552,7 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
         particles[mi].vy += y*particles[mi].ay;
         particles[mi].vz += y*particles[mi].az;
     }
-    if (shell>0){ // All particles are encounter particles in shell 0, no need for subdominant drift
+    if (shell>0){ // All particles are encounter particles in shell 0, no need for subdominant kick
     for (int i=0;i<shellN_subdominant;i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_subdominant[i];
         if (inshell_encounter[mi]<shell){ // do not apply acceleration twice
@@ -612,7 +609,6 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
     rim->t_drifted[shell] += a;
     if (shell+1<rim->Nmaxshells){ // does sub-shell exist?
         // Are there particles in it?
-        // Is it a whstep?
         if (rim->shellN_encounter[shell+1]>0 || rim->shellN_dominant[shell+1]>0){
             rim->Nmaxshellsused = MAX(rim->Nmaxshellsused, shell+2);
             // advance all sub-shell particles

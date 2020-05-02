@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-4;
     r->ri_mercurana.N_dominant = 1;
-    r->ri_mercurana.Nmaxshells = 30;
+    r->ri_mercurana.Nmaxshells = 20;
    
     if (0){ 
         struct reb_particle p1 = {0}; 

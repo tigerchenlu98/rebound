@@ -712,11 +712,11 @@ void reb_calculate_acceleration(struct reb_simulation* r){
     particles[mj].ay    += prefacti*dy;\
     particles[mj].az    += prefacti*dz;
 
-            // Dominant particles with dominant particles
-            for (int i=0; i<shellN_dominant; i++){
-                const int mi = map_dominant[i];
-                for (int j=i+1; j<shellN_dominant; j++){
-                    const int mj = map_dominant[j];
+            // Encounter particles with encounter particles
+            for (int i=0; i<shellN_encounter; i++){
+                const int mi = map_encounter[i];
+                for (int j=i+1; j<shellN_encounter; j++){
+                    const int mj = map_encounter[j];
                     CALC_GRAV
                 }
             }
@@ -728,11 +728,11 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                     CALC_GRAV
                 }
             }
-            // Encounter particles with encounter particles
-            for (int i=0; i<shellN_encounter; i++){
-                const int mi = map_encounter[i];
-                for (int j=i+1; j<shellN_encounter; j++){
-                    const int mj = map_encounter[j];
+            // Dominant particles with dominant particles
+            for (int i=0; i<shellN_dominant; i++){
+                const int mi = map_dominant[i];
+                for (int j=i+1; j<shellN_dominant; j++){
+                    const int mj = map_dominant[j];
                     CALC_GRAV
                 }
             }

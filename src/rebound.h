@@ -501,6 +501,7 @@ struct reb_simulation_integrator_mercurana {
     double* t_drifted;
     double* dt_drift;
     struct reb_particle** p0;
+    unsigned int moved_particles;
     unsigned int allocatedN;        ///< Allocated memory for various internal variables. 
     unsigned int* shellN_encounter; ///< Number of particles in each shell.
     unsigned int* shellN_dominant;  ///< Number of dominant particles in each shell.
