@@ -49,12 +49,16 @@ unsigned long rebd_drift[MAXSHELLS];
 unsigned long rebd_kick[MAXSHELLS];
 unsigned long rebd_md1a[MAXSHELLS];
 unsigned long rebd_md1b[MAXSHELLS];
+unsigned long rebd_md1c[MAXSHELLS];
 unsigned long rebd_md2a[MAXSHELLS];
 unsigned long rebd_md2b[MAXSHELLS];
+unsigned long rebd_md2c[MAXSHELLS];
 unsigned long rebd_md3a[MAXSHELLS];
 unsigned long rebd_md3b[MAXSHELLS];
+unsigned long rebd_md3c[MAXSHELLS];
 unsigned long rebd_md4a[MAXSHELLS];
 unsigned long rebd_md4b[MAXSHELLS];
+unsigned long rebd_md4c[MAXSHELLS];
 
 
 
@@ -261,6 +265,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
 //TODO: compare with maxdrift which triggered search to avoid repeated searches
                             if (rmin2< dcritsum*dcritsum){ 
+                                rebd_md1c[shell]++;
                                 // Add mj to all higher shells as dominant:
                                 inshell_dominant[mj] = shell;
                                 printf("MAXDRIFT VIOLATION DOM-DOM triggered. moving particle.\n");
@@ -305,6 +310,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                             double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
                             if (rmin2< dcritsum*dcritsum){ 
+                                rebd_md2c[shell]++;
                                 // Add mj to all higher shells as subdominant:
                                 inshell_subdominant[mj] = shell;
                                 printf("MAXDRIFT VIOLATION DOM-SUB triggered. moving particle.\n");
@@ -349,6 +355,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                             double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
                             if (rmin2< dcritsum*dcritsum){ 
+                                rebd_md3c[shell]++;
                                 // Add mj to all higher shells as dominant:
                                 inshell_dominant[mj] = shell;
                                 printf("MAXDRIFT VIOLATION SUB-DOM triggered. moving particle.\n");
@@ -393,6 +400,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                             double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
                             if (rmin2< dcritsum*dcritsum){ 
+                                rebd_md4c[shell]++;
                                 // Add mj to all higher shells as encounter:
                                 inshell_encounter[mj] = shell;
                                 printf("MAXDRIFT VIOLATION ENC-ENC triggered. moving particle.\n");
@@ -552,6 +560,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     
     
     if (rim->collisions_N){
+        printf("collision\n");
         unsigned int N_before = r->N;
         reb_collision_search(r); // will resolve collisions
         if (N_before!=r->N){

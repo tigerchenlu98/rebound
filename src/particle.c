@@ -216,55 +216,80 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 		reb_warning(r, "Removing active particle. You might want to keep particles sorted. Check collision_resolve_keep_sorted.");
     }
     if (r->integrator == REB_INTEGRATOR_MERCURANA){
-    //    struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
-    //    // First update map itself
-    //    for (int s=0;s<rim->Nmaxshells;s++){
-    //        unsigned int* map = rim->map[s];
-    //        for (int i=0;i<rim->shellN[s];i++){
-    //            if (map[i]==index){
-    //                if (keepSorted){
-    //                    for (int j=i;j<rim->shellN[s]-1;j++){
-    //                        map[j] = map[j+1];
-    //                    }
-    //                }else{
-    //                    map[i] = map[rim->shellN[s]-1];
-    //                }
-    //                rim->shellN[s]--;
-    //                if(index<r->N_active || r->N_active==-1){
-    //                    rim->shellN_active[s]--;
-    //                }
-    //                break; // only one chance of particle being in each shell
-    //            }
-    //        }
-    //    }
-    //    // Then update map indices
-    //    for (int s=0;s<rim->Nmaxshells;s++){
-    //        unsigned int* map = rim->map[s];
-    //        for (int i=0;i<rim->shellN[s];i++){
-    //            if (map[i]>index && keepSorted){
-    //                map[i]--;
-    //            }
-    //            if (map[i]==r->N-1 && (!keepSorted)){
-    //                map[i] = index;
-    //            }
-    //        }
-    //    }
-    //    // Update dcrits
-    //    for (int s=0;s<rim->Nmaxshells;s++){
-    //        if (keepSorted){
-    //            for (int i=index;i<r->N-1;i++){
-    //                rim->dcrit[s][i] = rim->dcrit[s][i+1];
-    //            }
-    //        }else{
-    //            rim->dcrit[s][index] = rim->dcrit[s][r->N-1];
-    //        }
-    //    }
-    //    if(keepSorted==0 && index<rim->N_dominant && rim->N_dominant!=0){
-    //        reb_warning(r, "Removing dominant particle. You might want to keep particles sorted. Check collision_resolve_keep_sorted.");
-    //    }
-    //    if(keepSorted==1 && index<rim->N_dominant && rim->N_dominant!=0){
-    //        rim->N_dominant--;
-    //    }
+        struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
+        for (int s=0;s<rim->Nmaxshells;s++){
+            unsigned int* map_encounter = rim->map_encounter[s];
+            unsigned int* map_dominant = rim->map_dominant[s];
+            unsigned int* map_subdominant = rim->map_subdominant[s];
+            int isEncounter = 0;
+            for (int i=0;i<rim->shellN_encounter[s];i++){
+                if (map_encounter[i]>index){
+                    map_encounter[i]--;
+                }
+                if (map_encounter[i]==index){
+                    isEncounter = 1;
+                    rim->shellN_encounter[s]--;
+                    if (i==rim->shellN_encounter[s]) break; // last particle in list
+                }
+                if (isEncounter){
+                    map_encounter[i] = map_encounter[i+1];
+                }
+            }
+            int isDominant = 0;
+            for (int i=0;i<rim->shellN_dominant[s];i++){
+                if (map_dominant[i]>index){
+                    map_dominant[i]--;
+                }
+                if (map_dominant[i]==index){
+                    isDominant = 1;
+                    rim->shellN_dominant[s]--;
+                    if (i==rim->shellN_dominant[s]) break; // last particle in list
+                }
+                if (isDominant){
+                    map_dominant[i] = map_dominant[i+1];
+                }
+            }
+            int isSubdominant = 0;
+            for (int i=0;i<rim->shellN_subdominant[s];i++){
+                if (map_subdominant[i]>index){
+                    map_subdominant[i]--;
+                }
+                if (map_subdominant[i]==index){
+                    isSubdominant = 1;
+                    rim->shellN_subdominant[s]--;
+                    if (i==rim->shellN_subdominant[s]) break; // last particle in list
+                }
+                if (isSubdominant){
+                    map_subdominant[i] = map_subdominant[i+1];
+                }
+            }
+            double* maxdrift_encounter = rim->maxdrift_encounter[s];
+            double* maxdrift_dominant = rim->maxdrift_dominant[s];
+            double* dcrit = rim->dcrit[s];
+            struct reb_particle* p0 = rim->p0[s];
+            
+            for (int i=index;i<r->N-1;i++){
+                maxdrift_encounter[i] = maxdrift_encounter[i+1];
+                maxdrift_dominant[i] = maxdrift_dominant[i+1];
+                dcrit[i] = dcrit[i+1];
+                p0[i] = p0[i+1];
+            }
+        }
+        unsigned int* inshell_encounter = rim->inshell_encounter;
+        unsigned int* inshell_dominant = rim->inshell_dominant;
+        unsigned int* inshell_subdominant = rim->inshell_dominant;
+        double* t_drifted = rim->t_drifted;
+        double* dt_drifted = rim->t_drifted;
+        for (int i=index;i<r->N-1;i++){
+            inshell_encounter[i] = inshell_encounter[i+1];
+            inshell_dominant[i] = inshell_dominant[i+1];
+            inshell_subdominant[i] = inshell_subdominant[i+1];
+            t_drifted[i] = t_drifted[i+1];
+            dt_drifted[i] = dt_drifted[i+1];
+        }
+        if (index<rim->N_dominant){
+            rim->N_dominant--;
+        }
     }    
     if (r->integrator == REB_INTEGRATOR_MERCURIUS){
         keepSorted = 1; // Force keepSorted for hybrid integrator
