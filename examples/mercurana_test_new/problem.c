@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     r->ri_mercurana.kappa = 1e-4;
     r->ri_mercurana.N_dominant = 1;
     r->ri_mercurana.Nmaxshells = 30;
-    int rad = 0; 
+    int rad = 1; 
     r->collision = REB_COLLISION_DIRECT;
     r->collision_resolve = reb_collision_resolve_merge;
 
