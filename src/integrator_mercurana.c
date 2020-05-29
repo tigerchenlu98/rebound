@@ -230,12 +230,30 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         shellN_encounter = rim->shellN_encounter[shell];
         shellN_dominant = rim->shellN_dominant[shell];
         shellN_subdominant = rim->shellN_subdominant[shell];
+        for (int i=0; i<r->N; i++){
+            p0[0][i] = particles[i]; 
+            maxdrift_encounter[0][i] = 1e300; 
+            maxdrift_dominant[0][i] = 1e300; 
+        }
         for (int i=0; i<shellN_dominant; i++){
             map_dominant[i] = i; 
         }
         for (int i=0; i<shellN_subdominant; i++){
             map_subdominant[i] = shellN_dominant + i; 
             map_encounter[i] = shellN_dominant + i; 
+        }
+        // Repeat from above
+        for (int i=0; i<shellN_encounter; i++){
+            int mi = map_encounter[i]; 
+            inshell_encounter[mi] = shell;
+        }
+        for (int i=0; i<shellN_dominant; i++){
+            int mi = map_dominant[i]; 
+            inshell_dominant[mi] = shell;
+        }
+        for (int i=0; i<shellN_subdominant; i++){
+            int mi = map_subdominant[i]; 
+            inshell_subdominant[mi] = shell;
         }
     }else{
         // Check for maxdrift violation of higher shells
@@ -441,11 +459,13 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                     inshell_dominant[mi] = shell+1;
                     rim->map_dominant[shell+1][rim->shellN_dominant[shell+1]] = mi;
                     rim->shellN_dominant[shell+1]++;
+                    p0[shell+1][mi] = particles[mi]; 
                 }
                 if (inshell_dominant[mj] == shell){
                     inshell_dominant[mj] = shell+1;
                     rim->map_dominant[shell+1][rim->shellN_dominant[shell+1]] = mj;
                     rim->shellN_dominant[shell+1]++;
+                    p0[shell+1][mj] = particles[mj]; 
                 }
             }
         }
@@ -467,11 +487,13 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                     inshell_dominant[mi] = shell+1;
                     rim->map_dominant[shell+1][rim->shellN_dominant[shell+1]] = mi;
                     rim->shellN_dominant[shell+1]++;
+                    p0[shell+1][mi] = particles[mi]; 
                 }
                 if (inshell_subdominant[mj] == shell){
                     inshell_subdominant[mj] = shell+1;
                     rim->map_subdominant[shell+1][rim->shellN_subdominant[shell+1]] = mj;
                     rim->shellN_subdominant[shell+1]++;
+                    p0[shell+1][mj] = particles[mj]; 
                 }
             }
         }
@@ -493,11 +515,13 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                     inshell_encounter[mi] = shell+1;
                     rim->map_encounter[shell+1][rim->shellN_encounter[shell+1]] = mi;
                     rim->shellN_encounter[shell+1]++;
+                    p0[shell+1][mi] = particles[mi]; 
                 }
                 if (inshell_encounter[mj] == shell){
                     inshell_encounter[mj] = shell+1;
                     rim->map_encounter[shell+1][rim->shellN_encounter[shell+1]] = mj;
                     rim->shellN_encounter[shell+1]++;
+                    p0[shell+1][mj] = particles[mj]; 
                 }
             }
         }
@@ -506,6 +530,22 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     // Maxdrift calculation
     for (int i=0; i<shellN_encounter; i++){
         int mi = map_encounter[i]; 
+        maxdrift_encounter[shell][mi] = 1e300; 
+        maxdrift_dominant[shell][mi] = 1e300; 
+        //TODO think about following
+        p0[shell][mi] = particles[mi]; 
+    }
+    // Maxdrift calculation
+    for (int i=0; i<shellN_dominant; i++){
+        int mi = map_dominant[i]; 
+        maxdrift_encounter[shell][mi] = 1e300; 
+        maxdrift_dominant[shell][mi] = 1e300; 
+        //TODO think about following
+        p0[shell][mi] = particles[mi]; 
+    }
+    // Maxdrift calculation
+    for (int i=0; i<shellN_subdominant; i++){
+        int mi = map_subdominant[i]; 
         maxdrift_encounter[shell][mi] = 1e300; 
         maxdrift_dominant[shell][mi] = 1e300; 
         //TODO think about following

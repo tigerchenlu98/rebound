@@ -230,9 +230,8 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 if (map_encounter[i]==index){
                     isEncounter = 1;
                     rim->shellN_encounter[s]--;
-                    if (i==rim->shellN_encounter[s]) break; // last particle in list
                 }
-                if (isEncounter){
+                if (isEncounter && i!=rim->shellN_encounter[s]){
                     map_encounter[i] = map_encounter[i+1];
                 }
             }
@@ -244,9 +243,8 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 if (map_dominant[i]==index){
                     isDominant = 1;
                     rim->shellN_dominant[s]--;
-                    if (i==rim->shellN_dominant[s]) break; // last particle in list
                 }
-                if (isDominant){
+                if (isDominant && i!=rim->shellN_dominant[s]){
                     map_dominant[i] = map_dominant[i+1];
                 }
             }
@@ -258,9 +256,8 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 if (map_subdominant[i]==index){
                     isSubdominant = 1;
                     rim->shellN_subdominant[s]--;
-                    if (i==rim->shellN_subdominant[s]) break; // last particle in list
                 }
-                if (isSubdominant){
+                if (isSubdominant && i!=rim->shellN_subdominant[s]){
                     map_subdominant[i] = map_subdominant[i+1];
                 }
             }
