@@ -40,6 +40,24 @@
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
 #define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
 
+
+// DEBUG Variables:
+
+#define MAXSHELLS 100
+
+unsigned long rebd_drift[MAXSHELLS];
+unsigned long rebd_kick[MAXSHELLS];
+unsigned long rebd_md1a[MAXSHELLS];
+unsigned long rebd_md1b[MAXSHELLS];
+unsigned long rebd_md2a[MAXSHELLS];
+unsigned long rebd_md2b[MAXSHELLS];
+unsigned long rebd_md3a[MAXSHELLS];
+unsigned long rebd_md3b[MAXSHELLS];
+unsigned long rebd_md4a[MAXSHELLS];
+unsigned long rebd_md4b[MAXSHELLS];
+
+
+
 // Machine independent implementation of pow(*,1./3.) using Newton's method.
 // Speed is not an issue. Only used to calculate dcrit.
 static double sqrt3(double a){
@@ -228,14 +246,16 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_dominant[s][mi]){
+                    rebd_md1a[shell]++;
                     //printf("MAXDRIFT VIOLATION DOM-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
                     maxdrift_dominant[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_dominant[s]; j++){ 
-                        int mj = map_dominant[j]; 
+                        int mj = rim->map_dominant[s][j]; 
                         if (mi==mj) continue;
                         // Not yet in current shell?
                         unsigned int mj_shell = inshell_dominant[mj];
                         if (mj_shell<shell){
+                            rebd_md1b[shell]++;
                             double drift = t_drifted[shell] - t_drifted[mj_shell];
                             double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
@@ -271,14 +291,16 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_encounter[s][mi]){
+                    rebd_md2a[shell]++;
                     //printf("MAXDRIFT VIOLATION DOM-SUB triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
                     maxdrift_encounter[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_subdominant[s]; j++){ 
-                        int mj = map_subdominant[j]; 
+                        int mj = rim->map_subdominant[s][j]; 
                         if (mi==mj) continue;
                         // Not yet in current shell?
                         unsigned int mj_shell = inshell_subdominant[mj];
                         if (mj_shell<shell){
+                            rebd_md2b[shell]++;
                             double drift = t_drifted[shell] - t_drifted[mj_shell];
                             double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
@@ -313,14 +335,16 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_dominant[s][mi]){
+                    rebd_md3a[shell]++;
                     //printf("MAXDRIFT VIOLATION SUB-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
                     maxdrift_dominant[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_dominant[s]; j++){ 
-                        int mj = map_dominant[j]; 
+                        int mj = rim->map_dominant[s][j]; 
                         if (mi==mj) continue; // should not be possible here, (dom always != sub)
                         // Not yet in current shell?
                         unsigned int mj_shell = inshell_dominant[mj];
                         if (mj_shell<shell){
+                            rebd_md3b[shell]++;
                             double drift = t_drifted[shell] - t_drifted[mj_shell];
                             double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
@@ -355,14 +379,16 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 double dt1 = dt; 
                 double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
                 if (drift>maxdrift_encounter[s][mi]){
+                    rebd_md4a[shell]++;
                     //printf("MAXDRIFT VIOLATION ENC-ENC triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
                     maxdrift_encounter[s][mi] = 1e300;
                     for (int j=0; j<rim->shellN_encounter[s]; j++){ 
-                        int mj = map_encounter[j]; 
+                        int mj = rim->map_encounter[s][j]; 
                         if (mi==mj) continue;
                         // Not yet in current shell?
                         unsigned int mj_shell = inshell_encounter[mj];
                         if (mj_shell<shell){
+                            rebd_md4b[shell]++;
                             double drift = t_drifted[shell] - t_drifted[mj_shell];
                             double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
                             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
@@ -540,6 +566,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
 // y = timestep for acceleration
 // v = timestep for jerk (0 if not used)
 static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, double y, double v, unsigned int shell){
+    rebd_kick[shell]++;
     struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
     struct reb_particle* const particles = r->particles;
     r->gravity = REB_GRAVITY_MERCURANA; // needed here again for SimulationArchive
@@ -582,6 +609,7 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
 
 // Main Kernel Operator: Drift step. 
 static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, double a, unsigned int shell){
+    rebd_drift[shell]++;
 #ifndef OPENMP
     if (reb_sigint) return;
 #endif
