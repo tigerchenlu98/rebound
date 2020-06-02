@@ -176,6 +176,64 @@ static double reb_drift_from_straight_line(struct reb_particle p0, double dt0, s
     return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
+
+static void check(  struct reb_simulation* r,
+                    double dt,
+                    unsigned int shell, 
+                    unsigned int* shellN_A,
+                    unsigned int** map_A,
+                    unsigned int* shellN_B,
+                    unsigned int** map_B,
+                    unsigned int* inshell_B,
+                    double** maxdrift_B
+                    ){
+    struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
+    const double* const dcrit = rim->dcrit[shell];
+    double* t_drifted = rim->t_drifted;
+    double* dt_drift = rim->dt_drift;
+    struct reb_particle** p0 = rim->p0;
+    struct reb_particle* const particles = r->particles;
+    double buffer = 1.05; // prevent having to check the same particle over and over again in one timestep
+    for (int i=0; i<shellN_A[shell]; i++){
+        int mi = map_A[shell][i]; 
+        for (int s=0;s<shell;s++){
+            double dt0 = t_drifted[shell] + dt - t_drifted[s];
+            double dt1 = dt; 
+            double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
+            if (drift>maxdrift_B[s][mi]){
+                maxdrift_B[s][mi] = 1e300;
+                for (int j=0; j<shellN_B[s]; j++){ 
+                    int mj = map_B[s][j]; 
+                    if (mi==mj) continue;
+                    // Not yet in current shell?
+                    unsigned int mj_shell = inshell_B[mj];
+                    if (mj_shell<shell){
+                        double drift = t_drifted[shell] - t_drifted[mj_shell];
+                        double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
+                        double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
+                        if (rmin2< dcritsum*dcritsum){ 
+                            inshell_B[mj] = shell;
+                            rim->moved_particles++;
+                            for (int sa=mj_shell+1; sa<=shell; sa++){
+                                map_B[sa][shellN_B[sa]] = mj;
+                                shellN_B[sa]++;
+                            }
+                            particles[mj].x += drift*particles[mj].vx;
+                            particles[mj].y += drift*particles[mj].vy;
+                            particles[mj].z += drift*particles[mj].vz;
+                            p0[shell][mj] = particles[mj]; 
+                        }else{
+                            double dcritsum = dcrit[mi]+dcrit[mj];
+                            const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
+                            maxdrift_B[s][mi] = MIN(maxdrift_B[s][mi],maxdrift);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // This function checks if there are any close encounters or physical collisions between particles in a given shell during a drift step of length dt. If a close encounter occures, particles are placed in deeper shells.
 static void reb_mercurana_encounter_predict(struct reb_simulation* const r, double dt, int shell){
     struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
@@ -193,9 +251,6 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     unsigned int* inshell_dominant = rim->inshell_dominant;
     unsigned int* inshell_subdominant = rim->inshell_dominant;
     struct reb_particle** p0 = rim->p0;
-    
-    double* t_drifted = rim->t_drifted;
-    double* dt_drift = rim->dt_drift;
     
     if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
         return;
@@ -250,189 +305,38 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             inshell_subdominant[mi] = shell;
         }
         // Check for maxdrift violation of higher shells
-
-        double buffer = 1.05; // prevent having to check the same particle over and over again in one timestep
-
         // Dominant - Dominant
-        for (int i=0; i<rim->shellN_dominant[shell]; i++){
-            int mi = map_dominant[i]; 
-            for (int s=0;s<shell;s++){
-                double dt0 = t_drifted[shell] + dt - t_drifted[s];
-                double dt1 = dt; 
-                double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
-                if (drift>maxdrift_dominant[s][mi]){
-                    rebd_md1a[shell]++;
-                    //printf("MAXDRIFT VIOLATION DOM-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
-                    maxdrift_dominant[s][mi] = 1e300;
-                    for (int j=0; j<rim->shellN_dominant[s]; j++){ 
-                        int mj = rim->map_dominant[s][j]; 
-                        if (mi==mj) continue;
-                        // Not yet in current shell?
-                        unsigned int mj_shell = inshell_dominant[mj];
-                        if (mj_shell<shell){
-                            rebd_md1b[shell]++;
-                            double drift = t_drifted[shell] - t_drifted[mj_shell];
-                            double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
-                            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
-//TODO: compare with maxdrift which triggered search to avoid repeated searches
-                            if (rmin2< dcritsum*dcritsum){ 
-                                rebd_md1c[shell]++;
-                                // Add mj to all higher shells as dominant:
-                                inshell_dominant[mj] = shell;
-                                printf("MAXDRIFT VIOLATION DOM-DOM triggered. moving particle.\n");
-                                rim->moved_particles++;
-                                for (int sa=mj_shell+1; sa<=shell; sa++){
-                                    rim->map_dominant[sa][rim->shellN_dominant[sa]] = mj;
-                                    rim->shellN_dominant[sa]++;
-                                }
-                                particles[mj].x += drift*particles[mj].vx;
-                                particles[mj].y += drift*particles[mj].vy;
-                                particles[mj].z += drift*particles[mj].vz;
-                                p0[shell][mj] = particles[mj]; 
-                            }else{
-                                double dcritsum = dcrit[mi]+dcrit[mj];
-                                const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-                                maxdrift_dominant[s][mi] = MIN(maxdrift_dominant[s][mi],maxdrift);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        check(r, dt, shell, 
+                rim->shellN_dominant, 
+                rim->map_dominant, 
+                rim->shellN_dominant, 
+                rim->map_dominant, 
+                rim->inshell_dominant, 
+                rim->maxdrift_dominant);
         // Dominant - Subdominant
-        for (int i=0; i<rim->shellN_dominant[shell]; i++){
-            int mi = map_dominant[i]; 
-            for (int s=0;s<shell;s++){
-                double dt0 = t_drifted[shell] + dt - t_drifted[s];
-                double dt1 = dt; 
-                double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
-                if (drift>maxdrift_encounter[s][mi]){
-                    rebd_md2a[shell]++;
-                    //printf("MAXDRIFT VIOLATION DOM-SUB triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
-                    maxdrift_encounter[s][mi] = 1e300;
-                    for (int j=0; j<rim->shellN_subdominant[s]; j++){ 
-                        int mj = rim->map_subdominant[s][j]; 
-                        if (mi==mj) continue;
-                        // Not yet in current shell?
-                        unsigned int mj_shell = inshell_subdominant[mj];
-                        if (mj_shell<shell){
-                            rebd_md2b[shell]++;
-                            double drift = t_drifted[shell] - t_drifted[mj_shell];
-                            double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
-                            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
-                            if (rmin2< dcritsum*dcritsum){ 
-                                rebd_md2c[shell]++;
-                                // Add mj to all higher shells as subdominant:
-                                inshell_subdominant[mj] = shell;
-                                printf("MAXDRIFT VIOLATION DOM-SUB triggered. moving particle.\n");
-                                rim->moved_particles++;
-                                for (int sa=mj_shell+1; sa<=shell; sa++){
-                                    rim->map_subdominant[sa][rim->shellN_subdominant[sa]] = mj;
-                                    rim->shellN_subdominant[sa]++;
-                                }
-                                particles[mj].x += drift*particles[mj].vx;
-                                particles[mj].y += drift*particles[mj].vy;
-                                particles[mj].z += drift*particles[mj].vz;
-                                p0[shell][mj] = particles[mj]; 
-                            }else{
-                                double dcritsum = dcrit[mi]+dcrit[mj];
-                                const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-                                maxdrift_encounter[s][mi] = MIN(maxdrift_encounter[s][mi],maxdrift);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        check(r, dt, shell, 
+                rim->shellN_dominant, 
+                rim->map_dominant, 
+                rim->shellN_subdominant, 
+                rim->map_subdominant, 
+                rim->inshell_subdominant, 
+                rim->maxdrift_encounter);
         // Subdominant - Dominant
-        for (int i=0; i<rim->shellN_subdominant[shell]; i++){
-            int mi = map_subdominant[i]; 
-            for (int s=0;s<shell;s++){
-                double dt0 = t_drifted[shell] + dt - t_drifted[s];
-                double dt1 = dt; 
-                double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
-                if (drift>maxdrift_dominant[s][mi]){
-                    rebd_md3a[shell]++;
-                    //printf("MAXDRIFT VIOLATION SUB-DOM triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_dominant[s][mi]);
-                    maxdrift_dominant[s][mi] = 1e300;
-                    for (int j=0; j<rim->shellN_dominant[s]; j++){ 
-                        int mj = rim->map_dominant[s][j]; 
-                        if (mi==mj) continue; // should not be possible here, (dom always != sub)
-                        // Not yet in current shell?
-                        unsigned int mj_shell = inshell_dominant[mj];
-                        if (mj_shell<shell){
-                            rebd_md3b[shell]++;
-                            double drift = t_drifted[shell] - t_drifted[mj_shell];
-                            double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
-                            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
-                            if (rmin2< dcritsum*dcritsum){ 
-                                rebd_md3c[shell]++;
-                                // Add mj to all higher shells as dominant:
-                                inshell_dominant[mj] = shell;
-                                printf("MAXDRIFT VIOLATION SUB-DOM triggered. moving particle.\n");
-                                rim->moved_particles++;
-                                for (int sa=mj_shell+1; sa<=shell; sa++){
-                                    rim->map_dominant[sa][rim->shellN_dominant[sa]] = mj;
-                                    rim->shellN_dominant[sa]++;
-                                }
-                                particles[mj].x += drift*particles[mj].vx;
-                                particles[mj].y += drift*particles[mj].vy;
-                                particles[mj].z += drift*particles[mj].vz;
-                                p0[shell][mj] = particles[mj]; 
-                            }else{
-                                double dcritsum = dcrit[mi]+dcrit[mj];
-                                const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-                                maxdrift_dominant[s][mi] = MIN(maxdrift_dominant[s][mi],maxdrift);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        check(r, dt, shell, 
+                rim->shellN_subdominant, 
+                rim->map_subdominant, 
+                rim->shellN_dominant, 
+                rim->map_dominant, 
+                rim->inshell_dominant, 
+                rim->maxdrift_dominant);
         // Encounter - Encounter
-        for (int i=0; i<rim->shellN_encounter[shell]; i++){
-            int mi = map_encounter[i]; 
-            for (int s=0;s<shell;s++){
-                double dt0 = t_drifted[shell] + dt - t_drifted[s];
-                double dt1 = dt; 
-                double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
-                if (drift>maxdrift_encounter[s][mi]){
-                    rebd_md4a[shell]++;
-                    //printf("MAXDRIFT VIOLATION ENC-ENC triggered shell. checking particles. %2d %2d  %3d   %e   %e\n",shell,s,mi,drift,maxdrift_encounter[s][mi]);
-                    maxdrift_encounter[s][mi] = 1e300;
-                    for (int j=0; j<rim->shellN_encounter[s]; j++){ 
-                        int mj = rim->map_encounter[s][j]; 
-                        if (mi==mj) continue;
-                        // Not yet in current shell?
-                        unsigned int mj_shell = inshell_encounter[mj];
-                        if (mj_shell<shell){
-                            rebd_md4b[shell]++;
-                            double drift = t_drifted[shell] - t_drifted[mj_shell];
-                            double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift);
-                            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
-                            if (rmin2< dcritsum*dcritsum){ 
-                                rebd_md4c[shell]++;
-                                // Add mj to all higher shells as encounter:
-                                inshell_encounter[mj] = shell;
-                                printf("MAXDRIFT VIOLATION ENC-ENC triggered. moving particle.\n");
-                                rim->moved_particles++;
-                                for (int sa=mj_shell+1; sa<=shell; sa++){
-                                    rim->map_encounter[sa][rim->shellN_encounter[sa]] = mj;
-                                    rim->shellN_encounter[sa]++;
-                                }
-                                particles[mj].x += drift*particles[mj].vx;
-                                particles[mj].y += drift*particles[mj].vy;
-                                particles[mj].z += drift*particles[mj].vz;
-                                p0[shell][mj] = particles[mj]; 
-                            }else{
-                                const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-                                maxdrift_encounter[s][mi] = MIN(maxdrift_encounter[s][mi],maxdrift);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        check(r, dt, shell, 
+                rim->shellN_encounter, 
+                rim->map_encounter, 
+                rim->shellN_encounter, 
+                rim->map_encounter, 
+                rim->inshell_encounter, 
+                rim->maxdrift_encounter);
     }
 
     // Check interactions in shell
