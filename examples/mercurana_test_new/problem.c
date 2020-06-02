@@ -56,6 +56,7 @@ void heartbeat(struct reb_simulation* r){
 
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
+    srand(0);
     r->exact_finish_time = 0;
     r->dt = 0.02;
     r->heartbeat = heartbeat;
