@@ -21,21 +21,21 @@ class TestMercurana(unittest.TestCase):
     
         sim2.integrator = "mercurana"
         sim2.ri_mercurana.Nmaxshells = 30
-        sim2.ri_mercurana.kappa0 = 0.001
+        sim2.ri_mercurana.kappa = 0.001
         sim2.integrate(50.)
         E1 = sim2.calculate_energy()
         self.assertGreater(sim2.ri_mercurana.Nmaxshellsused,10)
-        self.assertLess((abs((E1-E0)/E0)),1e-5)
+        self.assertLess((abs((E1-E0)/E0)),1e-4)
    
         sim3.integrator = "mercurana"
         sim3.ri_mercurana.Nmaxshells = 30
         sim3.ri_mercurana.N_dominant = 1
         sim3.ri_mercurana.n0=30
-        sim3.ri_mercurana.kappa0 = 0.001
+        sim3.ri_mercurana.kappa = 0.001
         sim3.integrate(50.)
         E1 = sim3.calculate_energy()
         self.assertGreater(sim3.ri_mercurana.Nmaxshellsused,4)
-        self.assertLess((abs((E1-E0)/E0)),2e-8)
+        self.assertLess((abs((E1-E0)/E0)),1e-4)
    
     def test_merge(self):
         sim = rebound.Simulation()
@@ -47,7 +47,7 @@ class TestMercurana(unittest.TestCase):
         sim.collision = "direct"
         sim.collision_resolve = "merge"
         sim.ri_mercurana.Nmaxshells = 30
-        sim.ri_mercurana.kappa0 = 0.001
+        sim.ri_mercurana.kappa = 0.001
         sim.integrate(10.)
         self.assertEqual(sim.N,1)
         self.assertEqual(sim.ri_mercurana.Nmaxshellsused,5)
@@ -72,10 +72,10 @@ class TestMercurana(unittest.TestCase):
         sim.collision = "direct"
         sim.collision_resolve = "merge"
         sim.ri_mercurana.Nmaxshells = 30
-        sim.ri_mercurana.kappa0 = 0.001
+        sim.ri_mercurana.kappa = 0.001
         sim.integrate(10.)
         E1 = sim.calculate_energy()
-        self.assertLess(abs((E1-E0)/E0),1e-5)
+        self.assertLess(abs((E1-E0)/E0),1e-4)
         self.assertEqual(sim.N,2)
         self.assertGreater(sim.ri_mercurana.Nmaxshellsused,4)
         self.assertEqual(sim.particles[0].m,2)
@@ -96,10 +96,10 @@ class TestMercurana(unittest.TestCase):
         sim.collision = "direct"
         sim.collision_resolve = "merge"
         sim.ri_mercurana.Nmaxshells = 30
-        sim.ri_mercurana.kappa0 = 0.001
+        sim.ri_mercurana.kappa = 0.001
         sim.integrate(10.)
         E1 = sim.calculate_energy()
-        self.assertLess(abs((E1-E0)/E0),1e-5)
+        self.assertLess(abs((E1-E0)/E0),1e-4)
         self.assertEqual(sim.N,2)
         self.assertEqual(sim.ri_mercurana.N_dominant,1)
         self.assertGreater(sim.ri_mercurana.Nmaxshellsused,4)
@@ -121,10 +121,10 @@ class TestMercurana(unittest.TestCase):
         sim.collision = "direct"
         sim.collision_resolve = "merge"
         sim.ri_mercurana.Nmaxshells = 30
-        sim.ri_mercurana.kappa0 = 0.001
+        sim.ri_mercurana.kappa = 0.001
         sim.integrate(10.)
         E1 = sim.calculate_energy()
-        self.assertLess(abs((E1-E0)/E0),1e-5)
+        self.assertLess(abs((E1-E0)/E0),1e-4)
         self.assertEqual(sim.N,2)
         self.assertEqual(sim.N_active,1)
         self.assertGreater(sim.ri_mercurana.Nmaxshellsused,4)
@@ -141,7 +141,7 @@ class TestMercurana(unittest.TestCase):
         sim.ri_mercurana.Nmaxshells = 30
         sim.ri_mercurana.N_dominant = 1
         sim.ri_mercurana.n0=30
-        sim.ri_mercurana.kappa0 = 0.001
+        sim.ri_mercurana.kappa = 0.001
         sim.integrate(50.)
         sim.save("test.bin")
         sim.integrate(100.)
