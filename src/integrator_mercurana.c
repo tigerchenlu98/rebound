@@ -236,7 +236,7 @@ static void check_maxdrift_violation(
 }
 
 
-static void check_this_cell(
+static void check_this_shell(
                     struct reb_simulation* r,
                     double dt,
                     unsigned int shell, 
@@ -389,7 +389,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
 
     // Check interactions in shell
     // Dominant and dominant
-    check_this_cell(r, dt, shell,
+    check_this_shell(r, dt, shell,
             rim->shellN_dominant,
             rim->map_dominant,
             rim->inshell_dominant,
@@ -399,7 +399,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             );
     
     // Dominant and subdominant
-    check_this_cell(r, dt, shell,
+    check_this_shell(r, dt, shell,
             rim->shellN_dominant,
             rim->map_dominant,
             rim->inshell_dominant,
@@ -409,7 +409,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             );
     
     // Encounter and encounter
-    check_this_cell(r, dt, shell,
+    check_this_shell(r, dt, shell,
             rim->shellN_encounter,
             rim->map_encounter,
             rim->inshell_encounter,

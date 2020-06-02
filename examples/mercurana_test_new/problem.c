@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
     r->dt = 0.02;
     r->heartbeat = heartbeat;
     r->integrator = REB_INTEGRATOR_MERCURANA;
-    r->ri_mercurana.kappa = 1e-4;
+    r->ri_mercurana.kappa = 1e-5;
     r->ri_mercurana.N_dominant = 1;
     r->ri_mercurana.Nmaxshells = 30;
     int rad = 1; 
