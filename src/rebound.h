@@ -491,8 +491,10 @@ struct reb_simulation_integrator_mercurana {
     double** dcrit;                 ///< Critical radii for each particle and each shell (automatically calculated)
     unsigned int Nmaxshellsused;     ///< Used for debugging only 
     unsigned int** map_encounter;   ///< Internal variable to map from shell to global particle index 
+    unsigned int** map_encounter_passive;   ///< Internal variable to map from shell to global particle index 
     unsigned int** map_dominant;    ///< Internal variable to map from shell to global particle index 
     unsigned int** map_subdominant; ///< Internal variable to map from shell to global particle index 
+    unsigned int** map_subdominant_passive; ///< Internal variable to map from shell to global particle index 
     unsigned int* inshell_encounter;  ///< from global to shell
     unsigned int* inshell_dominant;  ///< from global to shell
     unsigned int* inshell_subdominant;  ///< from global to shell
@@ -504,8 +506,10 @@ struct reb_simulation_integrator_mercurana {
     unsigned int moved_particles;
     unsigned int allocatedN;        ///< Allocated memory for various internal variables. 
     unsigned int* shellN_encounter; ///< Number of particles in each shell.
+    unsigned int* shellN_encounter_passive; ///< Number of particles in each shell.
     unsigned int* shellN_dominant;  ///< Number of dominant particles in each shell.
     unsigned int* shellN_subdominant; ///< Number of encounter particles in each shell. 
+    unsigned int* shellN_subdominant_passive; ///< Number of encounter particles in each shell. 
     unsigned int current_shell;     ///< Internal variable used in gravity routine only.
     unsigned int is_synchronized;   ///< Flag to determine if current particle structure is synchronized
     unsigned int collisions_N;      ///< Internal variable to communicate to collision routine.

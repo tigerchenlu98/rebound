@@ -748,6 +748,10 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         reb_error(r,"kappa>0 is required if Nmaxshells>1.");
         return;
     }
+    if (rim->N_dominant>r->N_active && r->N_active!=-1){
+        reb_error(r,"kappa>0 is required if Nmaxshells>1.");
+        return;
+    }
     
     const int N = r->N;
     
