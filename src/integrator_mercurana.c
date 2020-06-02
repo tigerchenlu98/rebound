@@ -749,7 +749,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         return;
     }
     if (rim->N_dominant>r->N_active && r->N_active!=-1){
-        reb_error(r,"kappa>0 is required if Nmaxshells>1.");
+        reb_error(r,"The number of dominant particles N_dominant cannot be larger than the number of active particles N_active.");
         return;
     }
     
@@ -772,23 +772,29 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         if (rim->map_encounter){
             for (int i=0;i<rim->Nmaxshells;i++){
                 free(rim->map_encounter[i]);
+                free(rim->map_encounter_passive[i]);
                 free(rim->map_dominant[i]);
                 free(rim->map_subdominant[i]);
+                free(rim->map_subdominant_passive[i]);
                 free(rim->maxdrift_encounter[i]);
                 free(rim->maxdrift_dominant[i]);
                 free(rim->p0[i]);
             }
         }
         rim->map_encounter = realloc(rim->map_encounter, sizeof(unsigned int*)*rim->Nmaxshells);
+        rim->map_encounter_passive = realloc(rim->map_encounter_passive, sizeof(unsigned int*)*rim->Nmaxshells);
         rim->map_dominant = realloc(rim->map_dominant, sizeof(unsigned int*)*rim->Nmaxshells);
         rim->map_subdominant = realloc(rim->map_subdominant, sizeof(unsigned int*)*rim->Nmaxshells);
+        rim->map_subdominant_passive = realloc(rim->map_subdominant_passive, sizeof(unsigned int*)*rim->Nmaxshells);
         rim->maxdrift_encounter = realloc(rim->maxdrift_encounter, sizeof(double*)*rim->Nmaxshells);
         rim->maxdrift_dominant = realloc(rim->maxdrift_dominant, sizeof(double*)*rim->Nmaxshells);
         rim->p0 = realloc(rim->p0, sizeof(struct reb_particle*)*rim->Nmaxshells);
         for (int i=0;i<rim->Nmaxshells;i++){
             rim->map_encounter[i] = malloc(sizeof(unsigned int)*N);
+            rim->map_encounter_passive[i] = malloc(sizeof(unsigned int)*N);
             rim->map_dominant[i] = malloc(sizeof(unsigned int)*N);
             rim->map_subdominant[i] = malloc(sizeof(unsigned int)*N);
+            rim->map_subdominant_passive[i] = malloc(sizeof(unsigned int)*N);
             rim->maxdrift_encounter[i] = malloc(sizeof(double)*N);
             rim->maxdrift_dominant[i] = malloc(sizeof(double)*N);
             rim->p0[i] = malloc(sizeof(struct reb_particle)*N);
@@ -799,12 +805,16 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         rim->inshell_subdominant = realloc(rim->inshell_subdominant, sizeof(unsigned int)*N);
         // shellN
         rim->shellN_encounter = realloc(rim->shellN_encounter, sizeof(unsigned int)*rim->Nmaxshells);
+        rim->shellN_encounter_passive = realloc(rim->shellN_encounter_passive, sizeof(unsigned int)*rim->Nmaxshells);
         rim->shellN_dominant = realloc(rim->shellN_dominant, sizeof(unsigned int)*rim->Nmaxshells);
         rim->shellN_subdominant = realloc(rim->shellN_subdominant, sizeof(unsigned int)*rim->Nmaxshells);
+        rim->shellN_subdominant_passive = realloc(rim->shellN_subdominant_passive, sizeof(unsigned int)*rim->Nmaxshells);
         for (int i=0;i<rim->Nmaxshells;i++){
             rim->shellN_encounter[i] = 0;
+            rim->shellN_encounter_passive[i] = 0;
             rim->shellN_dominant[i] = 0;
             rim->shellN_subdominant[i] = 0;
+            rim->shellN_subdominant_passive[i] = 0;
         }
         
         // shellN_active
@@ -952,23 +962,29 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     if (r->ri_mercurana.allocatedN){
         for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
             free(r->ri_mercurana.map_encounter[i]);
+            free(r->ri_mercurana.map_encounter_passive[i]);
             free(r->ri_mercurana.map_dominant[i]);
             free(r->ri_mercurana.map_subdominant[i]);
+            free(r->ri_mercurana.map_subdominant_passive[i]);
             free(r->ri_mercurana.dcrit[i]);
             free(r->ri_mercurana.maxdrift_encounter[i]);
             free(r->ri_mercurana.maxdrift_dominant[i]);
             free(r->ri_mercurana.p0[i]);
         }
         free(r->ri_mercurana.map_encounter);
+        free(r->ri_mercurana.map_encounter_passive);
         free(r->ri_mercurana.map_dominant);
         free(r->ri_mercurana.map_subdominant);
+        free(r->ri_mercurana.map_subdominant_passive);
         free(r->ri_mercurana.dcrit);
         free(r->ri_mercurana.inshell_encounter);
         free(r->ri_mercurana.inshell_dominant);
         free(r->ri_mercurana.inshell_subdominant);
         free(r->ri_mercurana.shellN_encounter);
+        free(r->ri_mercurana.shellN_encounter_passive);
         free(r->ri_mercurana.shellN_dominant);
         free(r->ri_mercurana.shellN_subdominant);
+        free(r->ri_mercurana.shellN_subdominant_passive);
         free(r->ri_mercurana.t_drifted);
         free(r->ri_mercurana.maxdrift_encounter);
         free(r->ri_mercurana.maxdrift_dominant);
@@ -976,15 +992,19 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     }
     r->ri_mercurana.allocatedN = 0;
     r->ri_mercurana.map_encounter = NULL;
+    r->ri_mercurana.map_encounter_passive = NULL;
     r->ri_mercurana.map_dominant = NULL;
     r->ri_mercurana.map_subdominant = NULL;
+    r->ri_mercurana.map_subdominant_passive = NULL;
     r->ri_mercurana.dcrit = NULL;
     r->ri_mercurana.inshell_encounter = NULL;
     r->ri_mercurana.inshell_dominant = NULL;
     r->ri_mercurana.inshell_subdominant = NULL;
     r->ri_mercurana.shellN_encounter = NULL;
+    r->ri_mercurana.shellN_encounter_passive = NULL;
     r->ri_mercurana.shellN_dominant = NULL;
     r->ri_mercurana.shellN_subdominant = NULL;
+    r->ri_mercurana.shellN_subdominant_passive = NULL;
     r->ri_mercurana.p0 = NULL;
     
     r->ri_mercurana.phi0 = REB_EOS_LF;
