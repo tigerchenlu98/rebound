@@ -564,7 +564,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
     int shellN_subdominant = rim->shellN_subdominant[shell];
     unsigned int* inshell_encounter = rim->inshell_encounter;
     unsigned int* inshell_dominant = rim->inshell_dominant;
-    unsigned int* inshell_subdominant = rim->inshell_dominant;
+    unsigned int* inshell_subdominant = rim->inshell_subdominant;
     
     if (shell+1<rim->Nmaxshells){ // does sub-shell exist? If so, do that first.
         // Are there particles in it?
