@@ -275,7 +275,7 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
         }
         unsigned int* inshell_encounter = rim->inshell_encounter;
         unsigned int* inshell_dominant = rim->inshell_dominant;
-        unsigned int* inshell_subdominant = rim->inshell_dominant;
+        unsigned int* inshell_subdominant = rim->inshell_subdominant;
         for (int i=index;i<r->N-1;i++){
             inshell_encounter[i] = inshell_encounter[i+1];
             inshell_dominant[i] = inshell_dominant[i+1];

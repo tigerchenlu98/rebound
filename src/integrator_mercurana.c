@@ -236,10 +236,7 @@ static void check_maxdrift_violation(
 }
 
 
-static void check_this_shell(
-                    struct reb_simulation* r,
-                    double dt,
-                    unsigned int shell, 
+static void check_this_shell( struct reb_simulation* r, double dt, unsigned int shell, 
                     unsigned int* shellN_A,
                     unsigned int** map_A,
                     unsigned int* inshell_A,
@@ -320,38 +317,27 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             maxdrift_encounter[0][i] = 1e300; 
             maxdrift_dominant[0][i] = 1e300; 
         }
-        for (int i=0; i<rim->shellN_dominant[shell]; i++){
+        for (int i=0; i<rim->N_dominant; i++){
             map_dominant[i] = i; 
         }
-        for (int i=0; i<rim->shellN_subdominant[shell]; i++){
-            map_subdominant[i] = rim->shellN_dominant[shell] + i; 
-            map_encounter[i] = rim->shellN_dominant[shell] + i; 
+        for (int i=rim->N_dominant; i<r->N; i++){
+            map_subdominant[i-rim->N_dominant] = i; 
+            map_encounter[i-rim->N_dominant] = i; 
         }
-        for (int i=0; i<rim->shellN_encounter[shell]; i++){
-            int mi = map_encounter[i]; 
-            inshell_encounter[mi] = shell;
-        }
-        for (int i=0; i<rim->shellN_dominant[shell]; i++){
-            int mi = map_dominant[i]; 
-            inshell_dominant[mi] = shell;
-        }
-        for (int i=0; i<rim->shellN_subdominant[shell]; i++){
-            int mi = map_subdominant[i]; 
-            inshell_subdominant[mi] = shell;
-        }
-    }else{
-        for (int i=0; i<rim->shellN_encounter[shell]; i++){
-            int mi = map_encounter[i]; 
-            inshell_encounter[mi] = shell;
-        }
-        for (int i=0; i<rim->shellN_dominant[shell]; i++){
-            int mi = map_dominant[i]; 
-            inshell_dominant[mi] = shell;
-        }
-        for (int i=0; i<rim->shellN_subdominant[shell]; i++){
-            int mi = map_subdominant[i]; 
-            inshell_subdominant[mi] = shell;
-        }
+    }
+    for (int i=0; i<rim->shellN_encounter[shell]; i++){
+        int mi = map_encounter[i]; 
+        inshell_encounter[mi] = shell;
+    }
+    for (int i=0; i<rim->shellN_dominant[shell]; i++){
+        int mi = map_dominant[i]; 
+        inshell_dominant[mi] = shell;
+    }
+    for (int i=0; i<rim->shellN_subdominant[shell]; i++){
+        int mi = map_subdominant[i]; 
+        inshell_subdominant[mi] = shell;
+    }
+    if (shell!=0){
         // Check for maxdrift violation of higher shells
         // Dominant - Dominant
         check_maxdrift_violation(r, dt, shell, 
