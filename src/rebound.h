@@ -902,8 +902,8 @@ struct reb_simulation {
     double exit_min_distance;       ///< Exit simulation if distance from another particle smaller than this value 
     double usleep;                  ///< Wait this number of microseconds after each timestep, useful for slowing down visualization.  
     struct reb_display_data* display_data; /// < Datastructure stores visualization related data. Does not have to be modified by the user. 
-    int track_energy_offset;        ///< Track energy change during collisions and ejections (default: 0).
-    double energy_offset;           ///< Energy offset due to collisions and ejections (only calculated if track_energy_offset=1).
+    int track_energy_offset;        ///< Track energy change during collisions and ejections. Off: 0 (default), low-accuracy: 1 (fast), high-accuracy: 2 (slow).
+    double energy_offset;           ///< Energy offset due to collisions and ejections (only calculated if track_energy_offset!=0).
     double walltime;                ///< Walltime in seconds used by REBOUND for this simulation (integration only, not visualization, heartbeat function, etc).
     uint32_t python_unit_l;         ///< Information only used for when working with units in python.
     uint32_t python_unit_m;         ///< Information only used for when working with units in python.

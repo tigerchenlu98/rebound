@@ -757,7 +757,7 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
     
     //Scale out energy from collision - initial energy
     double Ei=0, Ef=0;
-    if(r->track_energy_offset){
+    if(r->track_energy_offset==1){
         {
             double vx = pi->vx;
             double vy = pi->vy;
@@ -831,7 +831,7 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
     
 
     // Keeping track of energy offst
-    if(r->track_energy_offset){
+    if(r->track_energy_offset==1){
         {
             double vx = pi->vx;
             double vy = pi->vy;
@@ -862,6 +862,8 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
         }
         r->energy_offset += Ei - Ef;
     }
+	
+    r->collisions_Nlog ++;
     
     return swap?1:2; // Remove particle p2 from simulation
 }

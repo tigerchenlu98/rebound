@@ -22,7 +22,6 @@ extern unsigned long rebd_md4c[MAXSHELLS];
 double E0;
 
 void heartbeat(struct reb_simulation* r){
-    return;
     if (r->steps_done%10!=0) return;
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[0].x, r->particles[0].y, r->particles[0].vx, r->particles[0].vy);
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);
@@ -68,6 +67,7 @@ int main(int argc, char* argv[]) {
     int rad = 1; 
     r->collision = REB_COLLISION_DIRECT;
     r->collision_resolve = reb_collision_resolve_merge;
+    r->track_energy_offset = 1;
 
     if (0){ 
         struct reb_particle p1 = {0}; 

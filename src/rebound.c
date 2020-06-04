@@ -83,6 +83,12 @@ void reb_step(struct reb_simulation* const r){
         r->ri_whfast.recalculate_coordinates_this_timestep = 1;
         r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
+
+    double energy_initial = 0.;
+    long collisions_Nlog_initial = r->collisions_Nlog;
+    if (r->track_energy_offset==2){
+        energy_initial = reb_tools_energy(r);
+    }
    
     reb_integrator_part1(r);
     PROFILING_STOP(PROFILING_CAT_INTEGRATOR)
@@ -155,6 +161,12 @@ void reb_step(struct reb_simulation* const r){
     PROFILING_START()
     reb_collision_search(r);
     PROFILING_STOP(PROFILING_CAT_COLLISION)
+    
+    // If pendantic energy tracking is turned on, then ignore energy 
+    // change if a collision occured in this timestep
+    if (r->track_energy_offset==2 && r->collisions_Nlog!=collisions_Nlog_initial){
+        r->energy_offset += energy_initial - reb_tools_energy(r);
+    }
     
     // Update walltime
     struct timeval time_end;
