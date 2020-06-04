@@ -477,7 +477,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     
     
     if (rim->collisions_N){
-        printf("collision\n");
+        //printf("collision\n");
         unsigned int N_before = r->N;
         reb_collision_search(r); // will resolve collisions
         if (N_before!=r->N){

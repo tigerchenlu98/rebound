@@ -40,6 +40,7 @@
 #include "integrator_whfast.h"
 #include "integrator_ias15.h"
 #include "integrator_mercurius.h"
+#include "integrator_mercurana.h"
 #include "boundary.h"
 #include "gravity.h"
 #include "collision.h"

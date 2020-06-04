@@ -1062,7 +1062,7 @@ void reb_display_init(struct reb_simulation * const r){
 
 
     // Main display loop
-    while(!glfwWindowShouldClose(window) && r->status<0){
+    while(!glfwWindowShouldClose(window) && r->status<0 && reb_sigint==0){
         // lock mutex for update
         pthread_mutex_lock(&(data->mutex));    
         int size_changed = reb_display_copy_data(r);
@@ -1126,6 +1126,7 @@ void reb_display_init_data(struct reb_simulation* const r){
 }
 
 int reb_display_copy_data(struct reb_simulation* const r){
+    if (reb_sigint) return 0;
     if (r->N==0) return 0;
     struct reb_display_data* data = r->display_data;
     int size_changed = 0;
