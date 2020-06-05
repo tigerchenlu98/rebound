@@ -22,9 +22,10 @@ extern unsigned long rebd_md4c[MAXSHELLS];
 double E0;
 
 void heartbeat(struct reb_simulation* r){
-    if (r->steps_done%10!=0) return;
+    //if (r->steps_done%10!=0) return;
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[0].x, r->particles[0].y, r->particles[0].vx, r->particles[0].vy);
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);
+    if(0){
     for(int i=0;i<r->ri_mercurana.Nmaxshells;i++){
         if (r->ri_mercurana.shellN_encounter){
         printf("%2d dom=%4d sub=%4d enc=%4d ",i, r->ri_mercurana.shellN_dominant[i], r->ri_mercurana.shellN_subdominant[i], r->ri_mercurana.shellN_encounter[i]);
@@ -47,11 +48,11 @@ void heartbeat(struct reb_simulation* r){
     }
     printf("-------------\n");
     printf("maxshells %d\n", r->ri_mercurana.Nmaxshellsused);
-    printf("moved %d\n", r->ri_mercurana.moved_particles);
+    }
     double E1 = reb_tools_energy(r);
-    printf("dE/E = %e\n",fabs((E0-E1)/E0));
-    printf("N    = %d\n",r->N);
-    printf("-------------\n");
+    printf("dE/E = %e   moved = %d\n",fabs((E0-E1)/E0), r->ri_mercurana.moved_particles);
+    //printf("N    = %d\n",r->N);
+    //printf("-------------\n");
 }
 
 int main(int argc, char* argv[]) {

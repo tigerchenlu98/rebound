@@ -261,7 +261,6 @@ static void check_this_shell( struct reb_simulation* r, double dt, unsigned int 
             }
             double dcritsum = dcrit[mi]+dcrit[mj];
             if (rmin2< dcritsum*dcritsum){ 
-                //printf("%d %d %d %d, %.20f %.20f\n",mi,mj,i, j, rmin2, rsum);
                 if (inshell_A[mi] == shell){
                     inshell_A[mi] = shell+1;
                     map_A[shell+1][shellN_A[shell+1]] = mi;

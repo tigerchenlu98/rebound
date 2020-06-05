@@ -224,9 +224,6 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
             unsigned int* map_subdominant = rim->map_subdominant[s];
             int isEncounter = 0;
             for (int i=0;i<rim->shellN_encounter[s];i++){
-                if (map_encounter[i]>index){
-                    map_encounter[i]--;
-                }
                 if (map_encounter[i]==index){
                     isEncounter = 1;
                     rim->shellN_encounter[s]--;
@@ -234,12 +231,12 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 if (isEncounter && i!=rim->shellN_encounter[s]){
                     map_encounter[i] = map_encounter[i+1];
                 }
+                if (map_encounter[i]>index){
+                    map_encounter[i]--;
+                }
             }
             int isDominant = 0;
             for (int i=0;i<rim->shellN_dominant[s];i++){
-                if (map_dominant[i]>index){
-                    map_dominant[i]--;
-                }
                 if (map_dominant[i]==index){
                     isDominant = 1;
                     rim->shellN_dominant[s]--;
@@ -247,18 +244,21 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 if (isDominant && i!=rim->shellN_dominant[s]){
                     map_dominant[i] = map_dominant[i+1];
                 }
+                if (map_dominant[i]>index){
+                    map_dominant[i]--;
+                }
             }
             int isSubdominant = 0;
             for (int i=0;i<rim->shellN_subdominant[s];i++){
-                if (map_subdominant[i]>index){
-                    map_subdominant[i]--;
-                }
                 if (map_subdominant[i]==index){
                     isSubdominant = 1;
                     rim->shellN_subdominant[s]--;
                 }
                 if (isSubdominant && i!=rim->shellN_subdominant[s]){
                     map_subdominant[i] = map_subdominant[i+1];
+                }
+                if (map_subdominant[i]>index){
+                    map_subdominant[i]--;
                 }
             }
             double* maxdrift_encounter = rim->maxdrift_encounter[s];
