@@ -127,11 +127,12 @@ static double reb_mercurana_predict_rmin2(struct reb_particle p1, struct reb_par
     const double dy2 = dy1 +dt*dvy1;
     const double dz2 = dz1 +dt*dvz1;
     const double r2 = (dx2*dx2 + dy2*dy2 + dz2*dz2);
-    const double t_closest = (dx1*dvx1 + dy1*dvy1 + dz1*dvz1)/(dvx1*dvx1 + dvy1*dvy1 + dvz1*dvz1);
+    const double t_closest = -(dx1*dvx1 + dy1*dvy1 + dz1*dvz1)/(dvx1*dvx1 + dvy1*dvy1 + dvz1*dvz1);
     const double dx3 = dx1+t_closest*dvx1; // closest approach
     const double dy3 = dy1+t_closest*dvy1;
     const double dz3 = dz1+t_closest*dvz1;
     const double r3 = (dx3*dx3 + dy3*dy3 + dz3*dz3);
+    //printf("r1, r2, r3      %.20f %.20f %.20f          tclose %.20f\n",sqrt(r1),sqrt(r2),sqrt(r3), t_closest);
 
     double rmin2 = MIN(r1,r2);
     if (t_closest/dt>=0. && t_closest/dt<=1.){
@@ -260,6 +261,9 @@ static void check_this_shell( struct reb_simulation* r, double dt, unsigned int 
                 reb_mercurana_record_collision(r,mi,mj);
             }
             double dcritsum = dcrit[mi]+dcrit[mj];
+            //printf("%.5f %d %d     %.20f %.20f\n",r->t,mi, mj, dcritsum, sqrt(rmin2));
+            //printf("%.20f \n", particles[0].vx);
+            //printf("%.20f \n", particles[1].vx);
             if (rmin2< dcritsum*dcritsum){ 
                 if (inshell_A[mi] == shell){
                     inshell_A[mi] = shell+1;

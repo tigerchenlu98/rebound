@@ -215,7 +215,7 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
     if(keepSorted==0 && index<r->N_active && r->N_active!=-1 && r->N_active!=r->N){
 		reb_warning(r, "Removing active particle. You might want to keep particles sorted. Check collision_resolve_keep_sorted.");
     }
-    if (r->integrator == REB_INTEGRATOR_MERCURANA){
+    if (r->integrator == REB_INTEGRATOR_MERCURANA && r->ri_mercurana.allocatedN){
         keepSorted = 1; // Overwrite keep sorted flag
         struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
         for (int s=0;s<rim->Nmaxshells;s++){
