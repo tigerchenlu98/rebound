@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     r->dt = 0.02;
     r->heartbeat = heartbeat;
     r->integrator = REB_INTEGRATOR_MERCURANA;
-    r->ri_mercurana.kappa = 1e-5;
+    r->ri_mercurana.kappa = 1e-3;
     r->ri_mercurana.N_dominant = 1;
     r->ri_mercurana.Nmaxshells = 30;
     int rad = 1; 
@@ -101,17 +101,17 @@ int main(int argc, char* argv[]) {
         p2.x = 1;
         p2.vy = 1;
         p2.m = 1e-3;
-        if (rad) p2.r = 0.00046732617;
+        if (rad) p2.r = 0.0046732617;
         reb_add(r, p2); 
         
         struct reb_particle p3 = {0};
         p3.x = 2;
         p3.vy = 0.74;
         p3.m = 1e-3;
-        if (rad) p3.r = 0.00046732617;
+        if (rad) p3.r = 0.0046732617;
         reb_add(r, p3); 
 
-        for (int i=0; i<100;i++){
+        for (int i=0; i<500;i++){
             double a = reb_random_uniform(0.8,1.2);
             double omega = reb_random_uniform(0.,M_PI*2);
             double f = reb_random_uniform(0.,M_PI*2.);
