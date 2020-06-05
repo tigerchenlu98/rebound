@@ -22,27 +22,15 @@ extern unsigned long rebd_md4c[MAXSHELLS];
 double E0;
 
 void heartbeat(struct reb_simulation* r){
-    //if (r->steps_done%10!=0) return;
+    if (r->steps_done%10!=0) return;
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[0].x, r->particles[0].y, r->particles[0].vx, r->particles[0].vy);
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);
-    if(0){
+    if(1){
     for(int i=0;i<r->ri_mercurana.Nmaxshells;i++){
         if (r->ri_mercurana.shellN_encounter){
         printf("%2d dom=%4d sub=%4d enc=%4d ",i, r->ri_mercurana.shellN_dominant[i], r->ri_mercurana.shellN_subdominant[i], r->ri_mercurana.shellN_encounter[i]);
         printf("%12lu ", rebd_drift[i]);
         printf("%12lu ", rebd_kick[i]);
-        printf("%7lu ", rebd_md1a[i]);
-        printf("%7lu ", rebd_md1b[i]);
-        printf("%7lu ", rebd_md1c[i]);
-        printf("%7lu ", rebd_md2a[i]);
-        printf("%7lu ", rebd_md2b[i]);
-        printf("%7lu ", rebd_md2c[i]);
-        printf("%7lu ", rebd_md3a[i]);
-        printf("%7lu ", rebd_md3b[i]);
-        printf("%7lu ", rebd_md3c[i]);
-        printf("%7lu ", rebd_md4a[i]);
-        printf("%7lu ", rebd_md4b[i]);
-        printf("%7lu ", rebd_md4c[i]);
         printf("\n");
         }
     }

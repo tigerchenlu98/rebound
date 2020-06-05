@@ -47,18 +47,6 @@
 
 unsigned long rebd_drift[MAXSHELLS];
 unsigned long rebd_kick[MAXSHELLS];
-unsigned long rebd_md1a[MAXSHELLS];
-unsigned long rebd_md1b[MAXSHELLS];
-unsigned long rebd_md1c[MAXSHELLS];
-unsigned long rebd_md2a[MAXSHELLS];
-unsigned long rebd_md2b[MAXSHELLS];
-unsigned long rebd_md2c[MAXSHELLS];
-unsigned long rebd_md3a[MAXSHELLS];
-unsigned long rebd_md3b[MAXSHELLS];
-unsigned long rebd_md3c[MAXSHELLS];
-unsigned long rebd_md4a[MAXSHELLS];
-unsigned long rebd_md4b[MAXSHELLS];
-unsigned long rebd_md4c[MAXSHELLS];
 
 
 
