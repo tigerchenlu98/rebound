@@ -54,6 +54,84 @@
 static void reb_calculate_acceleration_for_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
 
 /**
+ * @brief Helper function for calculating gravitational interactions for particle group pairs.
+ */
+static inline void reb_mercurana_grav_update_AB(struct reb_simulation* const r, 
+        const double* dcrit_i, const double* dcrit_c, const double* dcrit_o, const double G, const double softening2,
+        const int shellN_A, unsigned int* map_A, 
+        const int shellN_B, unsigned int* map_B){
+    struct reb_particle* const particles = r->particles;
+    double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
+    for (int i=0; i<shellN_A; i++){
+        const int startj = (map_A==map_B)?(i+1):0;
+        const int mi = map_A[i];
+        for (int j=startj; j<shellN_B; j++){
+            const int mj = map_B[j];
+            const double dx = particles[mi].x - particles[mj].x;
+            const double dy = particles[mi].y - particles[mj].y;
+            const double dz = particles[mi].z - particles[mj].z;
+            const double dr = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+            const double dc_c = dcrit_c[mi]+dcrit_c[mj];
+            double Lsum = 0.;
+            if (dcrit_o){
+                double dc_o = dcrit_o[mi]+dcrit_o[mj];
+                Lsum -= _L(r,dr,dc_c,dc_o);
+            }
+            if (dcrit_i){
+                double dc_i = dcrit_i[mi]+dcrit_i[mj];
+                Lsum += _L(r,dr,dc_i,dc_c);
+            }else{
+                Lsum += 1; 
+            }
+            const double prefact = G*Lsum/(dr*dr*dr);
+            const double prefactj = -prefact*particles[mj].m;
+            const double prefacti = prefact*particles[mi].m;
+            particles[mi].ax    += prefactj*dx;
+            particles[mi].ay    += prefactj*dy;
+            particles[mi].az    += prefactj*dz;
+            particles[mj].ax    += prefacti*dx;
+            particles[mj].ay    += prefacti*dy;
+            particles[mj].az    += prefacti*dz;
+        }
+    }
+}
+static inline void reb_mercurana_grav_update_B(struct reb_simulation* const r, 
+        const double* dcrit_i, const double* dcrit_c, const double* dcrit_o, const double G, const double softening2,
+        const int shellN_A, unsigned int* map_A, 
+        const int shellN_B, unsigned int* map_B){
+    struct reb_particle* const particles = r->particles;
+    double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
+    for (int i=0; i<shellN_A; i++){
+        const int mi = map_A[i];
+        for (int j=0; j<shellN_B; j++){
+            const int mj = map_B[j];
+            const double dx = particles[mi].x - particles[mj].x;
+            const double dy = particles[mi].y - particles[mj].y;
+            const double dz = particles[mi].z - particles[mj].z;
+            const double dr = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+            const double dc_c = dcrit_c[mi];
+            double Lsum = 0.;
+            if (dcrit_o){
+                double dc_o = dcrit_o[mi];
+                Lsum -= _L(r,dr,dc_c,dc_o);
+            }
+            if (dcrit_i){
+                double dc_i = dcrit_i[mi];
+                Lsum += _L(r,dr,dc_i,dc_c);
+            }else{
+                Lsum += 1; 
+            }
+            const double prefact = G*Lsum/(dr*dr*dr);
+            const double prefacti = prefact*particles[mi].m;
+            particles[mj].ax    += prefacti*dx;
+            particles[mj].ay    += prefacti*dy;
+            particles[mj].az    += prefacti*dz;
+        }
+    }
+}
+
+
+/**
  * Main Gravity Routine
  */
 void reb_calculate_acceleration(struct reb_simulation* r){
@@ -669,8 +747,6 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 dcrit_o = r->ri_mercurana.dcrit[shell-1];
             }
 
-            double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
-
 #define SET_ZERO \
     particles[mi].ax = 0; \
     particles[mi].ay = 0; \
@@ -698,78 +774,32 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 SET_ZERO
             }
 
-#define CALC_GRAV  \
-    const double dx = particles[mi].x - particles[mj].x;\
-    const double dy = particles[mi].y - particles[mj].y;\
-    const double dz = particles[mi].z - particles[mj].z;\
-    const double dr = sqrt(dx*dx + dy*dy + dz*dz + softening2);\
-    const double dc_c = dcrit_c[mi]+dcrit_c[mj];\
-    double Lsum = 0.;\
-    if (dcrit_o){\
-        double dc_o = dcrit_o[mi]+dcrit_o[mj];\
-        Lsum -= _L(r,dr,dc_c,dc_o);\
-    }\
-    if (dcrit_i){\
-        double dc_i = dcrit_i[mi]+dcrit_i[mj];\
-        Lsum += _L(r,dr,dc_i,dc_c);\
-    }else{\
-        Lsum += 1; \
-    }\
-    const double prefact = G*Lsum/(dr*dr*dr);\
-    const double prefactj = -prefact*particles[mj].m;\
-    const double prefacti = prefact*particles[mi].m;\
-    particles[mi].ax    += prefactj*dx;\
-    particles[mi].ay    += prefactj*dy;\
-    particles[mi].az    += prefactj*dz;\
-    particles[mj].ax    += prefacti*dx;\
-    particles[mj].ay    += prefacti*dy;\
-    particles[mj].az    += prefacti*dz;
 
-            // Encounter particles with encounter particles
-            for (int i=0; i<shellN_encounter; i++){
-                const int mi = map_encounter[i];
-                for (int j=i+1; j<shellN_encounter; j++){
-                    const int mj = map_encounter[j];
-                    CALC_GRAV
-                }
+            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
+                    shellN_encounter, map_encounter,
+                    shellN_encounter, map_encounter);
+            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
+                    shellN_dominant, map_dominant,
+                    shellN_subdominant, map_subdominant);
+            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
+                    shellN_dominant, map_dominant,
+                    shellN_dominant, map_dominant);
+            if (_testparticle_type==1){
+                reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
+                        shellN_dominant, map_dominant,
+                        shellN_subdominant_passive, map_subdominant_passive);
+                reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
+                        shellN_encounter, map_encounter,
+                        shellN_encounter_passive, map_encounter_passive);
+            }else{
+                reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
+                        shellN_dominant, map_dominant,
+                        shellN_subdominant_passive, map_subdominant_passive);
+                reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
+                        shellN_encounter, map_encounter,
+                        shellN_encounter_passive, map_encounter_passive);
             }
-            // Dominant particles with subdominant particles
-            for (int i=0; i<shellN_dominant; i++){
-                const int mi = map_dominant[i];
-                for (int j=0; j<shellN_subdominant; j++){
-                    const int mj = map_subdominant[j];
-                    CALC_GRAV
-                }
-            }
-            // Dominant particles with dominant particles
-            for (int i=0; i<shellN_dominant; i++){
-                const int mi = map_dominant[i];
-                for (int j=i+1; j<shellN_dominant; j++){
-                    const int mj = map_dominant[j];
-                    CALC_GRAV
-                }
-            }
-            // Testparticles
-            //
-            // TODO add other test-particle interactions
-            // TODO implement test-particle_type 0 properly
-            
-            // Dominant particles with subdominant test-particles
-            for (int i=0; i<shellN_dominant; i++){
-                const int mi = map_dominant[i];
-                for (int j=0; j<shellN_subdominant_passive; j++){
-                    const int mj = map_subdominant_passive[j];
-                    CALC_GRAV
-                }
-            }
-            // Encounter particles with encounter test-particles
-            for (int i=0; i<shellN_encounter; i++){
-                const int mi = map_encounter[i];
-                for (int j=0; j<shellN_encounter_passive; j++){
-                    const int mj = map_encounter_passive[j];
-                    CALC_GRAV
-                }
-            }
+
         }
         break;
         default:

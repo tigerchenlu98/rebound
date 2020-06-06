@@ -145,7 +145,8 @@ int main(int argc, char* argv[]) {
         r->N_active = r->N;
 
         for (int i=0; i<200;i++){
-            double a = reb_random_uniform(2.4,3.2);
+            double a = reb_random_uniform(0.8,1.2);
+            //double a = reb_random_uniform(2.4,3.2);
             double omega = reb_random_uniform(0.,M_PI*2);
             double f = reb_random_uniform(0.,M_PI*2.);
             struct reb_particle p = reb_tools_orbit2d_to_particle(1.,p1,0.,a,0.1,omega,f);
@@ -155,7 +156,6 @@ int main(int argc, char* argv[]) {
 
         reb_move_to_com(r);
     }
-
 
     E0 = reb_tools_energy(r);
     reb_integrate(r,10000.);
