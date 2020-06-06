@@ -56,12 +56,50 @@ static void reb_calculate_acceleration_for_particle(const struct reb_simulation*
 /**
  * @brief Helper function for calculating gravitational interactions for particle group pairs.
  */
+static inline void reb_mercurana_grav_update_B(struct reb_simulation* const r, 
+        const double* dcrit_i, const double* dcrit_c, const double* dcrit_o, const double G, const double softening2,
+        const int shellN_A, unsigned int* map_A, 
+        const int shellN_B, unsigned int* map_B){
+    struct reb_particle* const particles = r->particles;
+    double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
+#pragma omp parallel for
+    for (int i=0; i<shellN_A; i++){
+        const int mi = map_A[i];
+        for (int j=0; j<shellN_B; j++){
+            const int mj = map_B[j];
+            if (mi==mj) continue; // avoid self interaction. Only needed for OPENMP
+            const double dx = particles[mi].x - particles[mj].x;
+            const double dy = particles[mi].y - particles[mj].y;
+            const double dz = particles[mi].z - particles[mj].z;
+            const double dr = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+            const double dc_c = dcrit_c[mi]+dcrit_c[mj];
+            double Lsum = 0.;
+            if (dcrit_o){
+                double dc_o = dcrit_o[mi]+dcrit_o[mj];
+                Lsum -= _L(r,dr,dc_c,dc_o);
+            }
+            if (dcrit_i){
+                double dc_i = dcrit_i[mi]+dcrit_i[mj];
+                Lsum += _L(r,dr,dc_i,dc_c);
+            }else{
+                Lsum += 1; 
+            }
+            const double prefact = G*Lsum/(dr*dr*dr);
+            const double prefacti = prefact*particles[mi].m;
+            particles[mj].ax    += prefacti*dx;
+            particles[mj].ay    += prefacti*dy;
+            particles[mj].az    += prefacti*dz;
+        }
+    }
+}
 static inline void reb_mercurana_grav_update_AB(struct reb_simulation* const r, 
         const double* dcrit_i, const double* dcrit_c, const double* dcrit_o, const double G, const double softening2,
         const int shellN_A, unsigned int* map_A, 
         const int shellN_B, unsigned int* map_B){
     struct reb_particle* const particles = r->particles;
     double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
+#ifndef OPENMP // OPENMP off, do O(1/2*N^2)
+#pragma omp parallel for
     for (int i=0; i<shellN_A; i++){
         const int startj = (map_A==map_B)?(i+1):0;
         const int mi = map_A[i];
@@ -94,39 +132,18 @@ static inline void reb_mercurana_grav_update_AB(struct reb_simulation* const r,
             particles[mj].az    += prefacti*dz;
         }
     }
+#else // OPENMP on, do O(N^2)
+    reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shellN_A, map_A, shellN_B, map_B);
+    reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shellN_B, map_B, shellN_A, map_A);
+#endif
 }
-static inline void reb_mercurana_grav_update_B(struct reb_simulation* const r, 
-        const double* dcrit_i, const double* dcrit_c, const double* dcrit_o, const double G, const double softening2,
-        const int shellN_A, unsigned int* map_A, 
-        const int shellN_B, unsigned int* map_B){
+static inline void reb_mercurana_grav_set_zero(struct reb_simulation* const r, const int shellN_A, unsigned int* map_A){ 
     struct reb_particle* const particles = r->particles;
-    double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
     for (int i=0; i<shellN_A; i++){
         const int mi = map_A[i];
-        for (int j=0; j<shellN_B; j++){
-            const int mj = map_B[j];
-            const double dx = particles[mi].x - particles[mj].x;
-            const double dy = particles[mi].y - particles[mj].y;
-            const double dz = particles[mi].z - particles[mj].z;
-            const double dr = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-            const double dc_c = dcrit_c[mi];
-            double Lsum = 0.;
-            if (dcrit_o){
-                double dc_o = dcrit_o[mi];
-                Lsum -= _L(r,dr,dc_c,dc_o);
-            }
-            if (dcrit_i){
-                double dc_i = dcrit_i[mi];
-                Lsum += _L(r,dr,dc_i,dc_c);
-            }else{
-                Lsum += 1; 
-            }
-            const double prefact = G*Lsum/(dr*dr*dr);
-            const double prefacti = prefact*particles[mi].m;
-            particles[mj].ax    += prefacti*dx;
-            particles[mj].ay    += prefacti*dy;
-            particles[mj].az    += prefacti*dz;
-        }
+        particles[mi].ax = 0; 
+        particles[mi].ay = 0; 
+        particles[mi].az = 0; 
     }
 }
 
@@ -747,33 +764,11 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 dcrit_o = r->ri_mercurana.dcrit[shell-1];
             }
 
-#define SET_ZERO \
-    particles[mi].ax = 0; \
-    particles[mi].ay = 0; \
-    particles[mi].az = 0; 
-            for (int i=0; i<shellN_dominant; i++){
-                const int mi = map_dominant[i];
-                SET_ZERO
-            }
-            for (int i=0; i<shellN_subdominant; i++){
-                const int mi = map_subdominant[i];
-                SET_ZERO
-            }
-            // Encounter particles might already be in subdominant list, but doesn't matter
-            for (int i=0; i<shellN_encounter; i++){
-                const int mi = map_encounter[i];
-                SET_ZERO
-            }
-            for (int i=0; i<shellN_subdominant_passive; i++){
-                const int mi = map_subdominant_passive[i];
-                SET_ZERO
-            }
-            // Encounter particles might already be in subdominant list, but doesn't matter
-            for (int i=0; i<shellN_encounter_passive; i++){
-                const int mi = map_encounter_passive[i];
-                SET_ZERO
-            }
-
+            reb_mercurana_grav_set_zero(r, shellN_dominant, map_dominant);
+            reb_mercurana_grav_set_zero(r, shellN_encounter, map_encounter);
+            reb_mercurana_grav_set_zero(r, shellN_subdominant, map_subdominant);
+            reb_mercurana_grav_set_zero(r, shellN_encounter_passive, map_encounter_passive);
+            reb_mercurana_grav_set_zero(r, shellN_subdominant_passive, map_subdominant_passive);
 
             reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
                     shellN_encounter, map_encounter,
