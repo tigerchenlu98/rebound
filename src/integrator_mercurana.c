@@ -183,7 +183,7 @@ static void check_maxdrift_violation(
     double* dt_drift = rim->dt_drift;
     struct reb_particle** p0 = rim->p0;
     struct reb_particle* const particles = r->particles;
-    double buffer = 1.05; // prevent having to check the same particle over and over again in one timestep
+    double buffer = 1.0; // prevent having to check the same particle over and over again in one timestep
     // Idea: - Loop over all particles of type A in current shell
     //       - Check for every higher shell, if maxdrift of type B will be violated in this timestep
     //       - If so, check for violating particle of type B.
@@ -197,6 +197,7 @@ static void check_maxdrift_violation(
             double dt1 = dt; 
             double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
             if (drift>maxdrift_B[s][mi]){
+                printf("maxdrift before %e  \t",maxdrift_B[s][mi]);
                 maxdrift_B[s][mi] = 1e300;
                 for (int j=0; j<shellN_B[s]; j++){ 
                     int mj = map_B[s][j]; 
@@ -214,6 +215,7 @@ static void check_maxdrift_violation(
                                 double drift_sa = t_drifted[shell] - t_drifted[sa];
                                 map_B[sa][shellN_B[sa]] = mj;
                                 shellN_B[sa]++;
+                                printf(" -- moved --");
                                 p0[sa][mj] = p0[s][mj];
                                 p0[sa][mj].x +=  drift_sa*particles[mj].vx; 
                                 p0[sa][mj].y +=  drift_sa*particles[mj].vy; 
@@ -229,6 +231,8 @@ static void check_maxdrift_violation(
                         }
                     }
                 }
+                printf("maxdrift after %e     %d %d\n",maxdrift_B[s][mi],shell,s);
+                sleep(1);
             }
         }
     }
