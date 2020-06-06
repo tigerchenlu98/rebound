@@ -9,9 +9,9 @@ int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     srand(5);
     r->exact_finish_time = 0;
-    r->dt = 0.01;
+    r->dt = 0.08;
     r->integrator = REB_INTEGRATOR_MERCURANA;
-    r->ri_mercurana.kappa = 1e-5;
+    r->ri_mercurana.kappa = 0.8e-3;
     r->ri_mercurana.N_dominant = 0;
     r->ri_mercurana.Nmaxshells = 30;
     r->collision = REB_COLLISION_DIRECT;
@@ -27,15 +27,23 @@ int main(int argc, char* argv[]) {
     struct reb_particle p3 =  reb_tools_orbit2d_to_particle(1.,p1,1,4.,0.,0,0);      
     p3.r = 1e-2;
     reb_add(r, p3); 
+    
+    struct reb_particle p4 =  reb_tools_orbit2d_to_particle(1.,p1,1e-3,0.3,0.,0,0);      
+    p4.r = 1e-3;
+    reb_add(r, p4); 
+    
+    struct reb_particle p5 =  reb_tools_orbit2d_to_particle(1.,p3,1e-3,0.3,0.,0,0);      
+    p5.r = 1e-3;
+    reb_add(r, p5); 
 
     r->N_active = r->N;
 
     int Np = 1000;
-    for(int i=0;i<1000;i++){
+    for(int i=0;i<Np;i++){
     struct reb_particle p2 =  reb_tools_orbit2d_to_particle(1.,p1,0,1.,0.49,((double)i)/(double)Np*2.*M_PI,-0.21);      
     reb_add(r, p2); 
     }
-    
+   
     reb_move_to_com(r);
     E0 = reb_tools_energy(r);
     reb_integrate(r, 1000);

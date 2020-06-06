@@ -232,7 +232,6 @@ static void check_maxdrift_violation(
                     }
                 }
                 printf("maxdrift after %e     %d %d\n",maxdrift_B[s][mi],shell,s);
-                sleep(1);
             }
         }
     }
