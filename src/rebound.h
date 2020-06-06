@@ -498,8 +498,11 @@ struct reb_simulation_integrator_mercurana {
     unsigned int* inshell_encounter;  ///< from global to shell
     unsigned int* inshell_dominant;  ///< from global to shell
     unsigned int* inshell_subdominant;  ///< from global to shell
-    double** maxdrift_encounter;  //< same as maxdrift_subdominant
     double** maxdrift_dominant;
+    double** maxdrift_subdominant;
+    double** maxdrift_encounter;  
+    double** maxdrift_subdominant_passive;
+    double** maxdrift_encounter_passive;  
     double* t_drifted;
     double* dt_drift;
     struct reb_particle** p0;

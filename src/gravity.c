@@ -739,8 +739,6 @@ void reb_calculate_acceleration(struct reb_simulation* r){
         {
             struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
             const unsigned int shell = rim->current_shell;
-            struct reb_particle* const particles = r->particles;
-            //const int testparticle_type   = r->testparticle_type;
             const double G = r->G;
             unsigned int* map_encounter = rim->map_encounter[shell];
             unsigned int* map_encounter_passive = rim->map_encounter_passive[shell];

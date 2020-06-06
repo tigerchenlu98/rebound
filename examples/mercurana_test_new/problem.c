@@ -39,7 +39,7 @@ void heartbeat(struct reb_simulation* r){
     printf("maxshells %d\n", r->ri_mercurana.Nmaxshellsused);
     }
     double E1 = reb_tools_energy(r);
-    printf("dE/E= %e  N= %d  N_active= %d  moved= %d\n",fabs((E0-E1)/E0), r->N, r->N_active, r->ri_mercurana.moved_particles);
+    printf("dE/E= %e (offset=%e)  N= %d  N_active= %d  moved= %d\n",fabs((E0-E1)/E0), r->energy_offset, r->N, r->N_active, r->ri_mercurana.moved_particles);
     //printf("N    = %d\n",r->N);
     //printf("-------------\n");
 }
@@ -48,11 +48,11 @@ int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     srand(5);
     r->exact_finish_time = 0;
-    r->dt = 0.050;
+    r->dt = 0.150;
     r->heartbeat = heartbeat;
     r->testparticle_type = 1;
     r->integrator = REB_INTEGRATOR_MERCURANA;
-    r->ri_mercurana.kappa = 1e-3;
+    r->ri_mercurana.kappa = 1e-2;
     r->ri_mercurana.N_dominant = 1;
     r->ri_mercurana.Nmaxshells = 30;
     int rad = 1; 
@@ -149,7 +149,8 @@ int main(int argc, char* argv[]) {
             //double a = reb_random_uniform(2.4,3.2);
             double omega = reb_random_uniform(0.,M_PI*2);
             double f = reb_random_uniform(0.,M_PI*2.);
-            struct reb_particle p = reb_tools_orbit2d_to_particle(1.,p1,0.,a,0.1,omega,f);
+            double m = r->testparticle_type==0?0:1e-6;
+            struct reb_particle p = reb_tools_orbit2d_to_particle(1.,p1,m,a,0.1,omega,f);
             if (rad) p.r = 0.000046;
             reb_add(r,p);
         }

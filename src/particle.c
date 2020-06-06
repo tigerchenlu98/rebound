@@ -289,14 +289,20 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                     map_subdominant_passive[i]--;
                 }
             }
-            double* maxdrift_encounter = rim->maxdrift_encounter[s];
             double* maxdrift_dominant = rim->maxdrift_dominant[s];
+            double* maxdrift_subdominant = rim->maxdrift_subdominant[s];
+            double* maxdrift_encounter = rim->maxdrift_encounter[s];
+            double* maxdrift_subdominant_passive = rim->maxdrift_subdominant_passive[s];
+            double* maxdrift_encounter_passive = rim->maxdrift_encounter_passive[s];
             double* dcrit = rim->dcrit[s];
             struct reb_particle* p0 = rim->p0[s];
             
             for (int i=index;i<r->N-1;i++){
-                maxdrift_encounter[i] = maxdrift_encounter[i+1];
                 maxdrift_dominant[i] = maxdrift_dominant[i+1];
+                maxdrift_subdominant[i] = maxdrift_subdominant[i+1];
+                maxdrift_encounter[i] = maxdrift_encounter[i+1];
+                maxdrift_subdominant_passive[i] = maxdrift_subdominant_passive[i+1];
+                maxdrift_encounter_passive[i] = maxdrift_encounter_passive[i+1];
                 dcrit[i] = dcrit[i+1];
                 p0[i] = p0[i+1];
             }
