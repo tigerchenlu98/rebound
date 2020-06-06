@@ -220,8 +220,10 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
         struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
         for (int s=0;s<rim->Nmaxshells;s++){
             unsigned int* map_encounter = rim->map_encounter[s];
+            unsigned int* map_encounter_passive = rim->map_encounter_passive[s];
             unsigned int* map_dominant = rim->map_dominant[s];
             unsigned int* map_subdominant = rim->map_subdominant[s];
+            unsigned int* map_subdominant_passive = rim->map_subdominant_passive[s];
             int isEncounter = 0;
             for (int i=0;i<rim->shellN_encounter[s];i++){
                 if (map_encounter[i]==index){
@@ -233,6 +235,19 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 }
                 if (map_encounter[i]>index){
                     map_encounter[i]--;
+                }
+            }
+            int isEncounter_passive = 0;
+            for (int i=0;i<rim->shellN_encounter_passive[s];i++){
+                if (map_encounter_passive[i]==index){
+                    isEncounter_passive = 1;
+                    rim->shellN_encounter_passive[s]--;
+                }
+                if (isEncounter_passive && i!=rim->shellN_encounter_passive[s]){
+                    map_encounter_passive[i] = map_encounter_passive[i+1];
+                }
+                if (map_encounter_passive[i]>index){
+                    map_encounter_passive[i]--;
                 }
             }
             int isDominant = 0;
@@ -259,6 +274,19 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 }
                 if (map_subdominant[i]>index){
                     map_subdominant[i]--;
+                }
+            }
+            int isSubdominant_passive = 0;
+            for (int i=0;i<rim->shellN_subdominant_passive[s];i++){
+                if (map_subdominant_passive[i]==index){
+                    isSubdominant_passive = 1;
+                    rim->shellN_subdominant_passive[s]--;
+                }
+                if (isSubdominant_passive && i!=rim->shellN_subdominant_passive[s]){
+                    map_subdominant_passive[i] = map_subdominant_passive[i+1];
+                }
+                if (map_subdominant_passive[i]>index){
+                    map_subdominant_passive[i]--;
                 }
             }
             double* maxdrift_encounter = rim->maxdrift_encounter[s];
