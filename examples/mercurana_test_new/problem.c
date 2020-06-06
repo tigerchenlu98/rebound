@@ -29,7 +29,7 @@ void heartbeat(struct reb_simulation* r){
     for(int i=0;i<r->ri_mercurana.Nmaxshells;i++){
         if (r->ri_mercurana.shellN_encounter){
         printf("%2d dom=%4d sub=%4d enc=%4d ",i, r->ri_mercurana.shellN_dominant[i], r->ri_mercurana.shellN_subdominant[i], r->ri_mercurana.shellN_encounter[i]);
-        printf(" test-passive=%4d enc-passive=%4d ", r->ri_mercurana.shellN_subdominant_passive[i], r->ri_mercurana.shellN_encounter_passive[i]);
+        printf(" sub-passive=%4d enc-passive=%4d ", r->ri_mercurana.shellN_subdominant_passive[i], r->ri_mercurana.shellN_encounter_passive[i]);
         printf("%12lu ", rebd_drift[i]);
         printf("%12lu ", rebd_kick[i]);
         printf("\n");
@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
         r->N_active = r->N;
 
         for (int i=0; i<200;i++){
-            double a = reb_random_uniform(2.8,3.2);
+            double a = reb_random_uniform(2.4,3.2);
             double omega = reb_random_uniform(0.,M_PI*2);
             double f = reb_random_uniform(0.,M_PI*2.);
             struct reb_particle p = reb_tools_orbit2d_to_particle(1.,p1,0.,a,0.1,omega,f);

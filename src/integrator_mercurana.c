@@ -381,6 +381,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 rim->map_encounter, 
                 rim->inshell_encounter, 
                 rim->maxdrift_encounter);
+        // TODO: Testparticles
     }
 
     // Check interactions in shell
@@ -414,6 +415,26 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             rim->inshell_encounter
             );
     
+    // Dominant and subdominant_passive
+    check_this_shell(r, dt, shell,
+            rim->shellN_dominant,
+            rim->map_dominant,
+            rim->inshell_dominant,
+            rim->shellN_subdominant_passive,
+            rim->map_subdominant_passive,
+            rim->inshell_subdominant // = inshell_subdominant_passive
+            );
+    
+    // Encounter and encounter_passive
+    check_this_shell(r, dt, shell,
+            rim->shellN_encounter,
+            rim->map_encounter,
+            rim->inshell_encounter,
+            rim->shellN_encounter_passive,
+            rim->map_encounter_passive,
+            rim->inshell_encounter
+            );
+    
     // Maxdrift calculation
     for (int i=0; i<rim->shellN_encounter[shell]; i++){
         int mi = map_encounter[i]; 
@@ -438,6 +459,8 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         //TODO think about following
         p0[shell][mi] = particles[mi]; 
     }
+    // Maxdrift calculation
+    // TODO: Test particle 
     
     // Encounter and encounter
     for (int i=0; i<rim->shellN_encounter[shell]; i++){
@@ -484,6 +507,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             }
         }
     }
+    // TODO: Test particle 
     
     
     if (rim->collisions_N){
