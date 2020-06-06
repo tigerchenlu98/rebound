@@ -648,11 +648,15 @@ void reb_calculate_acceleration(struct reb_simulation* r){
             //const int testparticle_type   = r->testparticle_type;
             const double G = r->G;
             unsigned int* map_encounter = rim->map_encounter[shell];
+            unsigned int* map_encounter_passive = rim->map_encounter_passive[shell];
             unsigned int* map_dominant = rim->map_dominant[shell];
             unsigned int* map_subdominant = rim->map_subdominant[shell];
+            unsigned int* map_subdominant_passive = rim->map_subdominant_passive[shell];
             const unsigned int shellN_encounter = rim->shellN_encounter[shell];
+            const unsigned int shellN_encounter_passive = rim->shellN_encounter_passive[shell];
             const unsigned int shellN_dominant = rim->shellN_dominant[shell];
             const unsigned int shellN_subdominant = rim->shellN_subdominant[shell];
+            const unsigned int shellN_subdominant_passive = rim->shellN_subdominant_passive[shell];
 
             const double* dcrit_i = NULL; // critical radius of inner shell
             const double* dcrit_c = NULL; // critical radius of current shell
@@ -682,6 +686,15 @@ void reb_calculate_acceleration(struct reb_simulation* r){
             // Encounter particles might already be in subdominant list, but doesn't matter
             for (int i=0; i<shellN_encounter; i++){
                 const int mi = map_encounter[i];
+                SET_ZERO
+            }
+            for (int i=0; i<shellN_subdominant_passive; i++){
+                const int mi = map_subdominant_passive[i];
+                SET_ZERO
+            }
+            // Encounter particles might already be in subdominant list, but doesn't matter
+            for (int i=0; i<shellN_encounter_passive; i++){
+                const int mi = map_encounter_passive[i];
                 SET_ZERO
             }
 
@@ -733,6 +746,27 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 const int mi = map_dominant[i];
                 for (int j=i+1; j<shellN_dominant; j++){
                     const int mj = map_dominant[j];
+                    CALC_GRAV
+                }
+            }
+            // Testparticles
+            //
+            // TODO add other test-particle interactions
+            // TODO implement test-particle_type 0 properly
+            
+            // Dominant particles with subdominant test-particles
+            for (int i=0; i<shellN_dominant; i++){
+                const int mi = map_dominant[i];
+                for (int j=0; j<shellN_subdominant_passive; j++){
+                    const int mj = map_subdominant_passive[j];
+                    CALC_GRAV
+                }
+            }
+            // Encounter particles with encounter test-particles
+            for (int i=0; i<shellN_encounter; i++){
+                const int mi = map_encounter[i];
+                for (int j=0; j<shellN_encounter_passive; j++){
+                    const int mj = map_encounter_passive[j];
                     CALC_GRAV
                 }
             }

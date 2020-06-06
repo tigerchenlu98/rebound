@@ -277,8 +277,10 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     const double* const dcrit = rim->dcrit[shell];
     
     unsigned int* map_encounter = rim->map_encounter[shell];
+    unsigned int* map_encounter_passive = rim->map_encounter_passive[shell];
     unsigned int* map_dominant = rim->map_dominant[shell];
     unsigned int* map_subdominant = rim->map_subdominant[shell];
+    unsigned int* map_subdominant_passive = rim->map_subdominant_passive[shell];
     
     double** maxdrift_dominant = rim->maxdrift_dominant;
     double** maxdrift_encounter = rim->maxdrift_encounter;
@@ -287,6 +289,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     unsigned int* inshell_dominant = rim->inshell_dominant;
     unsigned int* inshell_subdominant = rim->inshell_subdominant;
     struct reb_particle** p0 = rim->p0;
+    const int N_active = r->N_active==-1?r->N:r->N_active;
     
     if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
         return;
@@ -303,10 +306,10 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     if (shell==0){
         // Setup maps in outermost shell 
         rim->shellN_dominant[0] = rim->N_dominant;
-        rim->shellN_subdominant[0] = r->N_active - rim->N_dominant;
-        rim->shellN_subdominant_passive[0] = r->N - r->N_active;
-        rim->shellN_encounter[0] = r->N_active - rim->N_dominant;
-        rim->shellN_encounter_passive[0] = r->N - r->N_active;
+        rim->shellN_subdominant[0] = N_active - rim->N_dominant;
+        rim->shellN_subdominant_passive[0] = r->N - N_active;
+        rim->shellN_encounter[0] = N_active - rim->N_dominant;
+        rim->shellN_encounter_passive[0] = r->N - N_active;
         for (int i=0; i<r->N; i++){
             p0[0][i] = particles[i]; 
             maxdrift_encounter[0][i] = 1e300; 
@@ -315,9 +318,13 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         for (int i=0; i<rim->N_dominant; i++){
             map_dominant[i] = i; 
         }
-        for (int i=rim->N_dominant; i<r->N_active; i++){
+        for (int i=rim->N_dominant; i<N_active; i++){
             map_subdominant[i-rim->N_dominant] = i; 
             map_encounter[i-rim->N_dominant] = i; 
+        }
+        for (int i=N_active; i<r->N; i++){
+            map_subdominant_passive[i-N_active] = i; 
+            map_encounter_passive[i-N_active] = i; 
         }
     }
     for (int i=0; i<rim->shellN_encounter[shell]; i++){
@@ -330,6 +337,14 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     }
     for (int i=0; i<rim->shellN_subdominant[shell]; i++){
         int mi = map_subdominant[i]; 
+        inshell_subdominant[mi] = shell;
+    }
+    for (int i=0; i<rim->shellN_encounter_passive[shell]; i++){
+        int mi = map_encounter_passive[i]; 
+        inshell_encounter[mi] = shell;
+    }
+    for (int i=0; i<rim->shellN_subdominant_passive[shell]; i++){
+        int mi = map_subdominant_passive[i]; 
         inshell_subdominant[mi] = shell;
     }
     if (shell!=0){
