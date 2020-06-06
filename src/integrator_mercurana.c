@@ -188,7 +188,7 @@ static void check_maxdrift_violation(
     //       - Check for every higher shell, if maxdrift of type B will be violated in this timestep
     //       - If so, check for violating particle of type B.
     //       - Move violating particle of type B to current shell.
-    //       - Also update maxdrift for particle of type A to avoid triggering a search in the future.
+    //       - Also update maxdrift type B for particle of type A to avoid triggering a search in the future.
     for (int i=0; i<shellN_A; i++){
         int mi = map_A[i]; 
         for (int s=0;s<shell;s++){
@@ -423,7 +423,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 rim->shellN_subdominant, 
                 rim->map_subdominant, 
                 inshell_subdominant, 
-                rim->maxdrift_encounter);
+                rim->maxdrift_subdominant);
         // Dominant - Subdominant-passive
         check_maxdrift_violation(r, dt, shell, 
                 rim->shellN_dominant[shell], 
@@ -431,7 +431,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
                 rim->shellN_subdominant_passive, 
                 rim->map_subdominant_passive, 
                 inshell_subdominant, 
-                rim->maxdrift_encounter);
+                rim->maxdrift_subdominant_passive);
         // Subdominant - Dominant
         check_maxdrift_violation(r, dt, shell, 
                 rim->shellN_subdominant[shell], 
@@ -452,10 +452,10 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         check_maxdrift_violation(r, dt, shell, 
                 rim->shellN_encounter[shell], 
                 rim->map_encounter[shell], 
-                rim->shellN_encounter, 
+                rim->shellN_encounter_passive, 
                 rim->map_encounter_passive, 
                 inshell_encounter, 
-                rim->maxdrift_encounter);
+                rim->maxdrift_encounter_passive);
         // Subdominant-passive - Dominant
         check_maxdrift_violation(r, dt, shell, 
                 rim->shellN_subdominant_passive[shell], 
@@ -468,7 +468,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         check_maxdrift_violation(r, dt, shell, 
                 rim->shellN_encounter_passive[shell], 
                 rim->map_encounter_passive[shell], 
-                rim->shellN_encounter_passive, 
+                rim->shellN_encounter, 
                 rim->map_encounter, 
                 inshell_encounter, 
                 rim->maxdrift_encounter);
