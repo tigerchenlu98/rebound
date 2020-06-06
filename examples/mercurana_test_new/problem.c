@@ -48,9 +48,9 @@ int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     srand(5);
     r->exact_finish_time = 0;
-    r->dt = 0.02;
+    r->dt = 0.050;
     r->heartbeat = heartbeat;
-    r->testparticle_type = 0;
+    r->testparticle_type = 1;
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-3;
     r->ri_mercurana.N_dominant = 1;
