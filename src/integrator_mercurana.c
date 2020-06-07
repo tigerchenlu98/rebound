@@ -46,7 +46,8 @@
 #define MAXSHELLS 100
 
 unsigned long rebd_drift[MAXSHELLS];
-unsigned long rebd_kick[MAXSHELLS];
+unsigned long rebd_viol1[MAXSHELLS];
+unsigned long rebd_viol2[MAXSHELLS];
 
 
 
@@ -120,7 +121,6 @@ static double reb_mercurana_predict_rmin2(struct reb_particle p1, struct reb_par
     const double dy3 = dy1+t_closest*dvy1;
     const double dz3 = dz1+t_closest*dvz1;
     const double r3 = (dx3*dx3 + dy3*dy3 + dz3*dz3);
-    //printf("r1, r2, r3      %.20f %.20f %.20f          tclose %.20f\n",sqrt(r1),sqrt(r2),sqrt(r3), t_closest);
 
     double rmin2 = MIN(r1,r2);
     if (t_closest/dt>=0. && t_closest/dt<=1.){
@@ -183,7 +183,6 @@ static void check_maxdrift_violation(
     double* dt_drift = rim->dt_drift;
     struct reb_particle** p0 = rim->p0;
     struct reb_particle* const particles = r->particles;
-    double buffer = 1.0; // prevent having to check the same particle over and over again in one timestep
     // Idea: - Loop over all particles of type A in current shell
     //       - Check for every higher shell, if maxdrift of type B will be violated in this timestep
     //       - If so, check for violating particle of type B.
@@ -197,7 +196,9 @@ static void check_maxdrift_violation(
             double dt1 = dt; 
             double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
             if (drift>maxdrift_B[s][mi]){
-                printf("maxdrift before %e  \t",maxdrift_B[s][mi]);
+                rebd_viol1[s]++;
+                rebd_viol2[shell]++;
+                //printf("maxdrift before %e  \t",maxdrift_B[s][mi]);
                 maxdrift_B[s][mi] = 1e300;
                 for (int j=0; j<shellN_B[s]; j++){ 
                     int mj = map_B[s][j]; 
@@ -207,7 +208,7 @@ static void check_maxdrift_violation(
                         double drift_s = t_drifted[shell] - t_drifted[s];
                         // TODO: check following
                         double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift_s);
-                        double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
+                        double dcritsum = dcrit[mi]+dcrit[mj];
                         if (rmin2< dcritsum*dcritsum){ 
                             inshell_B[mj] = shell;
                             rim->moved_particles++;
@@ -215,7 +216,7 @@ static void check_maxdrift_violation(
                                 double drift_sa = t_drifted[shell] - t_drifted[sa];
                                 map_B[sa][shellN_B[sa]] = mj;
                                 shellN_B[sa]++;
-                                printf(" -- moved --");
+                                //printf(" -- moved --");
                                 p0[sa][mj] = p0[s][mj];
                                 p0[sa][mj].x +=  drift_sa*particles[mj].vx; 
                                 p0[sa][mj].y +=  drift_sa*particles[mj].vy; 
@@ -231,7 +232,7 @@ static void check_maxdrift_violation(
                         }
                     }
                 }
-                printf("maxdrift after %e     %d %d\n",maxdrift_B[s][mi],shell,s);
+                //printf("maxdrift after %e     %d %d\n",maxdrift_B[s][mi],shell,s);
             }
         }
     }
@@ -260,7 +261,8 @@ static void check_this_shell( struct reb_simulation* r, double dt, unsigned int 
             if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
                 reb_mercurana_record_collision(r,mi,mj);
             }
-            double dcritsum = dcrit[mi]+dcrit[mj];
+            const double buffer = 1.05; // prevent too many maxdrift violations 
+            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
             //printf("%.5f %d %d     %.20f %.20f\n",r->t,mi, mj, dcritsum, sqrt(rmin2));
             //printf("%.20f \n", particles[0].vx);
             //printf("%.20f \n", particles[1].vx);
@@ -598,7 +600,6 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
 // y = timestep for acceleration
 // v = timestep for jerk (0 if not used)
 static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, double y, double v, unsigned int shell){
-    rebd_kick[shell]++;
     struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
     struct reb_particle* const particles = r->particles;
     r->gravity = REB_GRAVITY_MERCURANA; // needed here again for SimulationArchive

@@ -6,19 +6,8 @@
 #define MAXSHELLS 100
 
 extern unsigned long rebd_drift[MAXSHELLS];
-extern unsigned long rebd_kick[MAXSHELLS];
-extern unsigned long rebd_md1a[MAXSHELLS];
-extern unsigned long rebd_md1b[MAXSHELLS];
-extern unsigned long rebd_md1c[MAXSHELLS];
-extern unsigned long rebd_md2a[MAXSHELLS];
-extern unsigned long rebd_md2b[MAXSHELLS];
-extern unsigned long rebd_md2c[MAXSHELLS];
-extern unsigned long rebd_md3a[MAXSHELLS];
-extern unsigned long rebd_md3b[MAXSHELLS];
-extern unsigned long rebd_md3c[MAXSHELLS];
-extern unsigned long rebd_md4a[MAXSHELLS];
-extern unsigned long rebd_md4b[MAXSHELLS];
-extern unsigned long rebd_md4c[MAXSHELLS];
+extern unsigned long rebd_viol1[MAXSHELLS];
+extern unsigned long rebd_viol2[MAXSHELLS];
 double E0;
 
 void heartbeat(struct reb_simulation* r){
@@ -31,7 +20,8 @@ void heartbeat(struct reb_simulation* r){
         printf("%2d dom=%4d sub=%4d enc=%4d ",i, r->ri_mercurana.shellN_dominant[i], r->ri_mercurana.shellN_subdominant[i], r->ri_mercurana.shellN_encounter[i]);
         printf(" sub-passive=%4d enc-passive=%4d ", r->ri_mercurana.shellN_subdominant_passive[i], r->ri_mercurana.shellN_encounter_passive[i]);
         printf("%12lu ", rebd_drift[i]);
-        printf("%12lu ", rebd_kick[i]);
+        printf("%12lu ", rebd_viol1[i]);
+        printf("%12lu ", rebd_viol2[i]);
         printf("\n");
         }
     }
@@ -46,9 +36,9 @@ void heartbeat(struct reb_simulation* r){
 
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
-    srand(5);
+    srand(4);
     r->exact_finish_time = 0;
-    r->dt = 0.150;
+    r->dt = 0.050;
     r->heartbeat = heartbeat;
     r->testparticle_type = 1;
     r->integrator = REB_INTEGRATOR_MERCURANA;
@@ -60,59 +50,6 @@ int main(int argc, char* argv[]) {
     r->collision_resolve = reb_collision_resolve_merge;
     r->track_energy_offset = 1;
 
-    if (0){ 
-        struct reb_particle p1 = {0}; 
-        p1.m = 1.;
-        if (rad) p1.r = 0.0046524726;
-        reb_add(r, p1);  
-        
-        struct reb_particle p2 = {0};
-        p2.x = 1;
-        p2.vy = 1;
-        p2.m = 1e-3;
-        if (rad) p2.r = 0.00046732617;
-        reb_add(r, p2); 
-        
-        struct reb_particle p3 = {0};
-        p3.x = 2;
-        p3.vy = 0.74;
-        p3.m = 1e-3;
-        if (rad) p3.r = 0.00046732617;
-        reb_add(r, p3); 
-    }
-
-    if (0){
-        struct reb_particle p1 = {0}; 
-        p1.m = 1.;
-        if (rad) p1.r = 0.0046524726;
-        reb_add(r, p1);  
-        
-        struct reb_particle p2 = {0};
-        p2.x = 1;
-        p2.vy = 1;
-        p2.m = 1e-3;
-        if (rad) p2.r = 0.0046732617;
-        reb_add(r, p2); 
-        
-        struct reb_particle p3 = {0};
-        p3.x = 2;
-        p3.vy = 0.74;
-        p3.m = 1e-3;
-        if (rad) p3.r = 0.0046732617;
-        reb_add(r, p3); 
-
-        for (int i=0; i<200;i++){
-            double a = reb_random_uniform(0.8,1.2);
-            double omega = reb_random_uniform(0.,M_PI*2);
-            double f = reb_random_uniform(0.,M_PI*2.);
-            struct reb_particle p = reb_tools_orbit2d_to_particle(1.,p1,1e-6,a,0.1,omega,f);
-            if (rad) p.r = 0.000046;
-            reb_add(r,p);
-        }
-
-        reb_move_to_com(r);
-    }
-    
     if (1){
         struct reb_particle p1 = {0}; 
         p1.m = 1.;
