@@ -428,14 +428,26 @@ static void reb_display(GLFWwindow* window){
     float tmp1[16];
     float tmp2[16];
     float tmp3[16];
+    float tmp4[16];
     if (data->reference>=0){
         struct reb_particle p = data->particles_copy[data->reference];
         mattranslate(tmp2,-p.x,-p.y,-p.z);
         quat2mat(data->view,tmp1);
-        matmult(tmp1,tmp2,view);
+        matmult(tmp1,tmp2,tmp4);
     }else{
-        quat2mat(data->view,view);
+        quat2mat(data->view,tmp4);
     }
+    float z = 0;
+    if (data->zrotation>=0){
+        z =atan2f(data->particles_copy[data->zrotation].y,data->particles_copy[data->zrotation].x);
+    }
+    float cosz = cosf(z);
+    float sinz = sinf(z);
+    float rotm[16] = {cosz,sinz,0,0,
+                      -sinz,cosz,0,0,
+                      0,0,1,0,
+                      0,0,0,1};
+    matmult(rotm,tmp4,view);
     
     for (int i=-data->ghostboxes*data->r_copy->nghostx;i<=data->ghostboxes*data->r_copy->nghostx;i++){
     for (int j=-data->ghostboxes*data->r_copy->nghosty;j<=data->ghostboxes*data->r_copy->nghosty;j++){
@@ -639,6 +651,7 @@ void reb_display_init(struct reb_simulation * const r){
     data->shells        = 1; 
     data->pause         = 0; 
     data->multisample = 1; 
+    data->zrotation     = -1; 
     if (data->r->integrator==REB_INTEGRATOR_WHFAST){
         data->wire          = 1; 
     }else{
