@@ -73,6 +73,7 @@ static const char* onscreenhelp[] = {
                 " x/X     | Move to a coordinate system centred ",
                 "         | on a particle (note: does not work if", 
                 "         | particle array is resorted)",
+                " z/Z     | Move to a corotating frame  ",
                 " c       | Toggle clear screen after each time-step",
                 " m       | Toggle multisampling",
                 " w       | Draw orbits as wires",
@@ -393,6 +394,17 @@ static void reb_display_keyboard(GLFWwindow* window, int key, int scancode, int 
                     data->reference--;
                     if (data->reference<-1) data->reference = data->r->N-1;
                     printf("Reference particle: %d.\n",data->reference);
+                }
+                break;
+            case 'Z': 
+                if (mods!=GLFW_MOD_SHIFT){
+                    data->zrotation++;
+                    if (data->zrotation>data->r->N) data->zrotation = -1;
+                    printf("Reference particle for corotating frame: %d.\n",data->zrotation);
+                }else{
+                    data->zrotation--;
+                    if (data->zrotation<-1) data->zrotation = data->r->N-1;
+                    printf("Reference particle for corotating frame: %d.\n",data->zrotation);
                 }
                 break;
         }

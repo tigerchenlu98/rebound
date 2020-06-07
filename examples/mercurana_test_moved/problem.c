@@ -10,7 +10,6 @@ extern unsigned long rebd_viol2[MAXSHELLS];
 double E0;
 
 void heartbeat(struct reb_simulation* r){
-    r->display_data->zrotation = 0; 
     if (r->steps_done%10!=0) return;
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[0].x, r->particles[0].y, r->particles[0].vx, r->particles[0].vy);
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);

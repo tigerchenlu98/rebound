@@ -2229,7 +2229,7 @@ struct reb_display_data {
     int clear;                      /**< Toggles clearing the display on each draw. */
     int ghostboxes;                 /**< Shows/hides ghost boxes. */
     int reference;                  /**< reb_particle used as a reference for centering. */
-    int zrotation;                  /**< angle (in rad) for programmatic rotation around the z axis (can be used for corotating frames). */
+    int zrotation;                  /**< particle index used for programmatic rotation around the z axis (can be useful for corotating frames). */
     unsigned int mouse_action;      
     unsigned int key_mods;      
     struct reb_quaternion view;
