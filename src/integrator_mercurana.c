@@ -216,7 +216,9 @@ static void check_maxdrift_violation(
                                 double drift_sa = t_drifted[shell] - t_drifted[sa];
                                 map_B[sa][shellN_B[sa]] = mj;
                                 shellN_B[sa]++;
-                                //printf(" -- moved --");
+                                //printf(" -- moved --\n steps done %lld\n",r->steps_done);
+                                //exit(0);
+                                printf(" %.20f moved %d  %d      %d %d %d %d\n",r->t, mi,mj,s,shell, r->N_active, r->N); 
                                 p0[sa][mj] = p0[s][mj];
                                 p0[sa][mj].x +=  drift_sa*particles[mj].vx; 
                                 p0[sa][mj].y +=  drift_sa*particles[mj].vy; 
@@ -261,11 +263,8 @@ static void check_this_shell( struct reb_simulation* r, double dt, unsigned int 
             if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
                 reb_mercurana_record_collision(r,mi,mj);
             }
-            const double buffer = 1.05; // prevent too many maxdrift violations 
+            const double buffer = 1.0; // prevent too many maxdrift violations 
             double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
-            //printf("%.5f %d %d     %.20f %.20f\n",r->t,mi, mj, dcritsum, sqrt(rmin2));
-            //printf("%.20f \n", particles[0].vx);
-            //printf("%.20f \n", particles[1].vx);
             if (rmin2< dcritsum*dcritsum){ 
                 if (inshell_A[mi] == shell){
                     inshell_A[mi] = shell+1;

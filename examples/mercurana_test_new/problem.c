@@ -11,6 +11,10 @@ extern unsigned long rebd_viol2[MAXSHELLS];
 double E0;
 
 void heartbeat(struct reb_simulation* r){
+    if (r->steps_done==16081){
+        reb_output_binary(r,"out.tmp");
+        exit(0);
+    }
     if (r->steps_done%10!=0) return;
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[0].x, r->particles[0].y, r->particles[0].vx, r->particles[0].vy);
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);
@@ -38,11 +42,11 @@ int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     srand(4);
     r->exact_finish_time = 0;
-    r->dt = 0.050;
+    r->dt = 0.040;
     r->heartbeat = heartbeat;
     r->testparticle_type = 1;
     r->integrator = REB_INTEGRATOR_MERCURANA;
-    r->ri_mercurana.kappa = 1e-2;
+    r->ri_mercurana.kappa = 1e-4;
     r->ri_mercurana.N_dominant = 1;
     r->ri_mercurana.Nmaxshells = 30;
     int rad = 1; 
@@ -81,7 +85,7 @@ int main(int argc, char* argv[]) {
         
         r->N_active = r->N;
 
-        for (int i=0; i<200;i++){
+        for (int i=0; i<0;i++){
             double a = reb_random_uniform(0.8,1.2);
             //double a = reb_random_uniform(2.4,3.2);
             double omega = reb_random_uniform(0.,M_PI*2);

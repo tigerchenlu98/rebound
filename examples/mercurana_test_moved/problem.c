@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     srand(5);
     r->heartbeat = heartbeat;
     r->exact_finish_time = 0;
-    r->dt = 0.08;
+    r->dt = 0.19;
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 0.8e-3;
     r->ri_mercurana.N_dominant = 2;
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
     r->N_active = r->N;
 
-    int Np = 1000;
+    int Np = 500;
     for(int i=0;i<Np;i++){
     struct reb_particle p2 =  reb_tools_orbit2d_to_particle(1.,p1,0,1.,0.49,((double)i)/(double)Np*2.*M_PI,-0.21);      
     reb_add(r, p2); 
