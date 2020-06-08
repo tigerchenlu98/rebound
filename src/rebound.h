@@ -2207,12 +2207,6 @@ struct reb_display_data {
     struct reb_particle* p_jh_copy;
     unsigned long allocated_N;
     unsigned long allocated_N_whfast;
-    double** dcrit;                 ///< Critical radii for MERCURANA
-    unsigned long allocated_N_mercurana;
-    unsigned long Nmaxshells_mercurana;
-    unsigned int* inshell_encounter;  ///< from global to shell
-    unsigned int* inshell_dominant;  ///< from global to shell
-    unsigned int* inshell_subdominant;  ///< from global to shell
     unsigned int opengl_enabled;
     double scale;
     double mouse_x;
@@ -2230,6 +2224,12 @@ struct reb_display_data {
     int ghostboxes;                 /**< Shows/hides ghost boxes. */
     int reference;                  /**< reb_particle used as a reference for centering. */
     int zrotation;                  /**< particle index used for programmatic rotation around the z axis (can be useful for corotating frames). */
+    double** dcrit;                 ///< Critical radii for MERCURANA
+    unsigned long allocated_N_mercurana;
+    unsigned long Nmaxshells_mercurana;
+    unsigned int* inshell_encounter;  ///< from global to shell
+    unsigned int* inshell_dominant;  ///< from global to shell
+    unsigned int* inshell_subdominant;  ///< from global to shell
     unsigned int mouse_action;      
     unsigned int key_mods;      
     struct reb_quaternion view;
