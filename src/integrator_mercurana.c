@@ -198,7 +198,6 @@ static void check_maxdrift_violation(
             if (drift>maxdrift_B[s][mi]){
                 rebd_viol1[s]++;
                 rebd_viol2[shell]++;
-                //printf("maxdrift before %e  \t",maxdrift_B[s][mi]);
                 maxdrift_B[s][mi] = 1e300;
                 for (int j=0; j<shellN_B[s]; j++){ 
                     int mj = map_B[s][j]; 
@@ -216,9 +215,6 @@ static void check_maxdrift_violation(
                                 double drift_sa = t_drifted[shell] - t_drifted[sa];
                                 map_B[sa][shellN_B[sa]] = mj;
                                 shellN_B[sa]++;
-                                //printf(" -- moved --\n steps done %lld\n",r->steps_done);
-                                //exit(0);
-                                printf(" %.20f moved %d  %d      %d %d %d %d\n",r->t, mi,mj,s,shell, r->N_active, r->N); 
                                 p0[sa][mj] = p0[s][mj];
                                 p0[sa][mj].x +=  drift_sa*particles[mj].vx; 
                                 p0[sa][mj].y +=  drift_sa*particles[mj].vy; 
@@ -234,7 +230,6 @@ static void check_maxdrift_violation(
                         }
                     }
                 }
-                //printf("maxdrift after %e     %d %d\n",maxdrift_B[s][mi],shell,s);
             }
         }
     }
@@ -353,7 +348,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
         return;
     }
-	
+
     rim->collisions_N = 0;
 
     rim->shellN_encounter[shell+1] = 0;
