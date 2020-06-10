@@ -48,7 +48,8 @@ int main(int argc, char* argv[]) {
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-4;
     r->ri_mercurana.N_dominant = 1;
-    r->ri_mercurana.Nmaxshells = 30;
+    r->ri_mercurana.Nmaxshells = 1;//30;
+    r->ri_mercurana.n0=0;//30;
     int rad = 1; 
     r->collision = REB_COLLISION_DIRECT;
     r->collision_resolve = reb_collision_resolve_merge;

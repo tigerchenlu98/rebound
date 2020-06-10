@@ -345,18 +345,6 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     unsigned int* inshell_subdominant = rim->inshell_subdominant;
     const int N_active = r->N_active==-1?r->N:r->N_active;
     
-    if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
-        return;
-    }
-
-    rim->collisions_N = 0;
-
-    rim->shellN_encounter[shell+1] = 0;
-    rim->shellN_encounter_passive[shell+1] = 0;
-    rim->shellN_dominant[shell+1] = 0;
-    rim->shellN_subdominant[shell+1] = 0;
-    rim->shellN_subdominant_passive[shell+1] = 0;
-
     if (shell==0){
         // Setup maps in outermost shell 
         rim->shellN_dominant[0] = rim->N_dominant;
@@ -376,6 +364,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
             map_encounter_passive[i-N_active] = i; 
         }
     }
+    // First, setup arrays for current shell.
     for (int i=0; i<rim->shellN_encounter[shell]; i++){
         int mi = map_encounter[i]; 
         inshell_encounter[mi] = shell;
@@ -396,6 +385,19 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         int mi = map_subdominant_passive[i]; 
         inshell_subdominant[mi] = shell;
     }
+    
+    rim->collisions_N = 0;
+    
+    if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
+        return; // If not, no prediction needed.
+    }
+
+    rim->shellN_encounter[shell+1] = 0;
+    rim->shellN_encounter_passive[shell+1] = 0;
+    rim->shellN_dominant[shell+1] = 0;
+    rim->shellN_subdominant[shell+1] = 0;
+    rim->shellN_subdominant_passive[shell+1] = 0;
+
     if (shell!=0){
         // Check for maxdrift violation of higher shells
         //       dom sub enc subp encp
