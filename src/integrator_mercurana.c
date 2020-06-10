@@ -766,6 +766,10 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         reb_error(r,"kappa>0 is required if Nmaxshells>1.");
         return;
     }
+    if (rim->Nmaxshells>1 && rim->n0==0){
+        reb_error(r,"n0>0 is required if Nmaxshells>1.");
+        return;
+    }
     if (rim->N_dominant>r->N_active && r->N_active!=-1){
         reb_error(r,"The number of dominant particles N_dominant cannot be larger than the number of active particles N_active.");
         return;

@@ -211,6 +211,22 @@ void reb_remove_all(struct reb_simulation* const r){
 	r->particles 	= NULL;
 }
 
+static inline void reb_remove_mercurana_shell(int s, int index, unsigned int* shellN, unsigned int** map){
+    int isInList = 0;
+    for (int i=0;i<shellN[s];i++){
+        if (map[s][i]==index){
+            isInList = 1;
+            shellN[s]--;
+        }
+        if (isInList && i!= shellN[s]){
+            map[s][i] = map[s][i+1];
+        }
+        if (map[s][i]>index){
+            map[s][i]--;
+        }
+    }
+}
+
 int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
     if(keepSorted==0 && index<r->N_active && r->N_active!=-1 && r->N_active!=r->N && r->integrator != REB_INTEGRATOR_MERCURANA){
 		reb_warning(r, "Removing active particle. You might want to keep particles sorted. Check collision_resolve_keep_sorted.");
@@ -219,76 +235,12 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
         keepSorted = 1; // Overwrite keep sorted flag
         struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
         for (int s=0;s<rim->Nmaxshells;s++){
-            unsigned int* map_encounter = rim->map_encounter[s];
-            unsigned int* map_encounter_passive = rim->map_encounter_passive[s];
-            unsigned int* map_dominant = rim->map_dominant[s];
-            unsigned int* map_subdominant = rim->map_subdominant[s];
-            unsigned int* map_subdominant_passive = rim->map_subdominant_passive[s];
-            int isEncounter = 0;
-            for (int i=0;i<rim->shellN_encounter[s];i++){
-                if (map_encounter[i]==index){
-                    isEncounter = 1;
-                    rim->shellN_encounter[s]--;
-                }
-                if (isEncounter && i!=rim->shellN_encounter[s]){
-                    map_encounter[i] = map_encounter[i+1];
-                }
-                if (map_encounter[i]>index){
-                    map_encounter[i]--;
-                }
-            }
-            int isEncounter_passive = 0;
-            for (int i=0;i<rim->shellN_encounter_passive[s];i++){
-                if (map_encounter_passive[i]==index){
-                    isEncounter_passive = 1;
-                    rim->shellN_encounter_passive[s]--;
-                }
-                if (isEncounter_passive && i!=rim->shellN_encounter_passive[s]){
-                    map_encounter_passive[i] = map_encounter_passive[i+1];
-                }
-                if (map_encounter_passive[i]>index){
-                    map_encounter_passive[i]--;
-                }
-            }
-            int isDominant = 0;
-            for (int i=0;i<rim->shellN_dominant[s];i++){
-                if (map_dominant[i]==index){
-                    isDominant = 1;
-                    rim->shellN_dominant[s]--;
-                }
-                if (isDominant && i!=rim->shellN_dominant[s]){
-                    map_dominant[i] = map_dominant[i+1];
-                }
-                if (map_dominant[i]>index){
-                    map_dominant[i]--;
-                }
-            }
-            int isSubdominant = 0;
-            for (int i=0;i<rim->shellN_subdominant[s];i++){
-                if (map_subdominant[i]==index){
-                    isSubdominant = 1;
-                    rim->shellN_subdominant[s]--;
-                }
-                if (isSubdominant && i!=rim->shellN_subdominant[s]){
-                    map_subdominant[i] = map_subdominant[i+1];
-                }
-                if (map_subdominant[i]>index){
-                    map_subdominant[i]--;
-                }
-            }
-            int isSubdominant_passive = 0;
-            for (int i=0;i<rim->shellN_subdominant_passive[s];i++){
-                if (map_subdominant_passive[i]==index){
-                    isSubdominant_passive = 1;
-                    rim->shellN_subdominant_passive[s]--;
-                }
-                if (isSubdominant_passive && i!=rim->shellN_subdominant_passive[s]){
-                    map_subdominant_passive[i] = map_subdominant_passive[i+1];
-                }
-                if (map_subdominant_passive[i]>index){
-                    map_subdominant_passive[i]--;
-                }
-            }
+            reb_remove_mercurana_shell(s, index, rim->shellN_dominant, rim->map_dominant);
+            reb_remove_mercurana_shell(s, index, rim->shellN_subdominant, rim->map_subdominant);
+            reb_remove_mercurana_shell(s, index, rim->shellN_encounter, rim->map_encounter);
+            reb_remove_mercurana_shell(s, index, rim->shellN_subdominant_passive, rim->map_subdominant_passive);
+            reb_remove_mercurana_shell(s, index, rim->shellN_encounter_passive, rim->map_encounter_passive);
+            
             double* maxdrift_dominant = rim->maxdrift_dominant[s];
             double* maxdrift_subdominant = rim->maxdrift_subdominant[s];
             double* maxdrift_encounter = rim->maxdrift_encounter[s];
