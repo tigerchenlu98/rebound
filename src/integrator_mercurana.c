@@ -609,33 +609,28 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
     unsigned int* map_dominant = rim->map_dominant[shell];
     unsigned int* map_subdominant = rim->map_subdominant[shell];
     unsigned int* map_subdominant_passive = rim->map_subdominant_passive[shell];
-    int shellN_encounter = rim->shellN_encounter[shell];
-    int shellN_encounter_passive = rim->shellN_encounter_passive[shell];
-    int shellN_dominant = rim->shellN_dominant[shell];
-    int shellN_subdominant = rim->shellN_subdominant[shell];
-    int shellN_subdominant_passive = rim->shellN_subdominant_passive[shell];
     unsigned int* inshell_encounter = rim->inshell_encounter;
 
-    for (int i=0;i<shellN_dominant;i++){ // Apply acceleration. Jerk already applied.
+    for (int i=0;i<rim->shellN_dominant[shell];i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_dominant[i];
         particles[mi].vx += y*particles[mi].ax;
         particles[mi].vy += y*particles[mi].ay;
         particles[mi].vz += y*particles[mi].az;
     }
-    for (int i=0;i<shellN_encounter;i++){ // Apply acceleration. Jerk already applied.
+    for (int i=0;i<rim->shellN_encounter[shell];i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_encounter[i];
         particles[mi].vx += y*particles[mi].ax;
         particles[mi].vy += y*particles[mi].ay;
         particles[mi].vz += y*particles[mi].az;
     }
-    for (int i=0;i<shellN_encounter_passive;i++){ // Apply acceleration. Jerk already applied.
+    for (int i=0;i<rim->shellN_encounter_passive[shell];i++){ // Apply acceleration. Jerk already applied.
         const int mi = map_encounter_passive[i];
         particles[mi].vx += y*particles[mi].ax;
         particles[mi].vy += y*particles[mi].ay;
         particles[mi].vz += y*particles[mi].az;
     }
     if (shell>0){ // All particles are encounter particles in shell 0, no need for subdominant kick
-        for (int i=0;i<shellN_subdominant;i++){ // Apply acceleration. Jerk already applied.
+        for (int i=0;i<rim->shellN_subdominant[shell];i++){ // Apply acceleration. Jerk already applied.
             const int mi = map_subdominant[i];
             if (inshell_encounter[mi]<shell){ // do not apply acceleration twice
                 particles[mi].vx += y*particles[mi].ax;
@@ -643,7 +638,7 @@ static void reb_integrator_mercurana_interaction_step(struct reb_simulation* r, 
                 particles[mi].vz += y*particles[mi].az;
             }
         }
-        for (int i=0;i<shellN_subdominant_passive;i++){ // Apply acceleration. Jerk already applied.
+        for (int i=0;i<rim->shellN_subdominant_passive[shell];i++){ // Apply acceleration. Jerk already applied.
             const int mi = map_subdominant_passive[i];
             if (inshell_encounter[mi]<shell){ // do not apply acceleration twice // inshell_encounter = inshell_encounter_passive
                 particles[mi].vx += y*particles[mi].ax;
@@ -668,11 +663,6 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
     unsigned int* map_dominant = rim->map_dominant[shell];
     unsigned int* map_subdominant = rim->map_subdominant[shell];
     unsigned int* map_subdominant_passive = rim->map_subdominant_passive[shell];
-    int shellN_encounter = rim->shellN_encounter[shell];
-    int shellN_encounter_passive = rim->shellN_encounter_passive[shell];
-    int shellN_dominant = rim->shellN_dominant[shell];
-    int shellN_subdominant = rim->shellN_subdominant[shell];
-    int shellN_subdominant_passive = rim->shellN_subdominant_passive[shell];
     unsigned int* inshell_encounter = rim->inshell_encounter;
     unsigned int* inshell_dominant = rim->inshell_dominant;
     unsigned int* inshell_subdominant = rim->inshell_subdominant;
@@ -700,7 +690,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
         r->t += a;
     }
     
-    for (int i=0;i<shellN_dominant;i++){  // loop over all particles in shell (includes subshells)
+    for (int i=0;i<rim->shellN_dominant[shell];i++){  // loop over all particles in shell (includes subshells)
         int mi = map_dominant[i]; 
         if( inshell_dominant[mi]==shell){
             particles[mi].x += a*particles[mi].vx;
@@ -708,7 +698,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].z += a*particles[mi].vz;
         }
     }
-    for (int i=0;i<shellN_subdominant;i++){  // loop over all particles in shell (includes subshells)
+    for (int i=0;i<rim->shellN_subdominant[shell];i++){  // loop over all particles in shell (includes subshells)
         int mi = map_subdominant[i]; 
         if( inshell_subdominant[mi]==shell && inshell_encounter[mi]<=shell){
             particles[mi].x += a*particles[mi].vx;
@@ -716,7 +706,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].z += a*particles[mi].vz;
         }
     }
-    for (int i=0;i<shellN_encounter;i++){  // loop over all particles in shell (includes subshells)
+    for (int i=0;i<rim->shellN_encounter[shell];i++){  // loop over all particles in shell (includes subshells)
         int mi = map_encounter[i]; 
         if( inshell_subdominant[mi]<shell && inshell_encounter[mi]==shell){
             particles[mi].x += a*particles[mi].vx;
@@ -724,7 +714,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].z += a*particles[mi].vz;
         }
     }
-    for (int i=0;i<shellN_subdominant_passive;i++){  // loop over all particles in shell (includes subshells)
+    for (int i=0;i<rim->shellN_subdominant_passive[shell];i++){  // loop over all particles in shell (includes subshells)
         int mi = map_subdominant_passive[i]; 
         if( inshell_subdominant[mi]==shell && inshell_encounter[mi]<=shell){
             particles[mi].x += a*particles[mi].vx;
@@ -732,7 +722,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].z += a*particles[mi].vz;
         }
     }
-    for (int i=0;i<shellN_encounter_passive;i++){  // loop over all particles in shell (includes subshells)
+    for (int i=0;i<rim->shellN_encounter_passive[shell];i++){  // loop over all particles in shell (includes subshells)
         int mi = map_encounter_passive[i]; 
         if( inshell_subdominant[mi]<shell && inshell_encounter[mi]==shell){
             particles[mi].x += a*particles[mi].vx;

@@ -216,14 +216,16 @@ static inline void reb_remove_mercurana_shell(int s, int index, unsigned int* sh
     for (int i=0;i<shellN[s];i++){
         if (map[s][i]==index){
             isInList = 1;
-            shellN[s]--;
         }
-        if (isInList && i!= shellN[s]){
+        if (isInList && i+1<shellN[s]){
             map[s][i] = map[s][i+1];
         }
         if (map[s][i]>index){
             map[s][i]--;
         }
+    }
+    if (isInList){
+        shellN[s]--;
     }
 }
 
