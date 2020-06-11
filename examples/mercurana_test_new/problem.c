@@ -42,14 +42,13 @@ int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     srand(4);
     r->exact_finish_time = 0;
-    r->dt = 0.040;
+    r->dt = 0.40;
     r->heartbeat = heartbeat;
     r->testparticle_type = 1;
     r->integrator = REB_INTEGRATOR_MERCURANA;
     r->ri_mercurana.kappa = 1e-4;
     r->ri_mercurana.N_dominant = 1;
-    r->ri_mercurana.Nmaxshells = 1;//30;
-    r->ri_mercurana.n0=0;//30;
+    r->ri_mercurana.Nmaxshells = 30;
     int rad = 1; 
     r->collision = REB_COLLISION_DIRECT;
     r->collision_resolve = reb_collision_resolve_merge;
