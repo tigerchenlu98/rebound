@@ -471,6 +471,43 @@ struct reb_simulation_integrator_eos {
     unsigned int is_synchronized;   ///< Flag to indicate if the drift step at the end of the last timestep has been taken.
 };
 
+// Particle type
+enum REB_PTYPE {
+    REB_PTYPE_DOM = 0,
+    REB_PTYPE_SUB = 2,
+    REB_PTYPE_ENC = 3,
+    REB_PTYPE_SUBP = 4,
+    REB_PTYPE_ENCP = 5,
+    REB_PTYPE_NONE = -1,
+};
+
+// Interaction type
+enum REB_ITYPE {
+    REB_ITYPE_DOM_DOM = 0,
+    REB_ITYPE_DOM_SUB = 1,
+    REB_ITYPE_DOM_SUBP = 2,
+    REB_ITYPE_SUB_DOM = 3,
+    REB_ITYPE_ENC_ENC = 4,
+    REB_ITYPE_ENC_ENCP = 5,
+    REB_ITYPE_SUBP_DOM = 6,
+    REB_ITYPE_ENCP_ENC = 7,
+    REB_ITYPE_NONE = -1,
+};
+
+// maxdrift data
+struct reb_mdd {
+    struct reb_particle p0;
+    double t0;
+    double maxdrift;
+};
+
+// Particle in shell data
+struct reb_pisd {
+    unsigned int** map;
+    unsigned int* inshell;
+    unsigned int* shellN;
+};
+
 /**
  * @brief This structure contains variables and pointer used by the MERCURANA integrator.
  */
@@ -490,29 +527,13 @@ struct reb_simulation_integrator_mercurana {
     // The user does not need to change the following variables 
     double** dcrit;                 ///< Critical radii for each particle and each shell (automatically calculated)
     unsigned int Nmaxshellsused;     ///< Used for debugging only 
-    unsigned int** map_encounter;   ///< Internal variable to map from shell to global particle index 
-    unsigned int** map_encounter_passive;   ///< Internal variable to map from shell to global particle index 
-    unsigned int** map_dominant;    ///< Internal variable to map from shell to global particle index 
-    unsigned int** map_subdominant; ///< Internal variable to map from shell to global particle index 
-    unsigned int** map_subdominant_passive; ///< Internal variable to map from shell to global particle index 
-    unsigned int* inshell_encounter;  ///< from global to shell
-    unsigned int* inshell_dominant;  ///< from global to shell
-    unsigned int* inshell_subdominant;  ///< from global to shell
-    double** maxdrift_dominant;
-    double** maxdrift_subdominant;
-    double** maxdrift_encounter;  
-    double** maxdrift_subdominant_passive;
-    double** maxdrift_encounter_passive;  
-    double* t_drifted;
-    double* dt_drift;
-    struct reb_particle** p0;
+    struct reb_pisd pisd[5];
+    struct reb_mdd** mdd[8];
+    double* dt_shell;
+    double* p_t;
+    double t_now;
     unsigned int moved_particles;
     unsigned int allocatedN;        ///< Allocated memory for various internal variables. 
-    unsigned int* shellN_encounter; ///< Number of particles in each shell.
-    unsigned int* shellN_encounter_passive; ///< Number of particles in each shell.
-    unsigned int* shellN_dominant;  ///< Number of dominant particles in each shell.
-    unsigned int* shellN_subdominant; ///< Number of encounter particles in each shell. 
-    unsigned int* shellN_subdominant_passive; ///< Number of encounter particles in each shell. 
     unsigned int current_shell;     ///< Internal variable used in gravity routine only.
     unsigned int is_synchronized;   ///< Flag to determine if current particle structure is synchronized
     unsigned int collisions_N;      ///< Internal variable to communicate to collision routine.

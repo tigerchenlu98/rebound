@@ -56,17 +56,57 @@ static void reb_calculate_acceleration_for_particle(const struct reb_simulation*
 /**
  * @brief Helper function for calculating gravitational interactions for particle group pairs.
  */
+static inline enum REB_PTYPE get_ptype_drifting(enum REB_ITYPE itype){
+    switch (itype){
+        case REB_ITYPE_DOM_DOM:
+        case REB_ITYPE_DOM_SUB:
+        case REB_ITYPE_DOM_SUBP:
+            return REB_PTYPE_DOM; 
+        case REB_ITYPE_SUB_DOM:
+            return REB_PTYPE_SUB; 
+        case REB_ITYPE_ENC_ENC:
+        case REB_ITYPE_ENC_ENCP:
+            return REB_PTYPE_ENC; 
+        case REB_ITYPE_SUBP_DOM:
+            return REB_PTYPE_SUBP; 
+        case REB_ITYPE_ENCP_ENC:
+            return REB_PTYPE_ENCP; 
+        default:
+            return REB_PTYPE_NONE;
+    }
+}
+static inline enum REB_PTYPE get_ptype_interacting(enum REB_ITYPE itype){
+    switch (itype){
+        case REB_ITYPE_DOM_DOM:
+        case REB_ITYPE_SUB_DOM:
+        case REB_ITYPE_SUBP_DOM:
+            return REB_PTYPE_DOM; 
+        case REB_ITYPE_DOM_SUB:
+            return REB_PTYPE_SUB; 
+        case REB_ITYPE_ENC_ENC:
+        case REB_ITYPE_ENCP_ENC:
+            return REB_PTYPE_ENC; 
+        case REB_ITYPE_DOM_SUBP:
+            return REB_PTYPE_SUBP; 
+        case REB_ITYPE_ENC_ENCP:
+            return REB_PTYPE_ENCP; 
+        default:
+            return REB_PTYPE_NONE;
+    }
+}
 static inline void reb_mercurana_grav_update_B(struct reb_simulation* const r, 
         const double* dcrit_i, const double* dcrit_c, const double* dcrit_o, const double G, const double softening2,
-        const int shellN_A, unsigned int* map_A, 
-        const int shellN_B, unsigned int* map_B){
+        int shell, enum REB_PTYPE ptype_A, enum REB_PTYPE ptype_B){
+    struct reb_pisd pisd_A = r->ri_mercurana.pisd[ptype_A];
+    struct reb_pisd pisd_B = r->ri_mercurana.pisd[ptype_B];
+    
     struct reb_particle* const particles = r->particles;
     double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
 #pragma omp parallel for
-    for (int i=0; i<shellN_A; i++){
-        const int mi = map_A[i];
-        for (int j=0; j<shellN_B; j++){
-            const int mj = map_B[j];
+    for (int i=0; i<pisd_A.shellN[shell]; i++){
+        const int mi = pisd_A.map[shell][i];
+        for (int j=0; j<pisd_B.shellN[shell]; j++){
+            const int mj = pisd_B.map[shell][j];
             if (mi==mj) continue; // avoid self interaction. Only needed for OPENMP
             const double dx = particles[mi].x - particles[mj].x;
             const double dy = particles[mi].y - particles[mj].y;
@@ -94,17 +134,20 @@ static inline void reb_mercurana_grav_update_B(struct reb_simulation* const r,
 }
 static inline void reb_mercurana_grav_update_AB(struct reb_simulation* const r, 
         const double* dcrit_i, const double* dcrit_c, const double* dcrit_o, const double G, const double softening2,
-        const int shellN_A, unsigned int* map_A, 
-        const int shellN_B, unsigned int* map_B){
+        int shell, enum REB_PTYPE ptype_A, enum REB_PTYPE ptype_B){
+    
+    struct reb_pisd pisd_A = r->ri_mercurana.pisd[ptype_A];
+    struct reb_pisd pisd_B = r->ri_mercurana.pisd[ptype_B];
+
     struct reb_particle* const particles = r->particles;
     double (*_L) (const struct reb_simulation* const r, double d, double dcrit, double fracin) = r->ri_mercurana.L;
 #ifndef OPENMP // OPENMP off, do O(1/2*N^2)
 #pragma omp parallel for
-    for (int i=0; i<shellN_A; i++){
-        const int startj = (map_A==map_B)?(i+1):0;
-        const int mi = map_A[i];
-        for (int j=startj; j<shellN_B; j++){
-            const int mj = map_B[j];
+    for (int i=0; i<pisd_A.shellN[shell]; i++){
+        const int startj = (ptype_A==ptype_B)?(i+1):0;
+        const int mi = pisd_A.map[shell][i];
+        for (int j=startj; j<pisd_B.shellN[shell]; j++){
+            const int mj = pisd_B.map[shell][j];
             const double dx = particles[mi].x - particles[mj].x;
             const double dy = particles[mi].y - particles[mj].y;
             const double dz = particles[mi].z - particles[mj].z;
@@ -133,14 +176,16 @@ static inline void reb_mercurana_grav_update_AB(struct reb_simulation* const r,
         }
     }
 #else // OPENMP on, do O(N^2)
-    reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shellN_A, map_A, shellN_B, map_B);
-    reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shellN_B, map_B, shellN_A, map_A);
+    reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, ptype_A, ptpye_B);
+    reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, ptype_B, ptpye_A);
 #endif
 }
-static inline void reb_mercurana_grav_set_zero(struct reb_simulation* const r, const int shellN_A, unsigned int* map_A){ 
+static inline void reb_mercurana_grav_set_zero(struct reb_simulation* const r, int shell, enum REB_PTYPE ptype){ 
     struct reb_particle* const particles = r->particles;
-    for (int i=0; i<shellN_A; i++){
-        const int mi = map_A[i];
+    unsigned int* map = r->ri_mercurana.pisd[ptype].map[shell];
+    unsigned int shellN = r->ri_mercurana.pisd[ptype].shellN[shell];
+    for (int i=0; i<shellN; i++){
+        const int mi = map[i];
         particles[mi].ax = 0; 
         particles[mi].ay = 0; 
         particles[mi].az = 0; 
@@ -739,17 +784,6 @@ void reb_calculate_acceleration(struct reb_simulation* r){
         {
             struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
             const unsigned int shell = rim->current_shell;
-            const double G = r->G;
-            unsigned int* map_encounter = rim->map_encounter[shell];
-            unsigned int* map_encounter_passive = rim->map_encounter_passive[shell];
-            unsigned int* map_dominant = rim->map_dominant[shell];
-            unsigned int* map_subdominant = rim->map_subdominant[shell];
-            unsigned int* map_subdominant_passive = rim->map_subdominant_passive[shell];
-            const unsigned int shellN_encounter = rim->shellN_encounter[shell];
-            const unsigned int shellN_encounter_passive = rim->shellN_encounter_passive[shell];
-            const unsigned int shellN_dominant = rim->shellN_dominant[shell];
-            const unsigned int shellN_subdominant = rim->shellN_subdominant[shell];
-            const unsigned int shellN_subdominant_passive = rim->shellN_subdominant_passive[shell];
 
             const double* dcrit_i = NULL; // critical radius of inner shell
             const double* dcrit_c = NULL; // critical radius of current shell
@@ -762,35 +796,19 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 dcrit_o = r->ri_mercurana.dcrit[shell-1];
             }
 
-            reb_mercurana_grav_set_zero(r, shellN_dominant, map_dominant);
-            reb_mercurana_grav_set_zero(r, shellN_encounter, map_encounter);
-            reb_mercurana_grav_set_zero(r, shellN_subdominant, map_subdominant);
-            reb_mercurana_grav_set_zero(r, shellN_encounter_passive, map_encounter_passive);
-            reb_mercurana_grav_set_zero(r, shellN_subdominant_passive, map_subdominant_passive);
+            for (int ptype=0; ptype<8; ptype++){ // Loop over all particle types
+                reb_mercurana_grav_set_zero(r, shell, ptype);
+            }
 
-            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
-                    shellN_encounter, map_encounter,
-                    shellN_encounter, map_encounter);
-            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
-                    shellN_dominant, map_dominant,
-                    shellN_subdominant, map_subdominant);
-            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
-                    shellN_dominant, map_dominant,
-                    shellN_dominant, map_dominant);
+            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, REB_PTYPE_ENC, REB_PTYPE_ENC);
+            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, REB_PTYPE_DOM, REB_PTYPE_SUB);
+            reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, REB_PTYPE_DOM, REB_PTYPE_DOM);
             if (_testparticle_type==1){
-                reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
-                        shellN_dominant, map_dominant,
-                        shellN_subdominant_passive, map_subdominant_passive);
-                reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
-                        shellN_encounter, map_encounter,
-                        shellN_encounter_passive, map_encounter_passive);
+                reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, REB_PTYPE_DOM, REB_PTYPE_SUBP);
+                reb_mercurana_grav_update_AB(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, REB_PTYPE_ENC, REB_PTYPE_ENCP);
             }else{
-                reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
-                        shellN_dominant, map_dominant,
-                        shellN_subdominant_passive, map_subdominant_passive);
-                reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2,
-                        shellN_encounter, map_encounter,
-                        shellN_encounter_passive, map_encounter_passive);
+                reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, REB_PTYPE_DOM, REB_PTYPE_SUBP);
+                reb_mercurana_grav_update_B(r, dcrit_i, dcrit_c, dcrit_o, G, softening2, shell, REB_PTYPE_ENC, REB_PTYPE_ENCP);
             }
 
         }

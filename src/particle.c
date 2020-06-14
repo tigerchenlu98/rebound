@@ -211,24 +211,6 @@ void reb_remove_all(struct reb_simulation* const r){
 	r->particles 	= NULL;
 }
 
-static inline void reb_remove_mercurana_shell(int s, int index, unsigned int* shellN, unsigned int** map){
-    int isInList = 0;
-    for (int i=0;i<shellN[s];i++){
-        if (map[s][i]==index){
-            isInList = 1;
-        }
-        if (isInList && i+1<shellN[s]){
-            map[s][i] = map[s][i+1];
-        }
-        if (map[s][i]>index){
-            map[s][i]--;
-        }
-    }
-    if (isInList){
-        shellN[s]--;
-    }
-}
-
 int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
     if(keepSorted==0 && index<r->N_active && r->N_active!=-1 && r->N_active!=r->N && r->integrator != REB_INTEGRATOR_MERCURANA){
 		reb_warning(r, "Removing active particle. You might want to keep particles sorted. Check collision_resolve_keep_sorted.");
@@ -236,39 +218,47 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
     if (r->integrator == REB_INTEGRATOR_MERCURANA && r->ri_mercurana.allocatedN){
         keepSorted = 1; // Overwrite keep sorted flag
         struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
-        for (int s=0;s<rim->Nmaxshells;s++){
-            reb_remove_mercurana_shell(s, index, rim->shellN_dominant, rim->map_dominant);
-            reb_remove_mercurana_shell(s, index, rim->shellN_subdominant, rim->map_subdominant);
-            reb_remove_mercurana_shell(s, index, rim->shellN_encounter, rim->map_encounter);
-            reb_remove_mercurana_shell(s, index, rim->shellN_subdominant_passive, rim->map_subdominant_passive);
-            reb_remove_mercurana_shell(s, index, rim->shellN_encounter_passive, rim->map_encounter_passive);
-            
-            double* maxdrift_dominant = rim->maxdrift_dominant[s];
-            double* maxdrift_subdominant = rim->maxdrift_subdominant[s];
-            double* maxdrift_encounter = rim->maxdrift_encounter[s];
-            double* maxdrift_subdominant_passive = rim->maxdrift_subdominant_passive[s];
-            double* maxdrift_encounter_passive = rim->maxdrift_encounter_passive[s];
-            double* dcrit = rim->dcrit[s];
-            struct reb_particle* p0 = rim->p0[s];
-            
+
+        for (int ptype=0; ptype<8; ptype++){ // Loop over all particle types
+            struct reb_pisd pisd = rim->pisd[ptype];
+            for (int s=0;s<rim->Nmaxshells;s++){
+                int isInList = 0;
+                for (int i=0;i<pisd.shellN[s];i++){
+                    if (pisd.map[s][i]==index){
+                        isInList = 1;
+                    }
+                    if (isInList && i+1<pisd.shellN[s]){
+                        pisd.map[s][i] = pisd.map[s][i+1];
+                    }
+                    if (pisd.map[s][i]>index){
+                        pisd.map[s][i]--;
+                    }
+                }
+                if (isInList){
+                    pisd.shellN[s]--;
+                }
+            }
             for (int i=index;i<r->N-1;i++){
-                maxdrift_dominant[i] = maxdrift_dominant[i+1];
-                maxdrift_subdominant[i] = maxdrift_subdominant[i+1];
-                maxdrift_encounter[i] = maxdrift_encounter[i+1];
-                maxdrift_subdominant_passive[i] = maxdrift_subdominant_passive[i+1];
-                maxdrift_encounter_passive[i] = maxdrift_encounter_passive[i+1];
-                dcrit[i] = dcrit[i+1];
-                p0[i] = p0[i+1];
+                pisd.inshell[i] = pisd.inshell[i+1];
             }
         }
-        unsigned int* inshell_encounter = rim->inshell_encounter;
-        unsigned int* inshell_dominant = rim->inshell_dominant;
-        unsigned int* inshell_subdominant = rim->inshell_subdominant;
-        for (int i=index;i<r->N-1;i++){
-            inshell_encounter[i] = inshell_encounter[i+1];
-            inshell_dominant[i] = inshell_dominant[i+1];
-            inshell_subdominant[i] = inshell_subdominant[i+1];
+           
+        for (int itype=0; itype<8; itype++){ // Loop over all interaction types
+            for (int s=0;s<rim->Nmaxshells;s++){
+                struct reb_mdd* mdd = rim->mdd[itype][s]; 
+                for (int i=index;i<r->N-1;i++){
+                    mdd[i] = mdd[i+1];
+                }
+            }
         }
+            
+        for (int s=0;s<rim->Nmaxshells;s++){
+            double* dcrit = rim->dcrit[s];
+            for (int i=index;i<r->N-1;i++){
+                dcrit[i] = dcrit[i+1];
+            }
+        }
+        
         if (index<rim->N_dominant){
             rim->N_dominant--;
         }

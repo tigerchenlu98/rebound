@@ -129,13 +129,6 @@ static double reb_mercurana_predict_rmin2(struct reb_particle p1, struct reb_par
     return rmin2;
 }
 
-static double reb_mercurana_predict_rmin2_drifted(struct reb_particle p1, struct reb_particle p2, double dt, double p2drift){ 
-    struct reb_particle p2drifted = p2;
-    p2drifted.x += p2drift * p2drifted.vx;
-    p2drifted.y += p2drift * p2drifted.vy;
-    p2drifted.z += p2drift * p2drifted.vz;
-    return reb_mercurana_predict_rmin2(p1, p2drifted,dt);
-}
 
 // This functions records a physical collision between particles i and j, to be resolved later.
 static void reb_mercurana_record_collision(struct reb_simulation* const r, unsigned int i, unsigned int j){
@@ -166,183 +159,132 @@ static double reb_drift_from_straight_line(struct reb_particle p0, double dt0, s
 }
 
 
-static void check_maxdrift_violation(  
-                    struct reb_simulation* r,
-                    double dt,
-                    unsigned int shell, 
-                    unsigned int shellN_A,
-                    unsigned int* map_A,
-                    unsigned int* shellN_B,
-                    unsigned int** map_B,
-                    unsigned int* inshell_B,
-                    double** maxdrift_B
-                    ){
-    struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
-    const double* const dcrit = rim->dcrit[shell];
-    double* t_drifted = rim->t_drifted;
-    double* dt_drift = rim->dt_drift;
-    struct reb_particle** p0 = rim->p0;
-    struct reb_particle* const particles = r->particles;
-    // Idea: - Loop over all particles of type A in current shell
-    //       - Check for every higher shell, if maxdrift of type B will be violated in this timestep
-    //       - If so, check for violating particle of type B.
-    //       - Move violating particle of type B to current shell.
-    //       - Also update maxdrift type B for particle of type A to avoid triggering a search in the future.
-    for (int i=0; i<shellN_A; i++){
-        int mi = map_A[i]; 
-        for (int s=0;s<shell;s++){
-            //TODO check following
-            double dt0 = t_drifted[shell] + dt - t_drifted[s];
-            double dt1 = dt; 
-            double drift = reb_drift_from_straight_line(p0[s][mi],dt0,particles[mi],dt1);
-            if (drift>maxdrift_B[s][mi]){
-                rebd_viol1[s]++;
-                rebd_viol2[shell]++;
-                maxdrift_B[s][mi] = 1e300;
-                for (int j=0; j<shellN_B[s]; j++){ 
-                    int mj = map_B[s][j]; 
-                    if (mi==mj) continue;
-                    // Not in a sub-shell?
-                    if (inshell_B[mj]==s){
-                        double drift_s = t_drifted[shell] - t_drifted[s];
-                        // TODO: check following
-                        double rmin2 = reb_mercurana_predict_rmin2_drifted(particles[mi],particles[mj],dt_drift[s],drift_s);
-                        double dcritsum = dcrit[mi]+dcrit[mj];
-                        if (rmin2< dcritsum*dcritsum){ 
-                            inshell_B[mj] = shell;
-                            rim->moved_particles++;
-                            for (int sa=s+1; sa<=shell; sa++){
-                                double drift_sa = t_drifted[shell] - t_drifted[sa];
-                                map_B[sa][shellN_B[sa]] = mj;
-                                shellN_B[sa]++;
-                                p0[sa][mj] = p0[s][mj];
-                                p0[sa][mj].x +=  drift_sa*particles[mj].vx; 
-                                p0[sa][mj].y +=  drift_sa*particles[mj].vy; 
-                                p0[sa][mj].z +=  drift_sa*particles[mj].vz; 
-                            }
-                            particles[mj].x += drift_s*particles[mj].vx;
-                            particles[mj].y += drift_s*particles[mj].vy;
-                            particles[mj].z += drift_s*particles[mj].vz;
-                        }else{
-                            double dcritsum = dcrit[mi]+dcrit[mj];
-                            const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-                            maxdrift_B[s][mi] = MIN(maxdrift_B[s][mi],maxdrift);
-                        }
-                    }
-                }
-            }
-        }
+
+static inline enum REB_PTYPE get_ptype_drifting(enum REB_ITYPE itype){
+    switch (itype){
+        case REB_ITYPE_DOM_DOM:
+        case REB_ITYPE_DOM_SUB:
+        case REB_ITYPE_DOM_SUBP:
+            return REB_PTYPE_DOM; 
+        case REB_ITYPE_SUB_DOM:
+            return REB_PTYPE_SUB; 
+        case REB_ITYPE_ENC_ENC:
+        case REB_ITYPE_ENC_ENCP:
+            return REB_PTYPE_ENC; 
+        case REB_ITYPE_SUBP_DOM:
+            return REB_PTYPE_SUBP; 
+        case REB_ITYPE_ENCP_ENC:
+            return REB_PTYPE_ENCP; 
+        default:
+            return REB_PTYPE_NONE;
+    }
+}
+static inline enum REB_PTYPE get_ptype_interacting(enum REB_ITYPE itype){
+    switch (itype){
+        case REB_ITYPE_DOM_DOM:
+        case REB_ITYPE_SUB_DOM:
+        case REB_ITYPE_SUBP_DOM:
+            return REB_PTYPE_DOM; 
+        case REB_ITYPE_DOM_SUB:
+            return REB_PTYPE_SUB; 
+        case REB_ITYPE_ENC_ENC:
+        case REB_ITYPE_ENCP_ENC:
+            return REB_PTYPE_ENC; 
+        case REB_ITYPE_DOM_SUBP:
+            return REB_PTYPE_SUBP; 
+        case REB_ITYPE_ENC_ENCP:
+            return REB_PTYPE_ENCP; 
+        default:
+            return REB_PTYPE_NONE;
     }
 }
 
 
-static void check_this_shell( struct reb_simulation* r, double dt, unsigned int shell, 
-                    unsigned int* shellN_A,
-                    unsigned int** map_A,
-                    unsigned int* inshell_A,
-                    unsigned int* shellN_B,
-                    unsigned int** map_B,
-                    unsigned int* inshell_B
-        ){
-    struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
-    const double* const dcrit = rim->dcrit[shell];
-    struct reb_particle** p0 = rim->p0;
-    struct reb_particle* const particles = r->particles;
-    for (int i=0; i<shellN_A[shell]; i++){
-        int mi = map_A[shell][i]; 
-        const int startj = (map_A==map_B)?i+1:0;  // speedup, but also avoids mi==mj
-        for (int j=startj; j<shellN_B[shell]; j++){
-            int mj = map_B[shell][j]; 
-            double rmin2 = reb_mercurana_predict_rmin2(particles[mi],particles[mj],dt);
-            double rsum = particles[mi].r+particles[mj].r;
-            if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
-                reb_mercurana_record_collision(r,mi,mj);
-            }
-            const double buffer = 1.0; // prevent too many maxdrift violations 
-            double dcritsum = buffer*(dcrit[mi]+dcrit[mj]);
-            if (rmin2< dcritsum*dcritsum){ 
-                if (inshell_A[mi] == shell){
-                    inshell_A[mi] = shell+1;
-                    map_A[shell+1][shellN_A[shell+1]] = mi;
-                    shellN_A[shell+1]++;
-                    p0[shell+1][mi] = particles[mi]; 
-                }
-                if (inshell_B[mj] == shell){
-                    inshell_B[mj] = shell+1;
-                    map_B[shell+1][shellN_B[shell+1]] = mj;
-                    shellN_B[shell+1]++;
-                    p0[shell+1][mj] = particles[mj]; 
-                }
-            }
-        }
-    }
-}
-
-static void calculate_maxdrift_this_shell(struct reb_simulation* r, double dt, unsigned int shell,
-                    unsigned int shellN_A,
-                    unsigned int* map_A,
-                    unsigned int* inshell_A,
-                    double* maxdrift_A,  
-                    unsigned int shellN_B,
-                    unsigned int* map_B,
-                    unsigned int* inshell_B,
-                    double* maxdrift_B  
-        ){
+// Checks for if particle mi is getting close to any particle in pisd_interacting. 
+// If so, move interacting particle one shell deeper.
+// If not, update maxdrift of particle mi.
+void check_one(struct reb_simulation* r, double dt, unsigned int shell, int mi, 
+        struct reb_mdd* mdd, struct reb_pisd pisd_interacting){
     struct reb_particle* const particles = r->particles;
     const double* const dcrit = r->ri_mercurana.dcrit[shell];
-    // Subdominant and dominant
-    for (int i=0; i<shellN_A; i++){
-        int mi = map_A[i]; 
-        const int startj = (map_A==map_B)?i+1:0;  // speedup, but also avoids mi==mj
-        for (int j=startj; j<shellN_B; j++){
-            int mj = map_B[j]; 
-            // Interaction not resolved in subshells?
-            if ( inshell_A[mi] == shell || inshell_B[mj] == shell ){
-                double rmin2 = reb_mercurana_predict_rmin2(particles[mi],particles[mj],dt);
-                double dcritsum = dcrit[mi]+dcrit[mj];
-                const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-                maxdrift_B[mi] = MIN(maxdrift_B[mi],maxdrift);
-                maxdrift_A[mj] = MIN(maxdrift_A[mj],maxdrift);
+    const double* const p_t = r->ri_mercurana.p_t;
+    mdd->p0 = particles[mi];
+    mdd->t0 = r->ri_mercurana.t_now;
+    mdd->maxdrift = 1e300;
+    for (int j=0; j<pisd_interacting.shellN[shell]; j++){
+        int mj = pisd_interacting.map[shell][j]; 
+        if (mi==mj) continue; // no self-interactions
+        // Drift particle mj to current time for rmin calculation
+        struct reb_particle pj = particles[mj];
+        double pjdrift = r->ri_mercurana.t_now - p_t[mj];
+        pj.x += pjdrift * pj.vx;
+        pj.y += pjdrift * pj.vy;
+        pj.z += pjdrift * pj.vz;
+        double rmin2 = reb_mercurana_predict_rmin2(particles[mi],pj,dt);
+        double rsum = particles[mi].r+particles[mj].r;
+        if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
+            // TODO: Think about right location for collision check
+            reb_mercurana_record_collision(r,mi,mj);
+        }
+        double dcritsum = dcrit[mi]+dcrit[mj];
+        if (rmin2< dcritsum*dcritsum){ 
+            if (pisd_interacting.inshell[mj] == shell){
+                // TODO: check if particle needs to be drifted!
+                pisd_interacting.inshell[mj] = shell+1;
+                pisd_interacting.map[shell+1][pisd_interacting.shellN[shell+1]] = mj;
+                pisd_interacting.shellN[shell+1]++;
+            }
+        }else{
+            // Interaction potentially not resolved in subshells. Need maxdrift.
+            const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
+            mdd->maxdrift = MIN(mdd->maxdrift,maxdrift);
+        }
+    }
+}
+
+static void check_maxdrift_violation(struct reb_simulation* r, double dt, unsigned int shell, enum REB_ITYPE itype){
+    enum REB_PTYPE drifting = get_ptype_drifting(itype);
+    enum REB_PTYPE interacting = get_ptype_interacting(itype);
+
+    struct reb_pisd pisd_drifting = r->ri_mercurana.pisd[drifting];
+    struct reb_pisd pisd_interacting = r->ri_mercurana.pisd[interacting];
+
+    struct reb_particle* const particles = r->particles;
+    
+    for (int i=0; i<pisd_drifting.shellN[shell]; i++){
+        int mi = pisd_drifting.map[shell][i]; 
+        for (int s=0;s<shell;s++){
+            struct reb_mdd* mdd = &(r->ri_mercurana.mdd[itype][s][mi]);
+            double dt0 = r->ri_mercurana.t_now - mdd->t0 + dt;
+            // TODO Check what function does
+            double drift = reb_drift_from_straight_line(mdd->p0,dt0,particles[mi],dt);
+            if (drift > mdd->maxdrift){
+                check_one(r, dt, s, mi, mdd, pisd_interacting);
             }
         }
     }
 }
 
-static void zero_maxdrift_this_shell(struct reb_simulation* r, unsigned int shell,
-                    unsigned int shellN_A,
-                    unsigned int* map_A
-        ){
-    struct reb_particle* const particles = r->particles;
-    struct reb_particle* p0 = r->ri_mercurana.p0[shell];
-    double* maxdrift_dominant = r->ri_mercurana.maxdrift_dominant[shell];
-    double* maxdrift_subdominant = r->ri_mercurana.maxdrift_subdominant[shell];
-    double* maxdrift_encounter = r->ri_mercurana.maxdrift_encounter[shell];
-    double* maxdrift_subdominant_passive = r->ri_mercurana.maxdrift_subdominant_passive[shell];
-    double* maxdrift_encounter_passive = r->ri_mercurana.maxdrift_encounter_passive[shell];
-    for (int i=0; i<shellN_A; i++){
-        int mi = map_A[i]; 
-        maxdrift_dominant[mi] = 1e300; 
-        maxdrift_subdominant[mi] = 1e300; 
-        maxdrift_encounter[mi] = 1e300; 
-        maxdrift_subdominant_passive[mi] = 1e300; 
-        maxdrift_encounter_passive[mi] = 1e300; 
-        p0[mi] = particles[mi]; 
+
+static void check_this_shell(struct reb_simulation* r, double dt, unsigned int shell, enum REB_ITYPE itype){
+    enum REB_PTYPE drifting = get_ptype_drifting(itype);
+    enum REB_PTYPE interacting = get_ptype_interacting(itype);
+
+    struct reb_pisd pisd_drifting = r->ri_mercurana.pisd[drifting];
+    struct reb_pisd pisd_interacting = r->ri_mercurana.pisd[interacting];
+
+    for (int i=0; i<pisd_drifting.shellN[shell]; i++){
+        int mi = pisd_drifting.map[shell][i]; 
+        struct reb_mdd* mdd = &(r->ri_mercurana.mdd[itype][shell][mi]);
+        check_one(r, dt, shell, mi, mdd, pisd_interacting);
     }
 }
+
 
 // This function checks if there are any close encounters or physical collisions between particles in a given shell during a drift step of length dt. If a close encounter occures, particles are placed in deeper shells.
 static void reb_mercurana_encounter_predict(struct reb_simulation* const r, double dt, int shell){
     struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
     
-    unsigned int* map_encounter = rim->map_encounter[shell];
-    unsigned int* map_encounter_passive = rim->map_encounter_passive[shell];
-    unsigned int* map_dominant = rim->map_dominant[shell];
-    unsigned int* map_subdominant = rim->map_subdominant[shell];
-    unsigned int* map_subdominant_passive = rim->map_subdominant_passive[shell];
-    
-    unsigned int* inshell_encounter = rim->inshell_encounter;
-    unsigned int* inshell_dominant = rim->inshell_dominant;
-    unsigned int* inshell_subdominant = rim->inshell_subdominant;
     const int N_active = r->N_active==-1?r->N:r->N_active;
     
     if (shell==0){
@@ -399,186 +341,14 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     rim->shellN_subdominant_passive[shell+1] = 0;
 
     if (shell!=0){
-        // Check for maxdrift violation of higher shells
-        //       dom sub enc subp encp
-        //  dom   x   x       x
-        //  sub   x   
-        //  enc           x        x
-        //  subp  x                
-        //  encp          x    
-        // Dominant - Dominant
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_dominant[shell], 
-                rim->map_dominant[shell], 
-                rim->shellN_dominant, 
-                rim->map_dominant, 
-                inshell_dominant, 
-                rim->maxdrift_dominant);
-        // Dominant - Subdominant
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_dominant[shell], 
-                rim->map_dominant[shell], 
-                rim->shellN_subdominant, 
-                rim->map_subdominant, 
-                inshell_subdominant, 
-                rim->maxdrift_subdominant);
-        // Dominant - Subdominant-passive
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_dominant[shell], 
-                rim->map_dominant[shell], 
-                rim->shellN_subdominant_passive, 
-                rim->map_subdominant_passive, 
-                inshell_subdominant, 
-                rim->maxdrift_subdominant_passive);
-        // Subdominant - Dominant
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_subdominant[shell], 
-                rim->map_subdominant[shell], 
-                rim->shellN_dominant, 
-                rim->map_dominant, 
-                inshell_dominant, 
-                rim->maxdrift_dominant);
-        // Encounter - Encounter
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_encounter[shell], 
-                rim->map_encounter[shell], 
-                rim->shellN_encounter, 
-                rim->map_encounter, 
-                inshell_encounter, 
-                rim->maxdrift_encounter);
-        // Encounter - Encounter-passive
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_encounter[shell], 
-                rim->map_encounter[shell], 
-                rim->shellN_encounter_passive, 
-                rim->map_encounter_passive, 
-                inshell_encounter, 
-                rim->maxdrift_encounter_passive);
-        // Subdominant-passive - Dominant
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_subdominant_passive[shell], 
-                rim->map_subdominant_passive[shell], 
-                rim->shellN_dominant, 
-                rim->map_dominant, 
-                inshell_dominant, 
-                rim->maxdrift_dominant);
-        // Encounter-passive - Encounter
-        check_maxdrift_violation(r, dt, shell, 
-                rim->shellN_encounter_passive[shell], 
-                rim->map_encounter_passive[shell], 
-                rim->shellN_encounter, 
-                rim->map_encounter, 
-                inshell_encounter, 
-                rim->maxdrift_encounter);
+        for (int itype=0; itype<8; itype++){ 
+            check_maxdrift_violation(r, dt, shell, itype);
+        } 
     }
 
-    // Check interactions in shell
-    // Dominant and dominant
-    check_this_shell(r, dt, shell,
-            rim->shellN_dominant,
-            rim->map_dominant,
-            inshell_dominant,
-            rim->shellN_dominant,
-            rim->map_dominant,
-            inshell_dominant
-            );
-    
-    // Dominant and subdominant
-    check_this_shell(r, dt, shell,
-            rim->shellN_dominant,
-            rim->map_dominant,
-            inshell_dominant,
-            rim->shellN_subdominant,
-            rim->map_subdominant,
-            inshell_subdominant
-            );
-    
-    // Encounter and encounter
-    check_this_shell(r, dt, shell,
-            rim->shellN_encounter,
-            rim->map_encounter,
-            inshell_encounter,
-            rim->shellN_encounter,
-            rim->map_encounter,
-            inshell_encounter
-            );
-    
-    // Dominant and subdominant_passive
-    check_this_shell(r, dt, shell,
-            rim->shellN_dominant,
-            rim->map_dominant,
-            inshell_dominant,
-            rim->shellN_subdominant_passive,
-            rim->map_subdominant_passive,
-            inshell_subdominant // = inshell_subdominant_passive
-            );
-    
-    // Encounter and encounter_passive
-    check_this_shell(r, dt, shell,
-            rim->shellN_encounter,
-            rim->map_encounter,
-            inshell_encounter,
-            rim->shellN_encounter_passive,
-            rim->map_encounter_passive,
-            inshell_encounter
-            );
-    
-    zero_maxdrift_this_shell(r, shell, rim->shellN_dominant[shell], map_dominant);
-    zero_maxdrift_this_shell(r, shell, rim->shellN_subdominant[shell], map_subdominant);
-    zero_maxdrift_this_shell(r, shell, rim->shellN_encounter[shell], map_encounter);
-    zero_maxdrift_this_shell(r, shell, rim->shellN_subdominant_passive[shell], map_subdominant_passive);
-    zero_maxdrift_this_shell(r, shell, rim->shellN_encounter_passive[shell], map_encounter_passive);
-    
-    calculate_maxdrift_this_shell(r, dt, shell,
-                    rim->shellN_encounter[shell],
-                    map_encounter,
-                    inshell_encounter,
-                    rim->maxdrift_encounter[shell],  
-                    rim->shellN_encounter[shell],
-                    map_encounter,
-                    inshell_encounter,
-                    rim->maxdrift_encounter[shell]  
-        );
-    calculate_maxdrift_this_shell(r, dt, shell,
-                    rim->shellN_dominant[shell],
-                    map_dominant,
-                    inshell_dominant,
-                    rim->maxdrift_dominant[shell],  
-                    rim->shellN_dominant[shell],
-                    map_dominant,
-                    inshell_dominant,
-                    rim->maxdrift_dominant[shell]  
-        );
-    calculate_maxdrift_this_shell(r, dt, shell,
-                    rim->shellN_dominant[shell],
-                    map_dominant,
-                    inshell_dominant,
-                    rim->maxdrift_dominant[shell],  
-                    rim->shellN_subdominant[shell],
-                    map_subdominant,
-                    inshell_subdominant,
-                    rim->maxdrift_subdominant[shell]  
-        );
-    calculate_maxdrift_this_shell(r, dt, shell,
-                    rim->shellN_encounter[shell],
-                    map_encounter,
-                    inshell_encounter,
-                    rim->maxdrift_encounter[shell],  
-                    rim->shellN_encounter_passive[shell],
-                    map_encounter_passive,
-                    inshell_encounter,
-                    rim->maxdrift_encounter_passive[shell]  
-        );
-    calculate_maxdrift_this_shell(r, dt, shell,
-                    rim->shellN_dominant[shell],
-                    map_dominant,
-                    inshell_dominant,
-                    rim->maxdrift_dominant[shell],  
-                    rim->shellN_subdominant_passive[shell],
-                    map_subdominant_passive,
-                    inshell_subdominant,
-                    rim->maxdrift_subdominant_passive[shell]  
-        );
+    for (int itype=0; itype<8; itype++){ 
+        check_this_shell(r, dt, shell, itype);
+    }
     
     if (rim->collisions_N){
         //printf("collision\n");
@@ -696,6 +466,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].x += a*particles[mi].vx;
             particles[mi].y += a*particles[mi].vy;
             particles[mi].z += a*particles[mi].vz;
+            p_t[mi] += a;
         }
     }
     for (int i=0;i<rim->shellN_subdominant[shell];i++){  // loop over all particles in shell (includes subshells)
@@ -704,6 +475,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].x += a*particles[mi].vx;
             particles[mi].y += a*particles[mi].vy;
             particles[mi].z += a*particles[mi].vz;
+            p_t[mi] += a;
         }
     }
     for (int i=0;i<rim->shellN_encounter[shell];i++){  // loop over all particles in shell (includes subshells)
@@ -712,6 +484,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].x += a*particles[mi].vx;
             particles[mi].y += a*particles[mi].vy;
             particles[mi].z += a*particles[mi].vz;
+            p_t[mi] += a;
         }
     }
     for (int i=0;i<rim->shellN_subdominant_passive[shell];i++){  // loop over all particles in shell (includes subshells)
@@ -720,6 +493,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].x += a*particles[mi].vx;
             particles[mi].y += a*particles[mi].vy;
             particles[mi].z += a*particles[mi].vz;
+            p_t[mi] += a;
         }
     }
     for (int i=0;i<rim->shellN_encounter_passive[shell];i++){  // loop over all particles in shell (includes subshells)
@@ -728,6 +502,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             particles[mi].x += a*particles[mi].vx;
             particles[mi].y += a*particles[mi].vy;
             particles[mi].z += a*particles[mi].vz;
+            p_t[mi] += a;
         }
     }
     rim->t_drifted[shell] += a;
@@ -774,8 +549,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
                 free(rim->dcrit[i]);
             }
         }
-        rim->t_drifted = realloc(rim->t_drifted, sizeof(double)*rim->Nmaxshells);
-        rim->dt_drift = realloc(rim->dt_drift, sizeof(double)*(rim->Nmaxshells));
+        rim->dt_shell = realloc(rim->dt_drift, sizeof(double)*(rim->Nmaxshells));
         rim->dcrit = realloc(rim->dcrit, sizeof(double*)*(rim->Nmaxshells));
         for (int i=0;i<rim->Nmaxshells;i++){
             rim->dcrit[i] = malloc(sizeof(double)*N);
@@ -804,6 +578,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         rim->maxdrift_subdominant_passive = realloc(rim->maxdrift_subdominant_passive, sizeof(double*)*rim->Nmaxshells);
         rim->maxdrift_encounter_passive = realloc(rim->maxdrift_encounter_passive, sizeof(double*)*rim->Nmaxshells);
         rim->p0 = realloc(rim->p0, sizeof(struct reb_particle*)*rim->Nmaxshells);
+        rim->p0_drifted = realloc(rim->t_drifted, sizeof(double*)*rim->Nmaxshells);
         for (int i=0;i<rim->Nmaxshells;i++){
             rim->map_encounter[i] = malloc(sizeof(unsigned int)*N);
             rim->map_encounter_passive[i] = malloc(sizeof(unsigned int)*N);
@@ -816,7 +591,9 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
             rim->maxdrift_subdominant_passive[i] = malloc(sizeof(double)*N);
             rim->maxdrift_encounter_passive[i] = malloc(sizeof(double)*N);
             rim->p0[i] = malloc(sizeof(struct reb_particle)*N);
+            rim->p0_drifted[i] = malloc(sizeof(double)*N);
         }
+        rim->p_drifted = realloc(rim->t_drifted, sizeof(double)*N);
         // inshell
         rim->inshell_encounter = realloc(rim->inshell_encounter, sizeof(unsigned int)*N);
         rim->inshell_dominant = realloc(rim->inshell_dominant, sizeof(unsigned int)*N);
@@ -902,7 +679,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
                     break;
             }
             dt_shell *= longest_drift_step_in_shell;
-            rim->dt_drift[s] = dt_shell;
+            rim->dt_shell[s] = dt_shell;
             unsigned int n = rim->n0;
             if (s>0 && rim->n1){
                 n = rim->n1; // use different number of substeps for deep shells
@@ -940,12 +717,16 @@ void reb_integrator_mercurana_part2(struct reb_simulation* const r){
     if (rim->allocatedN<r->N){ // Error occured earlier.
         return;
     }
-    // done in predict now
-    //rim->shellN[0] = r->N;
-    //rim->shellN_active[0] = r->N_active==-1?r->N:r->N_active;
-    
-    for (int i=0;i<r->ri_mercurana.Nmaxshells;i++){
-        rim->t_drifted[i] =0;
+   
+    rim->t_now = 0; 
+    for (int s=0;s<rim->Nmaxshells;s++){ // innermost shell has no dcrit
+        for (int i=0;i<r->N;i++){
+            rim->p0_t_dominant[s][i] =0;
+            rim->p0_t_subdominant[s][i] =0;
+            rim->p0_t_encounter[s][i] =0;
+            rim->p0_t_subdominant_passive[s][i] =0;
+            rim->p0_t_encounter_passive[s][i] =0;
+        }
     }
 
     if (rim->is_synchronized){
@@ -991,6 +772,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
             free(r->ri_mercurana.maxdrift_subdominant_passive[i]);
             free(r->ri_mercurana.maxdrift_encounter_passive[i]);
             free(r->ri_mercurana.p0[i]);
+            free(r->ri_mercurana.p0_drifted[i]);
         }
         free(r->ri_mercurana.map_encounter);
         free(r->ri_mercurana.map_encounter_passive);
@@ -1006,13 +788,15 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
         free(r->ri_mercurana.shellN_dominant);
         free(r->ri_mercurana.shellN_subdominant);
         free(r->ri_mercurana.shellN_subdominant_passive);
-        free(r->ri_mercurana.t_drifted);
+        free(r->ri_mercurana.p_drifted);
+        free(r->ri_mercurana.p0_drifted);
         free(r->ri_mercurana.maxdrift_dominant);
         free(r->ri_mercurana.maxdrift_subdominant);
         free(r->ri_mercurana.maxdrift_encounter);
         free(r->ri_mercurana.maxdrift_subdominant_passive);
         free(r->ri_mercurana.maxdrift_encounter_passive);
         free(r->ri_mercurana.p0);
+        free(r->ri_mercurana.dt_shell);
     }
     r->ri_mercurana.allocatedN = 0;
     r->ri_mercurana.map_encounter = NULL;

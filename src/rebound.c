@@ -395,9 +395,6 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     // ********** MERCURANA
     r->ri_mercurana.allocatedN = 0;
     r->ri_mercurana.dcrit = NULL;
-    r->ri_mercurana.shellN_encounter = NULL;
-    r->ri_mercurana.shellN_dominant = NULL;
-    r->ri_mercurana.shellN_subdominant = NULL;
     
 }
 
@@ -616,7 +613,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_mercurana.L = NULL;
     r->ri_mercurana.dLdr = NULL;
     r->ri_mercurana.collisions_N = 0;
-    r->ri_mercurana.N_dominant = 0;
 
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;
