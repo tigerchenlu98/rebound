@@ -20,14 +20,14 @@ void heartbeat(struct reb_simulation* r){
     //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);
     if(1){
     for(int i=0;i<r->ri_mercurana.Nmaxshells;i++){
-        if (r->ri_mercurana.shellN_encounter){
-        printf("%2d dom=%4d sub=%4d enc=%4d ",i, r->ri_mercurana.shellN_dominant[i], r->ri_mercurana.shellN_subdominant[i], r->ri_mercurana.shellN_encounter[i]);
-        printf(" sub-passive=%4d enc-passive=%4d ", r->ri_mercurana.shellN_subdominant_passive[i], r->ri_mercurana.shellN_encounter_passive[i]);
-        printf("%12lu ", rebd_drift[i]);
-        printf("%12lu ", rebd_viol1[i]);
-        printf("%12lu ", rebd_viol2[i]);
-        printf("\n");
+        printf("%2d ", i);
+        for (int ptype=0; ptype<5; ptype++){
+            printf("pt(%d)=%04d ", ptype, r->ri_mercurana.pisd[ptype].shellN[i]);
         }
+        //printf("%12lu ", rebd_drift[i]);
+        //printf("%12lu ", rebd_viol1[i]);
+        //printf("%12lu ", rebd_viol2[i]);
+        //printf("\n");
     }
     printf("-------------\n");
     printf("maxshells %d\n", r->ri_mercurana.Nmaxshellsused);

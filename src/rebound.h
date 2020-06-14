@@ -474,10 +474,10 @@ struct reb_simulation_integrator_eos {
 // Particle type
 enum REB_PTYPE {
     REB_PTYPE_DOM = 0,
-    REB_PTYPE_SUB = 2,
-    REB_PTYPE_ENC = 3,
-    REB_PTYPE_SUBP = 4,
-    REB_PTYPE_ENCP = 5,
+    REB_PTYPE_SUB = 1,
+    REB_PTYPE_ENC = 2,
+    REB_PTYPE_SUBP = 3,
+    REB_PTYPE_ENCP = 4,
     REB_PTYPE_NONE = -1,
 };
 
@@ -529,7 +529,6 @@ struct reb_simulation_integrator_mercurana {
     unsigned int Nmaxshellsused;     ///< Used for debugging only 
     struct reb_pisd pisd[5];
     struct reb_mdd** mdd[8];
-    double* dt_shell;
     double* p_t;
     double t_now;
     unsigned int moved_particles;
