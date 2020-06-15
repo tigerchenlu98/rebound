@@ -15,15 +15,13 @@ void heartbeat(struct reb_simulation* r){
         reb_output_binary(r,"out.tmp");
         exit(0);
     }
-    if (r->steps_done%10!=0) return;
-    //printf("%e    %e %e    %e %e  \n",r->t, r->particles[0].x, r->particles[0].y, r->particles[0].vx, r->particles[0].vy);
-    //printf("%e    %e %e    %e %e  \n",r->t, r->particles[1].x, r->particles[1].y, r->particles[1].vx, r->particles[1].vy);
+    //if (r->steps_done%10!=0) return;
     if(1){
-    for(int i=0;i<r->ri_mercurana.Nmaxshells;i++){
-        printf("%2d ", i);
+    for(int s=0;s<r->ri_mercurana.Nmaxshells;s++){
+        printf("%2d ", s);
         for (int ptype=0; ptype<5; ptype++){
             if (r->ri_mercurana.pisd[ptype].shellN){
-                printf("pt(%d)=%04d ", ptype, r->ri_mercurana.pisd[ptype].shellN[i]);
+                printf("pt(%d)=%04d ", ptype, r->ri_mercurana.pisd[ptype].shellN[s]);
             }
         }
         //printf("%12lu ", rebd_drift[i]);
@@ -52,8 +50,8 @@ int main(int argc, char* argv[]) {
     r->ri_mercurana.N_dominant = 1;
     r->ri_mercurana.Nmaxshells = 30;
     int rad = 1; 
-    r->collision = REB_COLLISION_DIRECT;
-    r->collision_resolve = reb_collision_resolve_merge;
+    //r->collision = REB_COLLISION_DIRECT;
+    //r->collision_resolve = reb_collision_resolve_merge;
     r->track_energy_offset = 1;
 
     if (1){

@@ -230,6 +230,7 @@ void check_one(struct reb_simulation* r, double dt, unsigned int shell, int mi,
         if (rmin2< dcritsum*dcritsum){ 
             if (pisd_interacting.inshell[mj] == shell){
                 // TODO: check if particle needs to be drifted!
+                //printf("mov [%d]        %d   (%d)\n", shell, mj, mi);
                 pisd_interacting.inshell[mj] = shell+1;
                 pisd_interacting.map[shell+1][pisd_interacting.shellN[shell+1]] = mj;
                 pisd_interacting.shellN[shell+1]++;
@@ -297,7 +298,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
 
     if (shell!=0){
         for (int itype=0; itype<8; itype++){ 
-            check_maxdrift_violation(r, dt, shell, itype);
+        //    check_maxdrift_violation(r, dt, shell, itype);
         } 
     }
 
@@ -704,7 +705,7 @@ void reb_integrator_mercurana_part2(struct reb_simulation* const r){
         reb_integrator_eos_preprocessor(r, r->dt, 0, rim->phi0, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
     }
     reb_integrator_eos_step(r, r->dt, 1., 1., 0, rim->phi0, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
-
+    
     rim->is_synchronized = 0;
     if (rim->safe_mode){
         reb_integrator_mercurana_synchronize(r);
