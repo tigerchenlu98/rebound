@@ -574,7 +574,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
                 rim->pisd[ptype].map[i] = malloc(sizeof(unsigned int)*N);
             }
             rim->pisd[ptype].inshell = realloc(rim->pisd[ptype].inshell, sizeof(unsigned int*)*N);
-            rim->pisd[ptype].shellN = realloc(rim->pisd[ptype].inshell, sizeof(unsigned int*)*rim->Nmaxshells);
+            rim->pisd[ptype].shellN = realloc(rim->pisd[ptype].shellN, sizeof(unsigned int*)*rim->Nmaxshells);
         }
         for (int itype=0; itype<8; itype++){ 
             if (rim->mdd[itype]){
@@ -675,7 +675,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
     if (r->gravity != REB_GRAVITY_BASIC && r->gravity != REB_GRAVITY_MERCURANA){
         reb_warning(r,"Mercurana has it's own gravity routine. Gravity routine set by the user will be ignored.");
     }
-    r->gravity = REB_GRAVITY_NONE; // Only temporary
+    r->gravity = REB_GRAVITY_MERCURANA; 
     
     if (rim->L == NULL){
         // Setting default switching function

@@ -504,7 +504,7 @@ static void reb_display(GLFWwindow* window){
                 for (int i=0; i<data->r_copy->N; i++){
                     for (int j=0;j<data->Nmaxshells_mercurana;j++){
                         //if (data->inshell_dominant[i]<j && data->inshell_subdominant[i]<j && data->inshell_encounter[i]<j){
-                            glUniform4f(data->box_shader_color_location, 1.,1.,1.,0.3);
+                        //    glUniform4f(data->box_shader_color_location, 1.,1.,1.,0.3);
                         //}else{
                             glUniform4f(data->box_shader_color_location, 1.,0.,0.,1.0);
                         //}

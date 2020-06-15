@@ -219,7 +219,7 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
         keepSorted = 1; // Overwrite keep sorted flag
         struct reb_simulation_integrator_mercurana* const rim = &(r->ri_mercurana);
 
-        for (int ptype=0; ptype<8; ptype++){ // Loop over all particle types
+        for (int ptype=0; ptype<5; ptype++){ // Loop over all particle types
             struct reb_pisd pisd = rim->pisd[ptype];
             for (int s=0;s<rim->Nmaxshells;s++){
                 int isInList = 0;

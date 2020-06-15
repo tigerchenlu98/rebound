@@ -22,12 +22,14 @@ void heartbeat(struct reb_simulation* r){
     for(int i=0;i<r->ri_mercurana.Nmaxshells;i++){
         printf("%2d ", i);
         for (int ptype=0; ptype<5; ptype++){
-            printf("pt(%d)=%04d ", ptype, r->ri_mercurana.pisd[ptype].shellN[i]);
+            if (r->ri_mercurana.pisd[ptype].shellN){
+                printf("pt(%d)=%04d ", ptype, r->ri_mercurana.pisd[ptype].shellN[i]);
+            }
         }
         //printf("%12lu ", rebd_drift[i]);
         //printf("%12lu ", rebd_viol1[i]);
         //printf("%12lu ", rebd_viol2[i]);
-        //printf("\n");
+        printf("\n");
     }
     printf("-------------\n");
     printf("maxshells %d\n", r->ri_mercurana.Nmaxshellsused);
