@@ -285,37 +285,6 @@ static void check_this_shell(struct reb_simulation* r, double dt, unsigned int s
 static void reb_mercurana_encounter_predict(struct reb_simulation* const r, double dt, int shell){
     struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
     
-    const int N_active = r->N_active==-1?r->N:r->N_active;
-    
-    if (shell==0){
-        // Setup maps in outermost shell 
-        rim->pisd[REB_PTYPE_DOM].shellN[0] = rim->N_dominant;
-        rim->pisd[REB_PTYPE_SUB].shellN[0] = N_active - rim->N_dominant;
-        rim->pisd[REB_PTYPE_ENC].shellN[0] = N_active - rim->N_dominant;
-        rim->pisd[REB_PTYPE_SUBP].shellN[0] = r->N - N_active;
-        rim->pisd[REB_PTYPE_ENCP].shellN[0] = r->N - N_active;
-        for (int i=0; i<rim->pisd[REB_PTYPE_DOM].shellN[0]; i++){
-            rim->pisd[REB_PTYPE_DOM].map[0][i] = i; 
-            rim->pisd[REB_PTYPE_DOM].inshell[i] = 0; 
-        }
-        for (int i=0; i<rim->pisd[REB_PTYPE_SUB].shellN[0]; i++){
-            rim->pisd[REB_PTYPE_SUB].map[0][i] = i + rim->N_dominant; 
-            rim->pisd[REB_PTYPE_SUB].inshell[i + rim->N_dominant] = 0; 
-        }
-        for (int i=0; i<rim->pisd[REB_PTYPE_ENC].shellN[0]; i++){
-            rim->pisd[REB_PTYPE_ENC].map[0][i] = i + rim->N_dominant; 
-            rim->pisd[REB_PTYPE_ENC].inshell[i + rim->N_dominant] = 0; 
-        }
-        for (int i=0; i<rim->pisd[REB_PTYPE_SUBP].shellN[0]; i++){
-            rim->pisd[REB_PTYPE_SUBP].map[0][i] = i + N_active; 
-            rim->pisd[REB_PTYPE_SUBP].inshell[i + N_active] = 0; 
-        }
-        for (int i=0; i<rim->pisd[REB_PTYPE_ENCP].shellN[0]; i++){
-            rim->pisd[REB_PTYPE_ENCP].map[0][i] = i + N_active; 
-            rim->pisd[REB_PTYPE_ENCP].inshell[i + N_active] = 0;
-        }
-    }
-    
     rim->collisions_N = 0;
     
     if (shell+1>=rim->Nmaxshells){ // does sub-shell exist?
@@ -695,6 +664,41 @@ void reb_integrator_mercurana_part2(struct reb_simulation* const r){
     for (int i=0;i<r->N;i++){
         rim->p_t[i] = 0.;
     }
+    for (int i=0;i<rim->Nmaxshells;i++){
+        for (int ptype=0; ptype<5; ptype++){ 
+            rim->pisd[ptype].shellN[i] = 0;
+        }
+    }
+    
+    // Setup maps in outermost shell 
+    const int N_active = r->N_active==-1?r->N:r->N_active;
+    
+    rim->pisd[REB_PTYPE_DOM].shellN[0] = rim->N_dominant;
+    rim->pisd[REB_PTYPE_SUB].shellN[0] = N_active - rim->N_dominant;
+    rim->pisd[REB_PTYPE_ENC].shellN[0] = N_active - rim->N_dominant;
+    rim->pisd[REB_PTYPE_SUBP].shellN[0] = r->N - N_active;
+    rim->pisd[REB_PTYPE_ENCP].shellN[0] = r->N - N_active;
+    for (int i=0; i<rim->pisd[REB_PTYPE_DOM].shellN[0]; i++){
+        rim->pisd[REB_PTYPE_DOM].map[0][i] = i; 
+        rim->pisd[REB_PTYPE_DOM].inshell[i] = 0; 
+    }
+    for (int i=0; i<rim->pisd[REB_PTYPE_SUB].shellN[0]; i++){
+        rim->pisd[REB_PTYPE_SUB].map[0][i] = i + rim->N_dominant; 
+        rim->pisd[REB_PTYPE_SUB].inshell[i + rim->N_dominant] = 0; 
+    }
+    for (int i=0; i<rim->pisd[REB_PTYPE_ENC].shellN[0]; i++){
+        rim->pisd[REB_PTYPE_ENC].map[0][i] = i + rim->N_dominant; 
+        rim->pisd[REB_PTYPE_ENC].inshell[i + rim->N_dominant] = 0; 
+    }
+    for (int i=0; i<rim->pisd[REB_PTYPE_SUBP].shellN[0]; i++){
+        rim->pisd[REB_PTYPE_SUBP].map[0][i] = i + N_active; 
+        rim->pisd[REB_PTYPE_SUBP].inshell[i + N_active] = 0; 
+    }
+    for (int i=0; i<rim->pisd[REB_PTYPE_ENCP].shellN[0]; i++){
+        rim->pisd[REB_PTYPE_ENCP].map[0][i] = i + N_active; 
+        rim->pisd[REB_PTYPE_ENCP].inshell[i + N_active] = 0;
+    }
+    
 
     if (rim->is_synchronized){
         reb_integrator_eos_preprocessor(r, r->dt, 0, rim->phi0, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
