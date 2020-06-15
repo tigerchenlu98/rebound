@@ -533,7 +533,6 @@ struct reb_simulation_integrator_mercurana {
     double t_now;
     unsigned int moved_particles;
     unsigned int allocatedN;        ///< Allocated memory for various internal variables. 
-    unsigned int current_shell;     ///< Internal variable used in gravity routine only.
     unsigned int is_synchronized;   ///< Flag to determine if current particle structure is synchronized
     unsigned int collisions_N;      ///< Internal variable to communicate to collision routine.
     double (*L) (const struct reb_simulation* const r, double d, double dcrit, double fracin); ///< Switching function 

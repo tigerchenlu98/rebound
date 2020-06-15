@@ -691,7 +691,10 @@ void reb_integrator_mercurana_part2(struct reb_simulation* const r){
         return;
     }
    
-    rim->t_now = 0; 
+    rim->t_now = 0.;
+    for (int i=0;i<r->N;i++){
+        rim->p_t[i] = 0.;
+    }
 
     if (rim->is_synchronized){
         reb_integrator_eos_preprocessor(r, r->dt, 0, rim->phi0, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
@@ -746,6 +749,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
             free(r->ri_mercurana.dcrit[i]);
         }
         free(r->ri_mercurana.dcrit);
+        free(r->ri_mercurana.p_t);
     }
     r->ri_mercurana.allocatedN = 0;
     r->ri_mercurana.dcrit = NULL;
