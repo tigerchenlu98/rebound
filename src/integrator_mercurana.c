@@ -584,7 +584,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
             }
             rim->mdd[itype] = realloc(rim->mdd[itype], sizeof(unsigned int*)*rim->Nmaxshells);
             for (int i=0;i<rim->Nmaxshells;i++){
-                rim->mdd[itype][i] = malloc(sizeof(struct reb_pisd)*N);
+                rim->mdd[itype][i] = malloc(sizeof(struct reb_mdd)*N);
             }
         }
 
