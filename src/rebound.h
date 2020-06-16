@@ -531,7 +531,7 @@ struct reb_simulation_integrator_mercurana {
     struct reb_mdd** mdd[8];
     double* p_t;
     double t_now;
-    unsigned int moved_particles;
+    unsigned int Nmoved;
     unsigned int allocatedN;        ///< Allocated memory for various internal variables. 
     unsigned int is_synchronized;   ///< Flag to determine if current particle structure is synchronized
     unsigned int collisions_N;      ///< Internal variable to communicate to collision routine.

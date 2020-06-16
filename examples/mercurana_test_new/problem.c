@@ -11,12 +11,6 @@ extern unsigned long rebd_viol2[MAXSHELLS];
 double E0;
 
 void heartbeat(struct reb_simulation* r){
-    if (r->steps_done==16081){
-        reb_output_binary(r,"out.tmp");
-        exit(0);
-    }
-    //if (r->steps_done%10!=0) return;
-    if(1){
     for(int s=0;s<r->ri_mercurana.Nmaxshells;s++){
         printf("%2d ", s);
         for (int ptype=0; ptype<5; ptype++){
@@ -31,18 +25,15 @@ void heartbeat(struct reb_simulation* r){
     }
     printf("-------------\n");
     printf("maxshells %d\n", r->ri_mercurana.Nmaxshellsused);
-    }
     double E1 = reb_tools_energy(r);
-    printf("dE/E= %e (offset=%e)  N= %d  N_active= %d  moved= %d\n",fabs((E0-E1)/E0), r->energy_offset, r->N, r->N_active, r->ri_mercurana.moved_particles);
-    //printf("N    = %d\n",r->N);
-    //printf("-------------\n");
+    printf("dE/E= %e (offset=%e)  N= %d  N_active= %d  moved= %d\n",fabs((E0-E1)/E0), r->energy_offset, r->N, r->N_active, r->ri_mercurana.Nmoved);
 }
 
 int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
     srand(4);
     r->exact_finish_time = 0;
-    r->dt = 0.040;
+    r->dt = 0.40;
     r->heartbeat = heartbeat;
     r->testparticle_type = 1;
     r->integrator = REB_INTEGRATOR_MERCURANA;
