@@ -258,6 +258,10 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 dcrit[i] = dcrit[i+1];
             }
         }
+        double* p_t = rim->p_t;
+        for (int i=index;i<r->N-1;i++){
+            p_t[i] = p_t[i+1];
+        }
         
         if (index<rim->N_dominant){
             rim->N_dominant--;

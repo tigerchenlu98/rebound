@@ -208,6 +208,7 @@ static inline unsigned int check_one(struct reb_simulation* r, double dt, unsign
     struct reb_particle* const particles = r->particles;
     const double* const dcrit = r->ri_mercurana.dcrit[shell];
     double* const p_t = r->ri_mercurana.p_t;
+    struct reb_particle pi = particles[mi];
     mdd->p0 = particles[mi];
     mdd->t0 = r->ri_mercurana.t_now;
     mdd->maxdrift = 1e300;
@@ -221,8 +222,8 @@ static inline unsigned int check_one(struct reb_simulation* r, double dt, unsign
         pj.x += pjdrift * pj.vx;
         pj.y += pjdrift * pj.vy;
         pj.z += pjdrift * pj.vz;
-        double rmin2 = reb_mercurana_predict_rmin2(particles[mi],pj,dt);
-        double rsum = particles[mi].r+particles[mj].r;
+        double rmin2 = reb_mercurana_predict_rmin2(pi,pj,dt);
+        double rsum = pi.r+pj.r;
         if (rmin2< rsum*rsum && r->collision==REB_COLLISION_DIRECT){
             // TODO: Think about right location for collision check
             reb_mercurana_record_collision(r,mi,mj);
@@ -248,46 +249,6 @@ static inline unsigned int check_one(struct reb_simulation* r, double dt, unsign
     return moved;
 }
 
-static void check_maxdrift_violation(struct reb_simulation* r, double dt, unsigned int shell, enum REB_ITYPE itype){
-    enum REB_PTYPE drifting = get_ptype_drifting(itype);
-    enum REB_PTYPE interacting = get_ptype_interacting(itype);
-
-    struct reb_pisd pisd_drifting = r->ri_mercurana.pisd[drifting];
-    struct reb_pisd pisd_interacting = r->ri_mercurana.pisd[interacting];
-
-    struct reb_particle* const particles = r->particles;
-    
-    for (int i=0; i<pisd_drifting.shellN[shell]; i++){
-        int mi = pisd_drifting.map[shell][i]; 
-        for (int s=0;s<shell;s++){
-            struct reb_mdd* mdd = &(r->ri_mercurana.mdd[itype][s][mi]);
-            double dt0 = r->ri_mercurana.t_now - mdd->t0 + dt;
-            double drift = reb_drift_from_straight_line(mdd->p0,dt0,particles[mi],dt);
-            if (drift > mdd->maxdrift){
-                unsigned int Nmoved = check_one(r, dt, s, mi, mdd, pisd_interacting);
-                r->ri_mercurana.Nmoved += Nmoved;
-            }
-        }
-    }
-}
-
-
-static void check_this_shell(struct reb_simulation* r, double dt, unsigned int shell, enum REB_ITYPE itype){
-    enum REB_PTYPE drifting = get_ptype_drifting(itype);
-    enum REB_PTYPE interacting = get_ptype_interacting(itype);
-
-    struct reb_pisd pisd_drifting = r->ri_mercurana.pisd[drifting];
-    struct reb_pisd pisd_interacting = r->ri_mercurana.pisd[interacting];
-
-    for (int i=0; i<pisd_drifting.shellN[shell]; i++){
-        int mi = pisd_drifting.map[shell][i]; 
-        struct reb_mdd* mdd = &(r->ri_mercurana.mdd[itype][shell][mi]);
-        check_one(r, dt, shell, mi, mdd, pisd_interacting);
-    }
-}
-
-
-// This function checks if there are any close encounters or physical collisions between particles in a given shell during a drift step of length dt. If a close encounter occures, particles are placed in deeper shells.
 static void reb_mercurana_encounter_predict(struct reb_simulation* const r, double dt, int shell){
     struct reb_simulation_integrator_mercurana* rim = &(r->ri_mercurana);
     
@@ -306,13 +267,41 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
     }
 
     if (shell!=0){
+        struct reb_particle* const particles = r->particles;
         for (int itype=0; itype<8; itype++){ 
-            check_maxdrift_violation(r, dt, shell, itype);
+            enum REB_PTYPE drifting = get_ptype_drifting(itype);
+            enum REB_PTYPE interacting = get_ptype_interacting(itype);
+
+            struct reb_pisd pisd_drifting = r->ri_mercurana.pisd[drifting];
+            struct reb_pisd pisd_interacting = r->ri_mercurana.pisd[interacting];
+            
+            for (int i=0; i<pisd_drifting.shellN[shell]; i++){
+                int mi = pisd_drifting.map[shell][i]; 
+                for (int s=0;s<shell;s++){
+                    struct reb_mdd* mdd = &(r->ri_mercurana.mdd[itype][s][mi]);
+                    double dt0 = r->ri_mercurana.t_now - mdd->t0 + dt;
+                    double drift = reb_drift_from_straight_line(mdd->p0,dt0,particles[mi],dt);
+                    if (drift > mdd->maxdrift){
+                        unsigned int Nmoved = check_one(r, dt, s, mi, mdd, pisd_interacting);
+                        r->ri_mercurana.Nmoved += Nmoved;
+                    }
+                }
+            }
         } 
     }
 
     for (int itype=0; itype<8; itype++){ 
-        check_this_shell(r, dt, shell, itype);
+        enum REB_PTYPE drifting = get_ptype_drifting(itype);
+        enum REB_PTYPE interacting = get_ptype_interacting(itype);
+
+        struct reb_pisd pisd_drifting = r->ri_mercurana.pisd[drifting];
+        struct reb_pisd pisd_interacting = r->ri_mercurana.pisd[interacting];
+
+        for (int i=0; i<pisd_drifting.shellN[shell]; i++){
+            int mi = pisd_drifting.map[shell][i]; 
+            struct reb_mdd* mdd = &(r->ri_mercurana.mdd[itype][shell][mi]);
+            check_one(r, dt, shell, mi, mdd, pisd_interacting);
+        }
     }
     
     if (rim->collisions_N){
