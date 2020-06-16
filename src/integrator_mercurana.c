@@ -294,6 +294,10 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
 
     for (int ptype=0; ptype<5; ptype++){ 
         rim->pisd[ptype].shellN[shell+1] = 0;
+        for (int i=0; i<rim->pisd[ptype].shellN[shell]; i++){
+            int mi = rim->pisd[ptype].map[shell][i]; 
+            rim->pisd[ptype].inshell[mi] = shell;
+        }
     }
 
     if (shell!=0){
@@ -475,15 +479,49 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
         rim->t_now += a;
     }
     
-    for (int ptype=0; ptype<5; ptype++){ 
-        for (int i=0;i<rim->pisd[ptype].shellN[shell];i++){  
-            int mi = rim->pisd[ptype].map[shell][i]; 
-            if( rim->pisd[ptype].inshell[mi]==shell && rim->p_t[mi]!=rim->t_now ){
-                particles[mi].x += a*particles[mi].vx;
-                particles[mi].y += a*particles[mi].vy;
-                particles[mi].z += a*particles[mi].vz;
-                rim->p_t[mi] = rim->t_now;
-            }
+    for (int i=0;i<rim->pisd[REB_PTYPE_DOM].shellN[shell];i++){  
+        int mi = rim->pisd[REB_PTYPE_DOM].map[shell][i]; 
+        if( rim->pisd[REB_PTYPE_DOM].inshell[mi]==shell){
+            particles[mi].x += a*particles[mi].vx;
+            particles[mi].y += a*particles[mi].vy;
+            particles[mi].z += a*particles[mi].vz;
+            rim->p_t[mi] = rim->t_now;
+        }
+    }
+    for (int i=0;i<rim->pisd[REB_PTYPE_SUB].shellN[shell];i++){  
+        int mi = rim->pisd[REB_PTYPE_SUB].map[shell][i]; 
+        if( rim->pisd[REB_PTYPE_SUB].inshell[mi]==shell && rim->pisd[REB_PTYPE_ENC].inshell[mi]<=shell){
+            particles[mi].x += a*particles[mi].vx;
+            particles[mi].y += a*particles[mi].vy;
+            particles[mi].z += a*particles[mi].vz;
+            rim->p_t[mi] = rim->t_now;
+        }
+    }
+    for (int i=0;i<rim->pisd[REB_PTYPE_ENC].shellN[shell];i++){  
+        int mi = rim->pisd[REB_PTYPE_ENC].map[shell][i]; 
+        if( rim->pisd[REB_PTYPE_ENC].inshell[mi]==shell && rim->pisd[REB_PTYPE_SUB].inshell[mi]<shell){
+            particles[mi].x += a*particles[mi].vx;
+            particles[mi].y += a*particles[mi].vy;
+            particles[mi].z += a*particles[mi].vz;
+            rim->p_t[mi] = rim->t_now;
+        }
+    }
+    for (int i=0;i<rim->pisd[REB_PTYPE_SUBP].shellN[shell];i++){  
+        int mi = rim->pisd[REB_PTYPE_SUBP].map[shell][i]; 
+        if( rim->pisd[REB_PTYPE_SUBP].inshell[mi]==shell && rim->pisd[REB_PTYPE_ENCP].inshell[mi]<=shell){
+            particles[mi].x += a*particles[mi].vx;
+            particles[mi].y += a*particles[mi].vy;
+            particles[mi].z += a*particles[mi].vz;
+            rim->p_t[mi] = rim->t_now;
+        }
+    }
+    for (int i=0;i<rim->pisd[REB_PTYPE_ENCP].shellN[shell];i++){  
+        int mi = rim->pisd[REB_PTYPE_ENCP].map[shell][i]; 
+        if( rim->pisd[REB_PTYPE_ENCP].inshell[mi]==shell && rim->pisd[REB_PTYPE_SUBP].inshell[mi]<shell){
+            particles[mi].x += a*particles[mi].vx;
+            particles[mi].y += a*particles[mi].vy;
+            particles[mi].z += a*particles[mi].vz;
+            rim->p_t[mi] = rim->t_now;
         }
     }
 }
