@@ -219,6 +219,7 @@ static inline unsigned int check_one(struct reb_simulation* r, double dt, unsign
         // Drift particle mj to current time for rmin calculation
         struct reb_particle pj = particles[mj];
         double pjdrift = r->ri_mercurana.t_now - p_t[mj];
+        if (pjdrift!=0){ printf("pjdrift: %e\n",pjdrift);};
         pj.x += pjdrift * pj.vx;
         pj.y += pjdrift * pj.vy;
         pj.z += pjdrift * pj.vz;
@@ -777,7 +778,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
         for (int itype=0; itype<8; itype++){ 
             if (rim->mdd[itype]){
                 for (int i=0;i<rim->Nmaxshells;i++){
-                    free(rim->mdd[itype]);
+                    free(rim->mdd[itype][i]);
                 }
             }
             free(rim->mdd[itype]);

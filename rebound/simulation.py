@@ -1956,6 +1956,18 @@ class reb_simulation_integrator_eos(Structure):
                 ("is_synchonized",c_uint),
                 ]
 
+class reb_pisd(Structure):
+    _fields_ = [
+                ("map", POINTER(POINTER(c_uint))),
+                ("inshell", POINTER(c_uint)),
+                ("shellN", POINTER(c_uint)),
+                ]
+#class reb_mdd(Structure):
+#    _fields_ = [
+#                ("p0", Particle),
+#                ("t0", c_double),
+#                ("maxdirft", c_double),
+#                ]
 class reb_simulation_integrator_mercurana(Structure):
     """
     This class is an abstraction of the C-struct reb_simulation_integrator_mercurana.
@@ -2057,30 +2069,12 @@ class reb_simulation_integrator_mercurana(Structure):
                 ("recalculate_dcrit_this_timestep", c_uint),
                 ("_dcrit", POINTER(POINTER(c_double))),
                 ("Nmaxshellsused", c_uint),
-                ("_map_encounter", POINTER(c_uint)),
-                ("_map_encounter_passive", POINTER(c_uint)),
-                ("_map_dominant", POINTER(c_uint)),
-                ("_map_subdominant", POINTER(c_uint)),
-                ("_map_subdominant_passive", POINTER(c_uint)),
-                ("_inshell_encounter", POINTER(c_uint)),
-                ("_inshell_dominant", POINTER(c_uint)),
-                ("_inshell_subdominant", POINTER(c_uint)),
-                ("_maxdrift_dominant", POINTER(c_uint)),
-                ("_maxdrift_subdominant", POINTER(c_uint)),
-                ("_maxdrift_encounter", POINTER(c_uint)),
-                ("_maxdrift_subdominant_passive", POINTER(c_uint)),
-                ("_maxdrift_encounter_passive", POINTER(c_uint)),
-                ("_t_drifted", POINTER(c_double)),
-                ("_dt_drifted", POINTER(c_double)),
-                ("_p0", POINTER(c_uint)),
-                ("moved_particles", c_uint),
+                ("pisd",reb_pisd*5),
+                ("mdd",POINTER(POINTER(c_uint))*8),
+                ("_p_t", POINTER(c_double)),
+                ("t_now", c_double),
+                ("Nmoved", c_uint),
                 ("allocatedN", c_uint),
-                ("_shellN_encounter", POINTER(c_uint)),
-                ("_shellN_encounter_passive", POINTER(c_uint)),
-                ("_shellN_dominant", POINTER(c_uint)),
-                ("_shellN_subdominant", POINTER(c_uint)),
-                ("_shellN_subdominant_passive", POINTER(c_uint)),
-                ("_current_shell", c_uint),
                 ("_is_synchronized", c_uint),
                 ("_collisions_N", c_uint),
                 ("L", CFUNCTYPE(c_double, POINTER(Simulation), c_double, c_double)),

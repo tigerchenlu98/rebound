@@ -9,7 +9,7 @@ extern unsigned long rebd_viol1[MAXSHELLS];
 extern unsigned long rebd_viol2[MAXSHELLS];
 double E0;
 
-#define Np 9
+#define Np 209
 double J0[Np];
 
 double jacobi(struct reb_simulation* r, unsigned int i){
@@ -51,10 +51,11 @@ void heartbeat(struct reb_simulation* r){
     int maxid = -1;
     for (int i=2;i<r->N;i++){
         double J = jacobi(r,i);
-        double dJ = fabs((J-J0[i-2])/J0[i-2]);
+        int oi = r->particles[i].hash;
+        double dJ = fabs((J-J0[oi])/J0[oi]);
         if (dJ>dJ_max) { 
             dJ_max = dJ;
-            maxid = i;
+            maxid = oi;
         }
     }
     printf("dJ/J = %e  i=%d   steps=%lld\n",dJ_max,maxid,r->steps_done);
@@ -71,8 +72,8 @@ int main(int argc, char* argv[]) {
     //r->ri_mercurana.Gm0r0 = 1;
     r->ri_mercurana.N_dominant = 2;
     r->ri_mercurana.Nmaxshells = 30;
-    //r->collision = REB_COLLISION_DIRECT;
-    //r->collision_resolve = reb_collision_resolve_merge;
+    r->collision = REB_COLLISION_DIRECT;
+    r->collision_resolve = reb_collision_resolve_merge;
     r->track_energy_offset = 1;
     //r->usleep = 10000;
 
@@ -96,15 +97,17 @@ int main(int argc, char* argv[]) {
     r->N_active = r->N;
 
     for(int i=0;i<Np;i++){
-        if (i+2!=5) continue;
-        struct reb_particle p2 =  reb_tools_orbit2d_to_particle(1.,p1,0,1.,0.49,((double)i)/(double)Np*2.*M_PI,-0.21);           
+        //if (i+2!=5) continue;
+        struct reb_particle p2 =  reb_tools_orbit2d_to_particle(1.,p1,0,1.,0.49,((double)i)/(double)Np*2.*M_PI,-0.21);           p2.hash = i; 
+        if (i!=38) continue;
         reb_add(r, p2); 
         
     }
    
     reb_move_to_com(r);
     for(int i=0;i<Np;i++){
-        J0[i] = jacobi(r,i+2); 
+        int oi = r->particles[i+2].hash;
+        J0[oi] = jacobi(r,i+2); 
     }
     E0 = reb_tools_energy(r);
     reb_integrate(r, 1000000);
