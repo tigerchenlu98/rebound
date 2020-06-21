@@ -522,6 +522,7 @@ struct reb_simulation_integrator_mercurana {
     unsigned int Nmaxshells;        ///< Maximum number of shells (default: 10)
     unsigned int N_dominant;        ///< Number of dominant bodies (default: 0)
     unsigned int safe_mode;         ///< If set to 1 (default) pre/post processors are applied before/after every step
+    unsigned int check_maxdrift;    ///< If set to 1 (default) additional checks are performed to ensure time-reversibility
     unsigned int recalculate_dcrit_this_timestep;  ///< Relaculate critical radii at the beginning of the next timestep
 
     // The user does not need to change the following variables 

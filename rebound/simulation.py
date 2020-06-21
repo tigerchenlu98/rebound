@@ -2066,6 +2066,7 @@ class reb_simulation_integrator_mercurana(Structure):
                 ("Nmaxshells", c_uint),
                 ("N_dominant", c_uint),
                 ("safe_mode", c_uint),
+                ("check_maxdrift", c_uint),
                 ("recalculate_dcrit_this_timestep", c_uint),
                 ("_dcrit", POINTER(POINTER(c_double))),
                 ("Nmaxshellsused", c_uint),

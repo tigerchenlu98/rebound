@@ -209,9 +209,11 @@ static inline unsigned int check_one(struct reb_simulation* r, double dt, unsign
     const double* const dcrit = r->ri_mercurana.dcrit[shell];
     double* const p_t = r->ri_mercurana.p_t;
     struct reb_particle pi = particles[mi];
-    mdd->p0 = particles[mi];
-    mdd->t0 = r->ri_mercurana.t_now;
-    mdd->maxdrift = 1e300;
+    if (mdd){  // only calculate maxdrift if check_maxdrift==1
+        mdd->p0 = particles[mi];
+        mdd->t0 = r->ri_mercurana.t_now;
+        mdd->maxdrift = 1e300;
+    }
     unsigned int moved = 0;
     for (int j=0; j<pisd_interacting.shellN[shell]; j++){
         int mj = pisd_interacting.map[shell][j]; 
@@ -242,9 +244,11 @@ static inline unsigned int check_one(struct reb_simulation* r, double dt, unsign
                 pisd_interacting.shellN[shell+1]++;
             }
         }else{
-            // Interaction potentially not resolved in subshells. Need maxdrift.
-            const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
-            mdd->maxdrift = MIN(mdd->maxdrift,maxdrift);
+            if (mdd){  // only calculate maxdrift if check_maxdrift==1
+                // Interaction potentially not resolved in subshells. Need maxdrift.
+                const double maxdrift = (sqrt(rmin2) - dcritsum)/2.;
+                mdd->maxdrift = MIN(mdd->maxdrift,maxdrift);
+            }
         }
     }
     return moved;
@@ -267,7 +271,7 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
         }
     }
 
-    if (shell!=0){
+    if (shell!=0 && rim->check_maxdrift){
         struct reb_particle* const particles = r->particles;
         for (int itype=0; itype<8; itype++){ 
             enum REB_PTYPE drifting = get_ptype_drifting(itype);
@@ -300,17 +304,18 @@ static void reb_mercurana_encounter_predict(struct reb_simulation* const r, doub
 
         for (int i=0; i<pisd_drifting.shellN[shell]; i++){
             int mi = pisd_drifting.map[shell][i]; 
-            struct reb_mdd* mdd = &(r->ri_mercurana.mdd[itype][shell][mi]);
+            struct reb_mdd* mdd = NULL;
+            if (rim->check_maxdrift){
+                mdd = &(r->ri_mercurana.mdd[itype][shell][mi]);
+            }
             check_one(r, dt, shell, mi, mdd, pisd_interacting);
         }
     }
     
     if (rim->collisions_N){
-        //printf("collision\n");
         unsigned int N_before = r->N;
-        reb_collision_search(r); // will resolve collisions
+        reb_collision_search(r); 
         if (N_before!=r->N){
-            // Need to redo predict step as particles changed.
             reb_mercurana_encounter_predict(r, dt, shell);
         }
         rim->collisions_N = 0;
@@ -519,6 +524,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
             rim->p_t[mi] = rim->t_now;
         }
     }
+    //if (r->heartbeat){ r->heartbeat(r); }               // Heartbeat
 }
 
 // Part 1 only contains logic for setting up all the data structures. 
@@ -555,7 +561,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
     
     const int N = r->N;
     
-    if (rim->allocatedN<N){
+    if (rim->allocatedN<N || (rim->mdd[0]==NULL && rim->check_maxdrift)){ // if check_maxdrift enabled during integration
         if (rim->dcrit){
             for (int i=0;i<rim->Nmaxshells;i++){
                 free(rim->dcrit[i]);
@@ -579,15 +585,17 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
             rim->pisd[ptype].inshell = realloc(rim->pisd[ptype].inshell, sizeof(unsigned int*)*N);
             rim->pisd[ptype].shellN = realloc(rim->pisd[ptype].shellN, sizeof(unsigned int*)*rim->Nmaxshells);
         }
-        for (int itype=0; itype<8; itype++){ 
-            if (rim->mdd[itype]){
-                for (int i=0;i<rim->Nmaxshells;i++){
-                    free(rim->mdd[itype]);
+        if (rim->check_maxdrift){
+            for (int itype=0; itype<8; itype++){ 
+                if (rim->mdd[itype]){
+                    for (int i=0;i<rim->Nmaxshells;i++){
+                        free(rim->mdd[itype]);
+                    }
                 }
-            }
-            rim->mdd[itype] = realloc(rim->mdd[itype], sizeof(unsigned int*)*rim->Nmaxshells);
-            for (int i=0;i<rim->Nmaxshells;i++){
-                rim->mdd[itype][i] = malloc(sizeof(struct reb_mdd)*N);
+                rim->mdd[itype] = realloc(rim->mdd[itype], sizeof(unsigned int*)*rim->Nmaxshells);
+                for (int i=0;i<rim->Nmaxshells;i++){
+                    rim->mdd[itype][i] = malloc(sizeof(struct reb_mdd)*N);
+                }
             }
         }
 
@@ -608,6 +616,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         for (int s=0;s<rim->Nmaxshells;s++){ // innermost shell has no dcrit
             for (int i=0;i<N;i++){
                 double mi = r->particles[i].m;
+                // Constrain two body error
                 double dgrav = sqrt3(r->G*dt0*dt0*mi/rim->kappa);
                 if (rim->Gm0r0){
                     double dgravrel = sqrt(sqrt(r->G*r->G*dt0*dt0*mi*mi/rim->Gm0r0/rim->kappa));
@@ -799,6 +808,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     r->ri_mercurana.Gm0r0 = 0.;
     r->ri_mercurana.alpha = 0.5;
     r->ri_mercurana.safe_mode = 1;
+    r->ri_mercurana.check_maxdrift = 1;
     r->ri_mercurana.Nmaxshells = 10;
     r->ri_mercurana.Nmaxshellsused = 1;
     r->ri_mercurana.Nmoved = 0;
