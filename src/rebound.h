@@ -519,6 +519,7 @@ struct reb_simulation_integrator_mercurana {
     double kappa;                   ///< Accuracy control (the smaller the better the accuracy)
     double massratio;               
     double rmin;    
+    double rmax;    
     double Gm0r0;                   ///< Specific energy scale used for Accuracy control (default: 0)
     double alpha;                   ///< Slope of the critical radii with timestep (default: 1/2)
     unsigned int Nmaxshells;        ///< Maximum number of shells (default: 10)

@@ -621,7 +621,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
             }
             rim->massratio = Mmaxsub/Mmindom;
             if (!isnormal(rim->massratio)){
-                reb_warning(r,"MERCURANA: Unable to calculate massratio. Setting it to 1.");
+                reb_warning(r,"MERCURANA: Unable to automatically calculate massratio. Setting it to 1. Consider setting it manually.");
                 rim->massratio = 1;
             }
         }
@@ -636,8 +636,25 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
                 rim->rmin = MIN(rim->rmin,r->particles[i].r);
             }
             if (!isnormal(rim->rmin)){
-                reb_warning(r,"MERCURANA: Unable to calculate rmin. Setting it to 1.");
+                reb_warning(r,"MERCURANA: Unable to automatically calculate rmin. Setting it to 1. Consider setting it manually.");
                 rim->rmin = 1;
+            }
+        }
+    }
+    
+    // Rmax calculation
+    if (rim->rmax==-1 || rim->recalculate_dcrit_this_timestep){
+        if (N>0){
+            rim->rmax = 0;
+            for (int i=1;i<N_active;i++){
+                double x = r->particles[i].x;
+                double y = r->particles[i].y;
+                double z = r->particles[i].z;
+                rim->rmax = MIN(rim->rmax,sqrt(x*x+y*y+z*z));
+            }
+            if (!isnormal(rim->rmax)){
+                reb_warning(r,"MERCURANA: Unable to automatically calculate rmax. Setting it to 1. Consider setting it manually.");
+                rim->rmax = 1;
             }
         }
     }
@@ -846,6 +863,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     r->ri_mercurana.Gm0r0 = 0.;
     r->ri_mercurana.massratio = -1.;
     r->ri_mercurana.rmin = -1.;
+    r->ri_mercurana.rmax = -1.;
     r->ri_mercurana.alpha = 0.5;
     r->ri_mercurana.safe_mode = 1;
     r->ri_mercurana.check_maxdrift = 1;
