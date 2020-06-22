@@ -605,6 +605,44 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         rim->recalculate_dcrit_this_timestep = 1;
     }
 
+    // Mass ratio calculation
+    if (rim->massratio==-1 || rim->recalculate_dcrit_this_timestep){
+        const int N_active = r->N_active==-1?N:r->N_active;
+        if (rim->N_dominant==0 || N==0 || rim->N_dominant==N_active){
+            rim->massratio = 1;
+        }else{
+            double Mmindom = r->particles[0].m;
+            double Mmaxsub = 0;
+            for (int i=1;i<rim->N_dominant;i++){
+                Mmindom = MIN(Mmindom,r->particles[i].m);
+            }
+            for (int i=rim->N_dominant;i<N;i++){
+                Mmaxsub = MAX(Mmaxsub,r->particles[i].m);
+            }
+            rim->massratio = Mmaxsub/Mmindom;
+            if (!isnormal(rim->massratio)){
+                reb_warning(r,"MERCURANA: Unable to calculate massratio. Setting it to 1.");
+                rim->massratio = 1;
+            }
+        }
+    }
+    
+    // Rmin calculation
+    if (rim->rmin==-1 || rim->recalculate_dcrit_this_timestep){
+        if (N>0){
+            const int N_active = r->N_active==-1?N:r->N_active;
+            rim->rmin = r->particles[0].r;
+            for (int i=1;i<N_active;i++){
+                rim->rmin = MIN(rim->rmin,r->particles[i].r);
+            }
+            if (!isnormal(rim->rmin)){
+                reb_warning(r,"MERCURANA: Unable to calculate rmin. Setting it to 1.");
+                rim->rmin = 1;
+            }
+        }
+    }
+
+
     if (rim->recalculate_dcrit_this_timestep){
         rim->recalculate_dcrit_this_timestep = 0;
         if (rim->is_synchronized==0){
@@ -806,6 +844,8 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     r->ri_mercurana.n1 = 0;
     r->ri_mercurana.kappa = 1e-3;
     r->ri_mercurana.Gm0r0 = 0.;
+    r->ri_mercurana.massratio = -1.;
+    r->ri_mercurana.rmin = -1.;
     r->ri_mercurana.alpha = 0.5;
     r->ri_mercurana.safe_mode = 1;
     r->ri_mercurana.check_maxdrift = 1;
