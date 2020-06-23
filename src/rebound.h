@@ -516,12 +516,10 @@ struct reb_simulation_integrator_mercurana {
     enum REB_EOS_TYPE phi1;         ///< Opperator splitting scheme for shells s>=1
     unsigned int n0;                ///< Number of sub-steps to approximate drift step in shell 0
     unsigned int n1;                ///< Number of sub-steps to approximate drift step in shells s>=1
-    double kappa;                   ///< Accuracy control (the smaller the better the accuracy)
+    double epsilon;       
     double massratio;               
     double rmin;    
     double rmax;    
-    double Gm0r0;                   ///< Specific energy scale used for Accuracy control (default: 0)
-    double alpha;                   ///< Slope of the critical radii with timestep (default: 1/2)
     unsigned int Nmaxshells;        ///< Maximum number of shells (default: 10)
     unsigned int N_dominant;        ///< Number of dominant bodies (default: 0)
     unsigned int safe_mode;         ///< If set to 1 (default) pre/post processors are applied before/after every step

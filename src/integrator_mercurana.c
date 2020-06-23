@@ -546,10 +546,6 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         reb_error(r,"Nmaxshells>=3 is required if n1 is greater than 0.");
         return;
     }
-    if (rim->Nmaxshells>1 && rim->kappa<=0.){
-        reb_error(r,"kappa>0 is required if Nmaxshells>1.");
-        return;
-    }
     if (rim->Nmaxshells>1 && rim->n0==0){
         reb_error(r,"n0>0 is required if Nmaxshells>1.");
         return;
@@ -560,6 +556,8 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
     }
     
     const int N = r->N;
+    const int N_active = r->N_active==-1?N:r->N_active;
+    const int N_dominant = rim->N_dominant;
     
     if (rim->allocatedN<N || (rim->mdd[0]==NULL && rim->check_maxdrift)){ // if check_maxdrift enabled during integration
         if (rim->dcrit){
@@ -607,16 +605,15 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
 
     // Mass ratio calculation
     if (rim->massratio==-1 || rim->recalculate_dcrit_this_timestep){
-        const int N_active = r->N_active==-1?N:r->N_active;
-        if (rim->N_dominant==0 || N==0 || rim->N_dominant==N_active){
+        if (N_dominant==0 || N==0 || N_dominant==N_active){
             rim->massratio = 1;
         }else{
             double Mmindom = r->particles[0].m;
             double Mmaxsub = 0;
-            for (int i=1;i<rim->N_dominant;i++){
+            for (int i=1;i<N_dominant;i++){
                 Mmindom = MIN(Mmindom,r->particles[i].m);
             }
-            for (int i=rim->N_dominant;i<N;i++){
+            for (int i=N_dominant;i<N;i++){
                 Mmaxsub = MAX(Mmaxsub,r->particles[i].m);
             }
             rim->massratio = Mmaxsub/Mmindom;
@@ -630,7 +627,6 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
     // Rmin calculation
     if (rim->rmin==-1 || rim->recalculate_dcrit_this_timestep){
         if (N>0){
-            const int N_active = r->N_active==-1?N:r->N_active;
             rim->rmin = r->particles[0].r;
             for (int i=1;i<N_active;i++){
                 rim->rmin = MIN(rim->rmin,r->particles[i].r);
@@ -650,11 +646,35 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
                 double x = r->particles[i].x;
                 double y = r->particles[i].y;
                 double z = r->particles[i].z;
-                rim->rmax = MIN(rim->rmax,sqrt(x*x+y*y+z*z));
+                rim->rmax = MAX(rim->rmax,sqrt(x*x+y*y+z*z));
             }
             if (!isnormal(rim->rmax)){
                 reb_warning(r,"MERCURANA: Unable to automatically calculate rmax. Setting it to 1. Consider setting it manually.");
                 rim->rmax = 1;
+            }
+        }
+    }
+    // Epsilon calculation
+    if (rim->epsilon==-1 || rim->recalculate_dcrit_this_timestep){
+        if (N_dominant==0 || rim->massratio<=0. ){
+            reb_warning(r,"MERCURANA: Unable to automatically calculate epsilon. Setting it to 1e-3. Consider setting it manually.");
+            rim->epsilon = 1e-3;
+        }else{
+            double T0min = 1e300;
+            for (int i=0;i<N_dominant;i++){
+                for (int j=N_dominant;j<N;j++){
+                    double x =  r->particles[i].x - r->particles[j].x;
+                    double y =  r->particles[i].y - r->particles[j].y;
+                    double z =  r->particles[i].z - r->particles[j].z;
+                    double a = sqrt(x*x+y*y+z*z);
+                    T0min = MIN(T0min,sqrt(a*a*a/(r->G*r->particles[i].m)));
+                }
+            }
+            if (!isnormal(T0min) || T0min==1e300){
+                reb_warning(r,"MERCURANA: Unable to automatically calculate epsilon. Setting it to 1e-3. Consider setting it manually.");
+                rim->epsilon = 1e-3;
+            }else{
+                rim->epsilon = r->dt*r->dt/(T0min*T0min);
             }
         }
     }
@@ -859,12 +879,10 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     r->ri_mercurana.phi1 = REB_EOS_LF;
     r->ri_mercurana.n0 = 2;
     r->ri_mercurana.n1 = 0;
-    r->ri_mercurana.kappa = 1e-3;
-    r->ri_mercurana.Gm0r0 = 0.;
+    r->ri_mercurana.epsilon = -1;
     r->ri_mercurana.massratio = -1.;
     r->ri_mercurana.rmin = -1.;
     r->ri_mercurana.rmax = -1.;
-    r->ri_mercurana.alpha = 0.5;
     r->ri_mercurana.safe_mode = 1;
     r->ri_mercurana.check_maxdrift = 1;
     r->ri_mercurana.Nmaxshells = 10;

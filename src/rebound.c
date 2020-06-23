@@ -602,12 +602,10 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_mercurana.phi1 = REB_EOS_LF;
     r->ri_mercurana.n0 = 2;
     r->ri_mercurana.n1 = 0;
-    r->ri_mercurana.kappa = 1e-2;
-    r->ri_mercurana.Gm0r0 = 0.;
+    r->ri_mercurana.epsilon = -1;
     r->ri_mercurana.massratio = -1;
     r->ri_mercurana.rmin = -1;
     r->ri_mercurana.rmax = -1;
-    r->ri_mercurana.alpha = 0.5;
     r->ri_mercurana.safe_mode = 1;
     r->ri_mercurana.check_maxdrift = 1;
     r->ri_mercurana.Nmaxshells = 10;
