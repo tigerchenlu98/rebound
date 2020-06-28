@@ -605,7 +605,7 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_mercurana.epsilon = -1;
     r->ri_mercurana.massratio = -1;
     r->ri_mercurana.rmin = -1;
-    r->ri_mercurana.rmax = -1;
+    r->ri_mercurana.rref = -1;
     r->ri_mercurana.safe_mode = 1;
     r->ri_mercurana.check_maxdrift = 1;
     r->ri_mercurana.Nmaxshells = 10;

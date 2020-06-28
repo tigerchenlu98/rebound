@@ -639,18 +639,18 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
     }
     
     // Rmax calculation
-    if (rim->rmax==-1 || rim->recalculate_dcrit_this_timestep){
+    if (rim->rref==-1 || rim->recalculate_dcrit_this_timestep){
         if (N>0){
-            rim->rmax = 0;
+            rim->rref = 0;
             for (int i=1;i<N_active;i++){
                 double x = r->particles[i].x;
                 double y = r->particles[i].y;
                 double z = r->particles[i].z;
-                rim->rmax = MAX(rim->rmax,sqrt(x*x+y*y+z*z));
+                rim->rref = MAX(rim->rref,sqrt(x*x+y*y+z*z));
             }
-            if (!isnormal(rim->rmax)){
-                reb_warning(r,"MERCURANA: Unable to automatically calculate rmax. Setting it to 1. Consider setting it manually.");
-                rim->rmax = 1;
+            if (!isnormal(rim->rref)){
+                reb_warning(r,"MERCURANA: Unable to automatically calculate rref. Setting it to 1. Consider setting it manually.");
+                rim->rref = 1;
             }
         }
     }
@@ -882,7 +882,7 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     r->ri_mercurana.epsilon = -1;
     r->ri_mercurana.massratio = -1.;
     r->ri_mercurana.rmin = -1.;
-    r->ri_mercurana.rmax = -1.;
+    r->ri_mercurana.rref = -1.;
     r->ri_mercurana.safe_mode = 1;
     r->ri_mercurana.check_maxdrift = 1;
     r->ri_mercurana.Nmaxshells = 10;

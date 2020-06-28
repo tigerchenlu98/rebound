@@ -519,7 +519,7 @@ struct reb_simulation_integrator_mercurana {
     double epsilon;       
     double massratio;               
     double rmin;    
-    double rmax;    
+    double rref;    
     unsigned int Nmaxshells;        ///< Maximum number of shells (default: 10)
     unsigned int N_dominant;        ///< Number of dominant bodies (default: 0)
     unsigned int safe_mode;         ///< If set to 1 (default) pre/post processors are applied before/after every step
