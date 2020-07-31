@@ -232,7 +232,7 @@ struct reb_simulation* reb_create_simulation_from_simulationarchive(struct reb_s
     return r; // might be null if error occured
 }
 
-void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, const char* filename, enum reb_input_binary_messages* warnings){
+void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, const char* filename, enum reb_input_binary_messages* warnings, long nblobsmax){
     sa->inf = fopen(filename,"r");
     if (sa->inf==NULL){
         *warnings |= REB_INPUT_BINARY_ERROR_NOFILE;
@@ -320,6 +320,9 @@ void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, 
         fseek(sa->inf, -sizeof(struct reb_simulationarchive_blob), SEEK_END);  
         fread(&blob, sizeof(struct reb_simulationarchive_blob), 1, sa->inf);
         sa->nblobs = blob.index+1;
+        if (nblobsmax >0 && sa->nblobs > nblobsmax){
+            sa->nblobs = nblobsmax;
+        }
         sa->t = malloc(sizeof(double)*sa->nblobs);
         sa->offset = malloc(sizeof(uint32_t)*sa->nblobs);
         fseek(sa->inf, 0, SEEK_SET);  
@@ -359,7 +362,7 @@ void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, 
 struct reb_simulationarchive* reb_open_simulationarchive(const char* filename){
     struct reb_simulationarchive* sa = malloc(sizeof(struct reb_simulationarchive)); 
     enum reb_input_binary_messages warnings = REB_INPUT_BINARY_WARNING_NONE;
-    reb_read_simulationarchive_with_messages(sa, filename, &warnings);
+    reb_read_simulationarchive_with_messages(sa, filename, &warnings, -1);
     if (warnings & REB_INPUT_BINARY_ERROR_NOFILE){
         // Don't output an error if file does not exist, just return NULL.
         free(sa);

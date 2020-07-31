@@ -57,7 +57,7 @@ class SimulationArchive(Structure):
                 ("offset", POINTER(c_uint32)), 
                 ("t", POINTER(c_double)) 
                 ]
-    def __init__(self,filename,setup=None, setup_args=(), process_warnings=True):
+    def __init__(self,filename,setup=None, setup_args=(), process_warnings=True, nblobsmax=-1):
         """
         Arguments
         ---------
@@ -70,12 +70,14 @@ class SimulationArchive(Structure):
             Arguments passed to setup function.
         process_warnings : Bool
             Display warning messages if True (default). Only fail on major errors if set to False.
+        nblobsmax : Int
+            Only load a maximum of nmblobsmax snapshots. This can be helpful when reading extremely large files. The default is -1 (no maximum).
 
         """
         self.setup = setup
         self.setup_args = setup_args
         w = c_int(0)
-        clibrebound.reb_read_simulationarchive_with_messages(byref(self),c_char_p(filename.encode("ascii")),byref(w))
+        clibrebound.reb_read_simulationarchive_with_messages(byref(self),c_char_p(filename.encode("ascii")),byref(w),c_long(nblobsmax))
         for majorerror, value, message in BINARY_WARNINGS:
             if w.value & value:
                 if majorerror:
