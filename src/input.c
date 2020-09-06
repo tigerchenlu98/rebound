@@ -267,11 +267,9 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
         CASE(EOS_ISSYNCHRON,     &r->ri_eos.is_synchronized);
         CASE(MERCURANA_PHI0,     &r->ri_mercurana.phi0);
         CASE(MERCURANA_PHI1,     &r->ri_mercurana.phi1);
-        CASE(MERCURANA_N0,       &r->ri_mercurana.n0);
-        CASE(MERCURANA_N1,       &r->ri_mercurana.n1);
+        CASE(MERCURANA_N,        &r->ri_mercurana.n);
         CASE(MERCURANA_KAPPA,    &r->ri_mercurana.kappa);
-        CASE(MERCURANA_GM0R0,    &r->ri_mercurana.Gm0r0);
-        CASE(MERCURANA_ALPHA,    &r->ri_mercurana.alpha);
+        CASE(MERCURANA_EPSILON,  &r->ri_mercurana.epsilon);
         CASE(MERCURANA_NMAXSHELLS, &r->ri_mercurana.Nmaxshells);
         CASE(MERCURANA_SAFEMODE, &r->ri_mercurana.safe_mode);
         CASE(MERCURANA_ISSYNCHRON, &r->ri_mercurana.is_synchronized);

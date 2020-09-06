@@ -460,10 +460,7 @@ static void reb_integrator_mercurana_drift_step(struct reb_simulation* const r, 
         if (particle_in_subshell){ 
             rim->Nmaxshellsused = MAX(rim->Nmaxshellsused, shell+2);
             // advance all sub-shell particles
-            unsigned int n = rim->n1?rim->n1:rim->n0;
-            if (rim->n0>0 && shell==0){
-                n = rim->n0; // use different number of substeps for first shell
-            }
+            unsigned int n = rim->n;
             const double as = a/n;
             reb_integrator_eos_preprocessor(r, as, shell+1, rim->phi1, reb_integrator_mercurana_drift_step, reb_integrator_mercurana_interaction_step);
             for (int i=0;i<n;i++){
@@ -538,16 +535,8 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         reb_error(r,"Nmaxshells needs to be larger than 0.");
         return;
     }
-    if (rim->Nmaxshells==1 && rim->n0 ){
-        reb_error(r,"Nmaxshells>=2 is required if n0 is greater than 0.");
-        return;
-    }
-    if (rim->Nmaxshells==2 && rim->n1){
-        reb_error(r,"Nmaxshells>=3 is required if n1 is greater than 0.");
-        return;
-    }
-    if (rim->Nmaxshells>1 && rim->n0==0){
-        reb_error(r,"n0>0 is required if Nmaxshells>1.");
+    if (rim->Nmaxshells==1 && rim->n ){
+        reb_error(r,"Nmaxshells>=2 is required if n is greater than 0.");
         return;
     }
     if (rim->N_dominant>r->N_active && r->N_active!=-1){
@@ -603,83 +592,6 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
         rim->recalculate_dcrit_this_timestep = 1;
     }
 
-    // Mass ratio calculation
-    if (rim->massratio==-1 || rim->recalculate_dcrit_this_timestep){
-        if (N_dominant==0 || N==0 || N_dominant==N_active){
-            rim->massratio = 1;
-        }else{
-            double Mmindom = r->particles[0].m;
-            double Mmaxsub = 0;
-            for (int i=1;i<N_dominant;i++){
-                Mmindom = MIN(Mmindom,r->particles[i].m);
-            }
-            for (int i=N_dominant;i<N;i++){
-                Mmaxsub = MAX(Mmaxsub,r->particles[i].m);
-            }
-            rim->massratio = Mmaxsub/Mmindom;
-            if (!isnormal(rim->massratio)){
-                reb_warning(r,"MERCURANA: Unable to automatically calculate massratio. Setting it to 1. Consider setting it manually.");
-                rim->massratio = 1;
-            }
-        }
-    }
-    
-    // Rmin calculation
-    if (rim->rmin==-1 || rim->recalculate_dcrit_this_timestep){
-        if (N>0){
-            rim->rmin = r->particles[0].r;
-            for (int i=1;i<N_active;i++){
-                rim->rmin = MIN(rim->rmin,r->particles[i].r);
-            }
-            if (!isnormal(rim->rmin)){
-                reb_warning(r,"MERCURANA: Unable to automatically calculate rmin. Setting it to 1. Consider setting it manually.");
-                rim->rmin = 1;
-            }
-        }
-    }
-    
-    // Rmax calculation
-    if (rim->rref==-1 || rim->recalculate_dcrit_this_timestep){
-        if (N>0){
-            rim->rref = 0;
-            for (int i=1;i<N_active;i++){
-                double x = r->particles[i].x;
-                double y = r->particles[i].y;
-                double z = r->particles[i].z;
-                rim->rref = MAX(rim->rref,sqrt(x*x+y*y+z*z));
-            }
-            if (!isnormal(rim->rref)){
-                reb_warning(r,"MERCURANA: Unable to automatically calculate rref. Setting it to 1. Consider setting it manually.");
-                rim->rref = 1;
-            }
-        }
-    }
-    // Epsilon calculation
-    if (rim->epsilon==-1 || rim->recalculate_dcrit_this_timestep){
-        if (N_dominant==0 || rim->massratio<=0. ){
-            reb_warning(r,"MERCURANA: Unable to automatically calculate epsilon. Setting it to 1e-3. Consider setting it manually.");
-            rim->epsilon = 1e-3;
-        }else{
-            double T0min = 1e300;
-            for (int i=0;i<N_dominant;i++){
-                for (int j=N_dominant;j<N;j++){
-                    double x =  r->particles[i].x - r->particles[j].x;
-                    double y =  r->particles[i].y - r->particles[j].y;
-                    double z =  r->particles[i].z - r->particles[j].z;
-                    double a = sqrt(x*x+y*y+z*z);
-                    T0min = MIN(T0min,sqrt(a*a*a/(r->G*r->particles[i].m)));
-                }
-            }
-            if (!isnormal(T0min) || T0min==1e300){
-                reb_warning(r,"MERCURANA: Unable to automatically calculate epsilon. Setting it to 1e-3. Consider setting it manually.");
-                rim->epsilon = 1e-3;
-            }else{
-                rim->epsilon = r->dt*r->dt/(T0min*T0min);
-            }
-        }
-    }
-
-
     if (rim->recalculate_dcrit_this_timestep){
         rim->recalculate_dcrit_this_timestep = 0;
         if (rim->is_synchronized==0){
@@ -692,17 +604,8 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
             for (int i=0;i<N;i++){
                 double mi = r->particles[i].m;
                 // Constrain two body error
-                double dgrav = sqrt3(r->G*dt0*dt0*mi/rim->kappa);
-                if (rim->Gm0r0){
-                    double dgravrel = sqrt(sqrt(r->G*r->G*dt0*dt0*mi*mi/rim->Gm0r0/rim->kappa));
-                    dgrav = MAX(dgrav,dgravrel);
-                }
-                if (rim->alpha!=0.5){
-                    // might not machine independent!
-                    rim->dcrit[s][i] = pow(dt_shell/dt0,rim->alpha) * dgrav;
-                }else{
-                    rim->dcrit[s][i] = sqrt(dt_shell/dt0) * dgrav;
-                }
+                double dgrav = pow(r->G*mi,1./3.)*pow(dt0,2./3.)*pow(dt_shell/(rim->epsilon*dt0),2./(3.*rim->kappa));
+                rim->dcrit[s][i] = dgrav;
             }
             // Definition: ??
             // - n=0 is not allowed
@@ -740,12 +643,7 @@ void reb_integrator_mercurana_part1(struct reb_simulation* r){
                     break;
             }
             dt_shell *= longest_drift_step_in_shell;
-            unsigned int n = rim->n0;
-            if (s>0 && rim->n1){
-                n = rim->n1; // use different number of substeps for deep shells
-                             // if n1 is not set, keep using n0
-            }
-            dt_shell /= n;
+            dt_shell /= rim->n;
             // Initialize shell numbers to zero (not needed, but helps debugging)
             //rim->shellN[s] = 0;
             //rim->shellN_active[s] = 0;
@@ -877,12 +775,9 @@ void reb_integrator_mercurana_reset(struct reb_simulation* r){
     r->ri_mercurana.dcrit = NULL;
     r->ri_mercurana.phi0 = REB_EOS_LF;
     r->ri_mercurana.phi1 = REB_EOS_LF;
-    r->ri_mercurana.n0 = 2;
-    r->ri_mercurana.n1 = 0;
-    r->ri_mercurana.epsilon = -1;
-    r->ri_mercurana.massratio = -1.;
-    r->ri_mercurana.rmin = -1.;
-    r->ri_mercurana.rref = -1.;
+    r->ri_mercurana.n = 2;
+    r->ri_mercurana.epsilon = 0.1;
+    r->ri_mercurana.kappa = 4./3.;
     r->ri_mercurana.safe_mode = 1;
     r->ri_mercurana.check_maxdrift = 1;
     r->ri_mercurana.Nmaxshells = 10;

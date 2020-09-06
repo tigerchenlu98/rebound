@@ -362,11 +362,9 @@ void reb_output_binary_to_stream(struct reb_simulation* r, char** bufp, size_t* 
     WRITE_FIELD(EOS_ISSYNCHRON,     &r->ri_eos.is_synchronized,         sizeof(unsigned int));
     WRITE_FIELD(MERCURANA_PHI0,     &r->ri_mercurana.phi0,              sizeof(unsigned int));
     WRITE_FIELD(MERCURANA_PHI1,     &r->ri_mercurana.phi1,              sizeof(unsigned int));
-    WRITE_FIELD(MERCURANA_N0,       &r->ri_mercurana.n0,                sizeof(unsigned int));
-    WRITE_FIELD(MERCURANA_N1,       &r->ri_mercurana.n1,                sizeof(unsigned int));
+    WRITE_FIELD(MERCURANA_N,        &r->ri_mercurana.n,                 sizeof(unsigned int));
     WRITE_FIELD(MERCURANA_KAPPA,    &r->ri_mercurana.kappa,             sizeof(double));
-    WRITE_FIELD(MERCURANA_GM0R0,    &r->ri_mercurana.Gm0r0,             sizeof(double));
-    WRITE_FIELD(MERCURANA_ALPHA,    &r->ri_mercurana.alpha,             sizeof(double));
+    WRITE_FIELD(MERCURANA_EPSILON,  &r->ri_mercurana.epsilon,           sizeof(double));
     WRITE_FIELD(MERCURANA_NMAXSHELLS, &r->ri_mercurana.Nmaxshells,      sizeof(unsigned int));
     WRITE_FIELD(MERCURANA_SAFEMODE, &r->ri_mercurana.safe_mode,         sizeof(unsigned int));
     WRITE_FIELD(MERCURANA_ISSYNCHRON, &r->ri_mercurana.is_synchronized, sizeof(unsigned int));

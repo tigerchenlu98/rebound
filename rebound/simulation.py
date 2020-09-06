@@ -2063,11 +2063,9 @@ class reb_simulation_integrator_mercurana(Structure):
     _fields_ = [
                 ("_phi0", c_uint),
                 ("_phi1", c_uint),
-                ("n0", c_uint),
-                ("n1", c_uint),
+                ("n", c_uint),
+                ("epsilon", c_double),
                 ("kappa", c_double),
-                ("Gm0r0", c_double),
-                ("alpha", c_double),
                 ("Nmaxshells", c_uint),
                 ("N_dominant", c_uint),
                 ("safe_mode", c_uint),
