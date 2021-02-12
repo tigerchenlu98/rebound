@@ -91,17 +91,11 @@ def OrbitPlot(sim, figsize=None, fancy=False, slices=0, xlim=None, ylim=None, un
         plt.setp(ax_right.get_yticklines(), visible=False)
         ax_right.set_xlabel("z"+unitlabel)
 
-    OrbitPlotOneSlice(sim, ax_main, Narc=Narc, color=color, periastron=periastron, orbit_type=orbit_type, lw=lw, axes="xy",fancy=fancy, plotparticles=plotparticles, primary=primary)
+    OrbitPlotOneSlice(sim, ax_main, Narc=Narc, color=color, periastron=periastron, orbit_type=orbit_type, lw=lw, axes="xy",fancy=fancy, plotparticles=plotparticles, primary=primary, xlim=xlim, ylim=ylim)
 
     if slices>0.:
         OrbitPlotOneSlice(sim, ax_right, Narc=Narc, color=color, periastron=periastron, orbit_type=orbit_type, lw=lw,fancy=fancy, axes="zy", plotparticles=plotparticles, primary=primary)
         OrbitPlotOneSlice(sim, ax_top, Narc=Narc, color=color, periastron=periastron, orbit_type=orbit_type, lw=lw,fancy=fancy, axes="xz", plotparticles=plotparticles, primary=primary)
-
-    if xlim is not None:
-        ax_main.set_xlim(xlim)
-    if ylim is not None:
-        ax_main.set_ylim(ylim)
-
 
     if fancy:
         ax_main.apply_aspect()
@@ -210,7 +204,7 @@ def fading_line(x, y, color='black', alpha_initial=1., alpha_final=0., glow=Fals
     lc.set_array(np.linspace(0.,1.,len(segments)))
     return lc
 
-def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_type="trial", lw=1., axes="xy", plotparticles=[], primary=None, fancy=False):
+def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_type="trial", lw=1., axes="xy", plotparticles=[], primary=None, fancy=False, xlim=None, ylim=None):
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
     from matplotlib.colors import LinearSegmentedColormap
@@ -259,6 +253,11 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
         ax.scatter(getattr(prim,axes[0]),getattr(prim,axes[1]), marker="*", s=35*lw, facecolor="black", edgecolor=None, zorder=3)
     
     proj = {}
+    
+    xmin = []
+    xmax = []
+    ymin = []
+    ymax = []
     for p, o in p_orb_pairs:
         prim = p.jacobi_com if primary is None else primary 
 
@@ -273,17 +272,7 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
             alpha_final = 0. if orbit_type=="trail" else 1. # fade to 0 with trail
 
             hyperbolic = o.a < 0. # Boolean for whether orbit is hyperbolic
-            if hyperbolic is False:
-                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
-                proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
-                lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_final=alpha_final, lw=lw, glow=fancy)
-                if type(lc) is list:
-                    for l in lc:
-                        ax.add_collection(l)
-                else:
-                    ax.add_collection(lc)
-
-            else:
+            if hyperbolic:
                 pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
                 # true anomaly stays close to limiting value and switches quickly at pericenter for hyperbolic orbit, so use mean anomaly
                 proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
@@ -303,11 +292,50 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
                         ax.add_collection(l)
                 else:
                     ax.add_collection(lc)
+            else:
+                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
+                proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
+                lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_final=alpha_final, lw=lw, glow=fancy)
+                xmax.append(max(proj[axes[0]]))
+                xmin.append(min(proj[axes[0]]))
+                ymax.append(max(proj[axes[1]]))
+                ymin.append(min(proj[axes[1]]))
+                if type(lc) is list:
+                    for l in lc:
+                        ax.add_collection(l)
+                else:
+                    ax.add_collection(lc)
+
 
         if periastron:
             newp = Particle(a=o.a, f=0., inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=p.m, primary=prim, simulation=sim)
             ax.plot([getattr(prim,axes[0]), getattr(newp,axes[0])], [getattr(prim,axes[1]), getattr(newp,axes[1])], linestyle="dotted", c=colori, zorder=1, lw=lw)
             ax.scatter([getattr(newp,axes[0])],[getattr(newp,axes[1])], marker="o", s=5.*lw, facecolor="none", edgecolor=colori, zorder=1)
+
+    if xmax:
+        xmax = max(xmax)
+        xmin = min(xmin)
+        width = xmax-xmin
+        ymax = max(ymax)
+        ymin = min(ymin)
+        height = ymax-ymin
+    
+        # prevent overly elongated plots
+        ymin -= width/10.
+        ymax += width/10.
+        
+        xmin -= height/10.
+        xmax += height/10.
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    elif xmax:
+        ax.set_xlim([xmin-0.05*width,xmax+0.05*width])
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    elif xmax:
+        ax.set_ylim([ymin-0.05*height,ymax+0.05*height])
+
 
 
 def OrbitPlotAddFancyStars(ax,lw,slices=1.):
