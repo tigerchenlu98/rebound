@@ -284,7 +284,7 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
                     ax.add_collection(lc)
 
             else:
-                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim, useTrueAnomaly=False))
+                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
                 # true anomaly stays close to limiting value and switches quickly at pericenter for hyperbolic orbit, so use mean anomaly
                 proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
                 lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_final=alpha_final, lw=lw, glow=fancy)
@@ -295,7 +295,7 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
                     ax.add_collection(lc)
           
                 alpha = 0.2 if orbit_type=="trail" else 1.
-                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim, trailing=False, useTrueAnomaly=False))
+                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim, trailing=False))
                 proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
                 lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_initial=alpha, alpha_final=alpha, lw=lw, glow=fancy)
                 if type(lc) is list:
