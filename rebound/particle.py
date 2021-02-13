@@ -484,7 +484,6 @@ class Particle(Structure):
         duplicateEndpoint: bool, optional
             If true (default), then the first and last point will be identical for closed orbits. This is useful for some plotting tools.
         """
-        pts = []
         if primary is None:
             primary = self.jacobi_com
         o = self.calculate_orbit(primary=primary)
@@ -494,6 +493,9 @@ class Particle(Structure):
                 timespan = 2*math.pi*o.d/o.v # rough time to cross display box
             else:
                 timespan = o.P
+        else:
+            if samplingAngle != "M":
+                raise ValueError("When timespan is used, sampling angle needs to be \"M\"")
         
         lim_phase = abs(o.n)*timespan # n is negative for hyperbolic orbits
 
@@ -502,27 +504,45 @@ class Particle(Structure):
         _Npts = Npts
         if duplicateEndpoint:
             _Npts -= 1
-        phase = [lim_phase*i/_Npts  for i in range(Npts)]
-
+        phases_f = []
+        clibrebound.reb_tools_E_to_f.restype = c_double
+        clibrebound.reb_tools_M_to_f.restype = c_double
+        clibrebound.reb_tools_mod2pi.restype = c_double
         if samplingAngle is None:
             if o.a <0.:
                 samplingAngle = "f"
             else:
-                samplingAngle = "E"
+                samplingAngle = "Ef"
+        if any(c not in "EMf" for c in samplingAngle):
+            raise ValueError("Unknown character in samplingAngle.")
 
-        for i,ph in enumerate(phase):
-            if samplingAngle == "E":
-                newp = Particle(a=o.a, E=o.E+ph, inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=self.m, primary=primary, simulation=self._sim.contents)
-            elif samplingAngle == "M":
-                newp = Particle(a=o.a, M=o.M+ph, inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=self.m, primary=primary, simulation=self._sim.contents)
-            elif samplingAngle == "f":
-                newp = Particle(a=o.a, f=o.f+ph, inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=self.m, primary=primary, simulation=self._sim.contents)
+        if "M" in samplingAngle:
+            for i in range(Npts):
+                f = clibrebound.reb_tools_M_to_f(c_double(o.e), c_double(o.M+lim_phase*i/_Npts))
+                phases_f.append(f)
+        if "E" in samplingAngle:
+            E = o.E # cached because of Kepler's equation
+            for i in range(Npts):
+                f = clibrebound.reb_tools_E_to_f(c_double(o.e), c_double(E+lim_phase*i/_Npts))
+                phases_f.append(f)
+        if "f" in samplingAngle:
+            for i in range(Npts):
+                f = o.f+lim_phase*i/_Npts
+                f = clibrebound.reb_tools_mod2pi(c_double(f))
+                phases_f.append(f)
+
+        phases_f.sort()
+      
+        pts_pre = []
+        pts_post = []
+        for i,ph in enumerate(phases_f):
+            newp = Particle(a=o.a, f=ph, inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=self.m, primary=primary, simulation=self._sim.contents)
+            if ph<o.f:
+                pts_pre.append(newp.xyz)
             else:
-                raise ValueError("Unknown value for samplingAngle.")
-
-            pts.append(newp.xyz)
+                pts_post.append(newp.xyz)
         
-        return pts
+        return pts_post + pts_pre
 
     # Simple operators for particles.
     
