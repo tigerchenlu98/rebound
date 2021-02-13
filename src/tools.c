@@ -479,20 +479,15 @@ void reb_tools_init_plummer(struct reb_simulation* r, int _N, double M, double R
 	}
 }
 
-static double mod2pi(double f){
-	while(f < 0.){
-		f += 2.*M_PI;
-	}
-	while(f > 2.*M_PI){
-		f -= 2.*M_PI;
-	}
-	return f;
+double reb_tools_mod2pi(double f){
+    const double pi2 = 2.*M_PI;
+    return fmod(pi2 + fmod(f, pi2), pi2);
 }
 
 double reb_tools_M_to_E(double e, double M){
 	double E;
 	if(e < 1.){
-        M = mod2pi(M); // avoid numerical artefacts for negative numbers
+        M = reb_tools_mod2pi(M); // avoid numerical artefacts for negative numbers
 		E = e < 0.8 ? M : M_PI;
 		double F = E - e*sin(E) - M;
 		for(int i=0; i<100; i++){
@@ -502,7 +497,7 @@ double reb_tools_M_to_E(double e, double M){
 				break;
 			}
 		}
-		E = mod2pi(E);
+		E = reb_tools_mod2pi(E);
 		return E;
 	}
 	else{
@@ -522,10 +517,10 @@ double reb_tools_M_to_E(double e, double M){
 
 double reb_tools_E_to_f(double e, double E){
 	if(e > 1.){
-		return 2.*atan(sqrt((1.+e)/(e-1.))*tanh(0.5*E));
+		return reb_tools_mod2pi(2.*atan(sqrt((1.+e)/(e-1.))*tanh(0.5*E)));
 	}
 	else{
-		return 2*atan(sqrt((1.+e)/(1.-e))*tan(0.5*E));
+		return reb_tools_mod2pi(2.*atan(sqrt((1.+e)/(1.-e))*tan(0.5*E)));
 	}
 }
 
