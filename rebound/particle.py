@@ -538,7 +538,7 @@ class Particle(Structure):
         pts_post = []
         for f in phases_f:
             newp = Particle(a=o.a, f=f, inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=self.m, primary=primary, simulation=self._sim.contents)
-            if f<o.f:
+            if f<=o.f:
                 pts_pre.append(newp.xyz)
             else:
                 pts_post.append(newp.xyz)

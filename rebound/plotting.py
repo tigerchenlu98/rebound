@@ -143,7 +143,7 @@ def get_color(color):
     lv = len(hexcolor)
     return tuple(int(hexcolor[i:i + lv // 3], 16)/255. for i in range(0, lv, lv // 3)) # tuple of rgb values
 
-def fading_line(x, y, color='black', alpha_initial=1., alpha_final=0., glow=False, **kwargs):
+def fading_line(x, y, alpha=1, color='black', glow=False, **kwargs):
     """
     Returns a matplotlib LineCollection connecting the points in the x and y lists, with a single color and alpha varying from alpha_initial to alpha_final along the line.
     Can pass any kwargs you can pass to LineCollection, like linewidgth.
@@ -152,13 +152,11 @@ def fading_line(x, y, color='black', alpha_initial=1., alpha_final=0., glow=Fals
     ----------
     x       : list or array of floats for the positions on the (plot's) x axis
     y       : list or array of floats for the positions on the (plot's) y axis
-    color   : matplotlib color for the line. Can also pass a 3-tuple of RGB values (default: 'black')
-    alpha_initial:  Limiting value of alpha to use at the beginning of the arrays.
-    alpha_final:    Limiting value of alpha to use at the end of the arrays.
+    alpha   : a float or a list of floats for the alpha values
+    color   : Color for the line. 3-tuple of RGB values, hex, or string. Default: 'black'.
     """
     try:
         from matplotlib.collections import LineCollection
-        from matplotlib.colors import LinearSegmentedColormap
         import numpy as np
     except:
         raise ImportError("Error importing matplotlib and/or numpy. Plotting functions not available. If running from within a jupyter notebook, try calling '%matplotlib inline' beforehand.")
@@ -170,41 +168,36 @@ def fading_line(x, y, color='black', alpha_initial=1., alpha_final=0., glow=Fals
 
     if glow:
         kwargs["lw"] = 1*lw
-        fl1 = fading_line(x, y, color, alpha_initial, alpha_final, glow=False, **kwargs)
+        fl1 = fading_line(x, y, alpha, color, glow=False, **kwargs)
         kwargs["lw"] = 2*lw
-        alpha_initial *= 0.5
-        alpha_final *= 0.5
-        fl2 = fading_line(x, y, color, alpha_initial, alpha_final, glow=False, **kwargs)
+        alpha *= 0.5
+        fl2 = fading_line(x, y, alpha, color, glow=False, **kwargs)
         kwargs["lw"] = 6*lw
-        alpha_initial *= 0.5
-        alpha_final *= 0.5
-        fl3 = fading_line(x, y, color, alpha_initial, alpha_final, glow=False, **kwargs)
+        alpha *= 0.5
+        fl3 = fading_line(x, y, alpha, color, glow=False, **kwargs)
         return [fl3,fl2,fl1]
-
-    color = get_color(color)
-    cdict = {'red': ((0.,color[0],color[0]),(1.,color[0],color[0])),
-             'green': ((0.,color[1],color[1]),(1.,color[1],color[1])),
-             'blue': ((0.,color[2],color[2]),(1.,color[2],color[2])),
-             'alpha': ((0.,alpha_initial, alpha_initial), (1., alpha_final, alpha_final))}
     
     Npts = len(x)
     if len(y) != Npts:
         raise AttributeError("x and y must have same dimension.")
+    
+    color = get_color(color)
+    colors = np.zeros((Npts,4))
+    colors[:,0:3] = color
+    colors[:,3] = np.linspace(0,1,Npts)
    
     segments = np.zeros((Npts-1,2,2))
-    for i in range(0,Npts-1):
-        segments[i][0] = [x[i], y[i]]
-        segments[i][1] = [x[i+1], y[i+1]]
+    segments[:,0,0] = x[:-1]
+    segments[:,0,1] = y[:-1]
+    segments[:,1,0] = x[1:]
+    segments[:,1,1] = y[1:]
 
-    individual_cm = LinearSegmentedColormap('indv1', cdict)
-    lc = LineCollection(segments, cmap=individual_cm, **kwargs)
-    lc.set_array(np.linspace(0.,1.,len(segments)))
+    lc = LineCollection(segments, color=colors, **kwargs)
     return lc
 
 def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_type="trial", lw=1., axes="xy", plotparticles=[], primary=None, fancy=False, xlim=None, ylim=None):
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
-    from matplotlib.colors import LinearSegmentedColormap
     import numpy as np
     import random
 
@@ -286,7 +279,7 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
                 ymax.append(max(proj[axes[1]]))
                 ymin.append(min(proj[axes[1]]))
             
-            lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_final=alpha_final, lw=lw, glow=fancy)
+            lc = fading_line(proj[axes[0]], proj[axes[1]], colori, lw=lw, glow=fancy)
             if type(lc) is list:
                 for l in lc:
                     ax.add_collection(l)
