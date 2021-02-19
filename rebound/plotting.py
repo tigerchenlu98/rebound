@@ -192,12 +192,9 @@ def fading_line(x, y, color='black', alpha_initial=1., alpha_final=0., glow=Fals
         raise AttributeError("x and y must have same dimension.")
    
     segments = np.zeros((Npts-1,2,2))
-    segments[0][0] = [x[0], y[0]]
-    for i in range(1,Npts-1):
-        pt = [x[i], y[i]]
-        segments[i-1][1] = pt
-        segments[i][0] = pt 
-    segments[-1][1] = [x[-1], y[-1]]
+    for i in range(0,Npts-1):
+        segments[i][0] = [x[i], y[i]]
+        segments[i][1] = [x[i+1], y[i+1]]
 
     individual_cm = LinearSegmentedColormap('indv1', cdict)
     lc = LineCollection(segments, cmap=individual_cm, **kwargs)
@@ -260,6 +257,10 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
     ymax = []
     for p, o in p_orb_pairs:
         prim = p.jacobi_com if primary is None else primary 
+        xmax.append(prim.xyz[axis0])
+        xmin.append(prim.xyz[axis0])
+        ymax.append(prim.xyz[axis1])
+        ymin.append(prim.xyz[axis1])
 
         colori = next(coloriterator)
 
@@ -270,42 +271,27 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
        
         if orbit_type is not None:
             alpha_final = 0. if orbit_type=="trail" else 1. # fade to 0 with trail
+            pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
+            proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
 
-            hyperbolic = o.a < 0. # Boolean for whether orbit is hyperbolic
-            if hyperbolic:
-                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
-                # true anomaly stays close to limiting value and switches quickly at pericenter for hyperbolic orbit, so use mean anomaly
-                proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
-                lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_final=alpha_final, lw=lw, glow=fancy)
-                if type(lc) is list:
-                    for l in lc:
-                        ax.add_collection(l)
-                else:
-                    ax.add_collection(lc)
-          
-                alpha = 0.2 if orbit_type=="trail" else 1.
-                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim, trailing=False))
-                proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
-                lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_initial=alpha, alpha_final=alpha, lw=lw, glow=fancy)
-                if type(lc) is list:
-                    for l in lc:
-                        ax.add_collection(l)
-                else:
-                    ax.add_collection(lc)
-            else:
-                pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
-                proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
-                lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_final=alpha_final, lw=lw, glow=fancy)
+            # Estimate limits
+            if o.a < 0.: # hyperbolic
+                xmax.append(p.xyz[axis0])
+                xmin.append(p.xyz[axis0])
+                ymax.append(p.xyz[axis1])
+                ymin.append(p.xyz[axis1])
+            else: # circular
                 xmax.append(max(proj[axes[0]]))
                 xmin.append(min(proj[axes[0]]))
                 ymax.append(max(proj[axes[1]]))
                 ymin.append(min(proj[axes[1]]))
-                if type(lc) is list:
-                    for l in lc:
-                        ax.add_collection(l)
-                else:
-                    ax.add_collection(lc)
-
+            
+            lc = fading_line(proj[axes[0]], proj[axes[1]], colori, alpha_final=alpha_final, lw=lw, glow=fancy)
+            if type(lc) is list:
+                for l in lc:
+                    ax.add_collection(l)
+            else:
+                ax.add_collection(lc)
 
         if periastron:
             newp = Particle(a=o.a, f=0., inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=p.m, primary=prim, simulation=sim)

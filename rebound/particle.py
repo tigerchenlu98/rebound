@@ -459,7 +459,7 @@ class Particle(Structure):
 
         return o
     
-    def sample_orbit(self, Npts=100, primary=None, trailing=True, timespan=None, samplingAngle=None, duplicateEndpoint=True):
+    def sample_orbit(self, Npts=100, primary=None, samplingAngle=None, duplicateEndpoint=None):
         """
         Returns a nested list of xyz positions along the osculating orbit of the particle. 
         If primary is not passed, returns xyz positions along the Jacobi osculating orbit
@@ -471,73 +471,74 @@ class Particle(Structure):
             Number of points along the orbit to return  (default: 100)
         primary : rebound.Particle, optional
             Primary to use for the osculating orbit (default: Jacobi center of mass)
-        trailing: bool, optional
-            Whether to return points stepping backwards in time (True) or forwards (False). (default: True)
-        timespan: float, optional    
-            Return points (for the osculating orbit) from the current position to timespan (forwards or backwards in time depending on trailing keyword). 
-            Defaults to the orbital period for bound orbits, and to the rough time it takes the orbit to move by the current distance from the primary for a hyperbolic orbit.
         samplingAngle: str, optional
             This determines which angle is sampled linearly. Can be:
               - "M" (mean anomaly)
               - "E" (eccentric anomaly) 
               - "f" (true anomaly)
         duplicateEndpoint: bool, optional
-            If true (default), then the first and last point will be identical for closed orbits. This is useful for some plotting tools.
+            If true, then the first and last point will be identical for closed orbits. This is useful for some plotting tools. The default is true for eccentric orbits. The argument has no effect for hyperbolic orbits (because the endpoints are not identical).
         """
         if primary is None:
             primary = self.jacobi_com
         o = self.calculate_orbit(primary=primary)
 
-        if timespan is None:
-            if o.a < 0.: # hyperbolic orbit
-                timespan = 2*math.pi*o.d/o.v # rough time to cross display box
-            else:
-                timespan = o.P
-        else:
-            if samplingAngle != "M":
-                raise ValueError("When timespan is used, sampling angle needs to be \"M\"")
-        
-        lim_phase = abs(o.n)*timespan # n is negative for hyperbolic orbits
-
-        if trailing is True:
-            lim_phase *= -1 # sample phase backwards from current value
-        _Npts = Npts
-        if duplicateEndpoint:
-            _Npts -= 1
         phases_f = []
         clibrebound.reb_tools_E_to_f.restype = c_double
         clibrebound.reb_tools_M_to_f.restype = c_double
         clibrebound.reb_tools_mod2pi.restype = c_double
-        if samplingAngle is None:
-            if o.a <0.:
-                samplingAngle = "f"
-            else:
+        if samplingAngle is not None:
+            if any(c not in "EMf" for c in samplingAngle):
+                raise ValueError("Unknown character in samplingAngle.")
+        
+        if o.a < 0.: # hyperbolic orbit
+            if samplingAngle is None:
+                samplingAngle = "Mf"
+            phi = math.acos(-1./o.e)*0.999
+            dphi = 2*phi/(Npts-2)
+            for i in range(Npts-1):
+                if "M" in samplingAngle:
+                    f = clibrebound.reb_tools_M_to_f(c_double(o.e), c_double(phi))
+                    phases_f.append(f)
+                if "E" in samplingAngle:
+                    f = clibrebound.reb_tools_E_to_f(c_double(o.e), c_double(phi))
+                    phases_f.append(f)
+                if "f" in samplingAngle:
+                    f = clibrebound.reb_tools_mod2pi(c_double(phi))
+                    phases_f.append(f)
+                phi -= dphi
+        else:       # circular orbit
+            if samplingAngle is None:
                 samplingAngle = "Ef"
-        if any(c not in "EMf" for c in samplingAngle):
-            raise ValueError("Unknown character in samplingAngle.")
+            if duplicateEndpoint is None:
+                duplicateEndpoint = True
+            if duplicateEndpoint:
+                dphi = 2.*math.pi/(Npts-2)  # one point is reserved for actual position
+                                            # one point is reserved for the end point
+            else:
+                dphi = 2.*math.pi/(Npts-1)  # one point is reserved for actual position
+            for i in range(Npts-1):
+                if "M" in samplingAngle:
+                    f = clibrebound.reb_tools_M_to_f(c_double(o.e), c_double(i*dphi))
+                    phases_f.append(f)
+                if "E" in samplingAngle:
+                    f = clibrebound.reb_tools_E_to_f(c_double(o.e), c_double(i*dphi))
+                    phases_f.append(f)
+                if "f" in samplingAngle:
+                    f = i*dphi
+                    f = clibrebound.reb_tools_mod2pi(c_double(f))
+                    phases_f.append(f)
 
-        if "M" in samplingAngle:
-            for i in range(Npts):
-                f = clibrebound.reb_tools_M_to_f(c_double(o.e), c_double(o.M+lim_phase*i/_Npts))
-                phases_f.append(f)
-        if "E" in samplingAngle:
-            E = o.E # cached because of Kepler's equation
-            for i in range(Npts):
-                f = clibrebound.reb_tools_E_to_f(c_double(o.e), c_double(E+lim_phase*i/_Npts))
-                phases_f.append(f)
-        if "f" in samplingAngle:
-            for i in range(Npts):
-                f = o.f+lim_phase*i/_Npts
-                f = clibrebound.reb_tools_mod2pi(c_double(f))
-                phases_f.append(f)
-
+        # add actual position
+        f = clibrebound.reb_tools_mod2pi(c_double(o.f))
+        phases_f.append(f)
         phases_f.sort()
       
         pts_pre = []
         pts_post = []
-        for i,ph in enumerate(phases_f):
-            newp = Particle(a=o.a, f=ph, inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=self.m, primary=primary, simulation=self._sim.contents)
-            if ph<o.f:
+        for f in phases_f:
+            newp = Particle(a=o.a, f=f, inc=o.inc, omega=o.omega, Omega=o.Omega, e=o.e, m=self.m, primary=primary, simulation=self._sim.contents)
+            if f<o.f:
                 pts_pre.append(newp.xyz)
             else:
                 pts_post.append(newp.xyz)
