@@ -143,17 +143,18 @@ def get_color(color):
     lv = len(hexcolor)
     return tuple(int(hexcolor[i:i + lv // 3], 16)/255. for i in range(0, lv, lv // 3)) # tuple of rgb values
 
-def fading_line(x, y, alpha=1, color='black', glow=False, **kwargs):
+def fading_line(x, y, color='black', alpha=1, fading=True, fancy=False, **kwargs):
     """
     Returns a matplotlib LineCollection connecting the points in the x and y lists, with a single color and alpha varying from alpha_initial to alpha_final along the line.
     Can pass any kwargs you can pass to LineCollection, like linewidgth.
 
     Parameters
     ----------
-    x       : list or array of floats for the positions on the (plot's) x axis
-    y       : list or array of floats for the positions on the (plot's) y axis
-    alpha   : a float or a list of floats for the alpha values
+    x       : list or array of floats for the positions on the (plot's) x axis.
+    y       : list or array of floats for the positions on the (plot's) y axis.
     color   : Color for the line. 3-tuple of RGB values, hex, or string. Default: 'black'.
+    alpha   : float, alpha value of the line. Default 1.
+    fading  : bool, determines if the line is fading along the orbit.
     """
     try:
         from matplotlib.collections import LineCollection
@@ -166,15 +167,15 @@ def fading_line(x, y, alpha=1, color='black', glow=False, **kwargs):
         kwargs["lw"] = 1
     lw = kwargs["lw"]
 
-    if glow:
+    if fancy:
         kwargs["lw"] = 1*lw
-        fl1 = fading_line(x, y, alpha, color, glow=False, **kwargs)
+        fl1 = fading_line(x, y, color=color, alpha=alpha, fading=fading, fancy=False, **kwargs)
         kwargs["lw"] = 2*lw
         alpha *= 0.5
-        fl2 = fading_line(x, y, alpha, color, glow=False, **kwargs)
+        fl2 = fading_line(x, y, color=color, alpha=alpha, fading=fading, fancy=False, **kwargs)
         kwargs["lw"] = 6*lw
         alpha *= 0.5
-        fl3 = fading_line(x, y, alpha, color, glow=False, **kwargs)
+        fl3 = fading_line(x, y, color=color, alpha=alpha, fading=fading, fancy=False, **kwargs)
         return [fl3,fl2,fl1]
     
     Npts = len(x)
@@ -184,7 +185,10 @@ def fading_line(x, y, alpha=1, color='black', glow=False, **kwargs):
     color = get_color(color)
     colors = np.zeros((Npts,4))
     colors[:,0:3] = color
-    colors[:,3] = np.linspace(0,1,Npts)
+    if fading:
+        colors[:,3] = alpha*np.linspace(0,1,Npts)
+    else:
+        colors[:,3] = alpha
    
     segments = np.zeros((Npts-1,2,2))
     segments[:,0,0] = x[:-1]
@@ -279,7 +283,7 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
                 ymax.append(max(proj[axes[1]]))
                 ymin.append(min(proj[axes[1]]))
             
-            lc = fading_line(proj[axes[0]], proj[axes[1]], colori, lw=lw, glow=fancy)
+            lc = fading_line(proj[axes[0]], proj[axes[1]], color=colori, lw=lw, fancy=fancy)
             if type(lc) is list:
                 for l in lc:
                     ax.add_collection(l)
