@@ -145,7 +145,7 @@ def get_color(color):
 
 def fading_line(x, y, color='black', alpha=1, fading=True, fancy=False, **kwargs):
     """
-    Returns a matplotlib LineCollection connecting the points in the x and y lists, with a single color and alpha varying from alpha_initial to alpha_final along the line.
+    Returns a matplotlib LineCollection connecting the points in the x and y lists.
     Can pass any kwargs you can pass to LineCollection, like linewidgth.
 
     Parameters
@@ -254,10 +254,11 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
     ymax = []
     for p, o in p_orb_pairs:
         prim = p.jacobi_com if primary is None else primary 
-        xmax.append(prim.xyz[axis0])
-        xmin.append(prim.xyz[axis0])
-        ymax.append(prim.xyz[axis1])
-        ymin.append(prim.xyz[axis1])
+        for _p in [p,prim]:
+            xmax.append(_p.xyz[axis0])
+            xmin.append(_p.xyz[axis0])
+            ymax.append(_p.xyz[axis1])
+            ymin.append(_p.xyz[axis1])
 
         colori = next(coloriterator)
 
@@ -267,7 +268,6 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
             ax.scatter(getattr(p,axes[0]), getattr(p,axes[1]), s=25*lw, facecolor="black", edgecolor=None, zorder=3)
        
         if orbit_type is not None:
-            alpha_final = 0. if orbit_type=="trail" else 1. # fade to 0 with trail
             pts = np.array(p.sample_orbit(Npts=Narc+1, primary=prim))
             proj['x'],proj['y'],proj['z'] = [pts[:,i] for i in range(3)]
 
@@ -283,7 +283,13 @@ def OrbitPlotOneSlice(sim, ax, Narc=128, color=False, periastron=False, orbit_ty
                 ymax.append(max(proj[axes[1]]))
                 ymin.append(min(proj[axes[1]]))
             
-            lc = fading_line(proj[axes[0]], proj[axes[1]], color=colori, lw=lw, fancy=fancy)
+            if orbit_type=="trail":
+                fading = True
+            elif orbit_type=="solid":
+                fading = False
+            else:
+                raise ValueError("Unknown orbit_type.")
+            lc = fading_line(proj[axes[0]], proj[axes[1]], color=colori, lw=lw, fancy=fancy, fading=fading)
             if type(lc) is list:
                 for l in lc:
                     ax.add_collection(l)
