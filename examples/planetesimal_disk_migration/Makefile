@@ -1,6 +1,5 @@
 export OPENGL=0
 export OPENMP=0
-export PROFILING=0
 include ../../src/Makefile.defs
 
 all: librebound

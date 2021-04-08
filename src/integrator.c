@@ -168,8 +168,6 @@ void reb_integrator_reset(struct reb_simulation* r){
 
 void reb_update_acceleration(struct reb_simulation* r){
 	// This should probably go elsewhere
-	PROFILING_STOP(PROFILING_CAT_INTEGRATOR)
-	PROFILING_START()
 	reb_calculate_acceleration(r);
 	if (r->N_var){
 		reb_calculate_acceleration_var(r);
@@ -201,7 +199,5 @@ void reb_update_acceleration(struct reb_simulation* r){
             }
         }
     }
-	PROFILING_STOP(PROFILING_CAT_GRAVITY)
-	PROFILING_START()
 }
 

@@ -77,7 +77,6 @@ void reb_step(struct reb_simulation* const r){
     gettimeofday(&time_beginning,NULL);
 
     // A 'DKD'-like integrator will do the first 'D' part.
-    PROFILING_START()
     if (r->pre_timestep_modifications){
         reb_integrator_synchronize(r);
         r->pre_timestep_modifications(r);
@@ -86,24 +85,18 @@ void reb_step(struct reb_simulation* const r){
     }
    
     reb_integrator_part1(r);
-    PROFILING_STOP(PROFILING_CAT_INTEGRATOR)
 
     // Update and simplify tree. 
     // Prepare particles for distribution to other nodes. 
     // This function also creates the tree if called for the first time.
     if (r->tree_needs_update || r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE || r->collision==REB_COLLISION_LINETREE){
         // Check for root crossings.
-        PROFILING_START()
         reb_boundary_check(r);     
-        PROFILING_STOP(PROFILING_CAT_BOUNDARY)
 
         // Update tree (this will remove particles which left the box)
-        PROFILING_START()
         reb_tree_update(r);          
-        PROFILING_STOP(PROFILING_CAT_GRAVITY)
     }
 
-    PROFILING_START()
 
     if (r->tree_root!=NULL && r->gravity==REB_GRAVITY_TREE){
         // Update center of mass and quadrupole moments in tree in preparation of force calculation.
@@ -117,10 +110,8 @@ void reb_step(struct reb_simulation* const r){
     }
     // Calculate non-gravity accelerations. 
     if (r->additional_forces) r->additional_forces(r);
-    PROFILING_STOP(PROFILING_CAT_GRAVITY)
 
     // A 'DKD'-like integrator will do the 'KD' part.
-    PROFILING_START()
     reb_integrator_part2(r);
     
     if (r->post_timestep_modifications){
@@ -129,22 +120,17 @@ void reb_step(struct reb_simulation* const r){
         r->ri_whfast.recalculate_coordinates_this_timestep = 1;
         r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
-    PROFILING_STOP(PROFILING_CAT_INTEGRATOR)
 
     // Do collisions here. We need both the positions and velocities at the same time.
     // Check for root crossings.
-    PROFILING_START()
     reb_boundary_check(r);     
     if (r->tree_needs_update){
         // Update tree (this will remove particles which left the box)
         reb_tree_update(r);          
     }
-    PROFILING_STOP(PROFILING_CAT_BOUNDARY)
 
     // Search for collisions using local and essential tree.
-    PROFILING_START()
     reb_collision_search(r);
-    PROFILING_STOP(PROFILING_CAT_COLLISION)
     
     // Update walltime
     struct timeval time_end;

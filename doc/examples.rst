@@ -173,7 +173,6 @@ They for example show how to use hashes to identify particles.
    c_example_selfgravity_plummer
    c_example_uniquely_identifying_particles_with_hashes
    c_example_openmp
-   c_example_profiling
    c_example_star_of_david
    ipython/Testparticles
    ipython/UniquelyIdentifyingParticlesWithHashes
