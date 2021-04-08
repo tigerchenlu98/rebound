@@ -317,8 +317,7 @@ static void reb_mercurius_encounter_step(struct reb_simulation* const r, const d
         r->particles[0].vx = 0; // star does not move in dh 
         r->particles[0].vy = 0;
         r->particles[0].vz = 0;
-        reb_update_acceleration(r);
-        reb_integrator_ias15_part2(r);
+        reb_integrator_ias15_step(r);
         r->particles[0].vx = star.vx; // restore every timestep for collisions
         r->particles[0].vy = star.vy;
         r->particles[0].vz = star.vz;

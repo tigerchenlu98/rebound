@@ -159,8 +159,6 @@ void reb_output_binary_to_stream(struct reb_simulation* r, char** bufp, size_t* 
     size_t allocatedsize = 0;
     *bufp = NULL;
     *sizep = 0;
-    // Init integrators. This helps with bit-by-bit reproducibility.
-    reb_integrator_init(r);
 
     // Output header.
     char header[64] = "\0";

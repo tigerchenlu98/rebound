@@ -2108,7 +2108,6 @@ void reb_whfast_interaction_step(struct reb_simulation* const r, const double _d
 void reb_whfast_jump_step(const struct reb_simulation* const r, const double _dt); ///< Internal function
 void reb_whfast_kepler_step(const struct reb_simulation* const r, const double _dt); ///< Internal function
 void reb_whfast_com_step(const struct reb_simulation* const r, const double _dt); ///< Internal function
-void reb_integrator_ias15_part2(struct reb_simulation* r);              ///< Internal function used to call a specific integrator
 void reb_integrator_ias15_reset(struct reb_simulation* r);              ///< Internal function used to call a specific integrator
 int reb_integrator_whfast_init(struct reb_simulation* const r);    ///< Internal function to check errors and allocate memory if needed
 
