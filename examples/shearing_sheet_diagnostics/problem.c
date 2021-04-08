@@ -43,7 +43,6 @@ int main(int argc, char* argv[]) {
     r->dt                 = 1e-3*2.*M_PI/OMEGA; // s
     r->heartbeat          = heartbeat;          // function pointer for callbacks after every timestep
     // This example uses two root boxes in the x and y direction. 
-    // Although not necessary in this case, it allows for the parallelization using MPI. 
     // See Rein & Liu for a description of what a root box is in this context.
     double surfacedensity         = 400;        // kg/m^2
     double particle_density       = 400;        // kg/m^3

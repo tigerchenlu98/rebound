@@ -50,9 +50,6 @@
 #include "input.h"
 #include "binarydiff.h"
 #include "simulationarchive.h"
-#ifdef MPI
-#include "communication_mpi.h"
-#endif
 #include "display.h"
 #ifdef OPENMP
 #include <omp.h>
@@ -107,21 +104,10 @@ void reb_step(struct reb_simulation* const r){
     }
 
     PROFILING_START()
-#ifdef MPI
-    // Distribute particles and add newly received particles to tree.
-    reb_communication_mpi_distribute_particles(r);
-#endif // MPI
 
     if (r->tree_root!=NULL && r->gravity==REB_GRAVITY_TREE){
         // Update center of mass and quadrupole moments in tree in preparation of force calculation.
         reb_tree_update_gravity_data(r); 
-#ifdef MPI
-        // Prepare essential tree (and particles close to the boundary needed for collisions) for distribution to other nodes.
-        reb_tree_prepare_essential_tree_for_gravity(r);
-
-        // Transfer essential tree and particles needed for collisions.
-        reb_communication_mpi_distribute_essential_tree_for_gravity(r);
-#endif // MPI
     }
 
     // Calculate accelerations. 
@@ -264,23 +250,6 @@ void reb_configure_box(struct reb_simulation* const r, const double root_size, c
         reb_exit("Number of root boxes must be greater or equal to 1 in each direction.");
     }
 }
-#ifdef MPI
-void reb_mpi_init(struct reb_simulation* const r){
-    reb_communication_mpi_init(r,0,NULL);
-    // Make sure domain can be decomposed into equal number of root boxes per node.
-    if ((r->root_n/r->mpi_num)*r->mpi_num != r->root_n){
-        if (r->mpi_id==0) fprintf(stderr,"ERROR: Number of root boxes (%d) not a multiple of mpi nodes (%d).\n",r->root_n,r->mpi_num);
-        exit(-1);
-    }
-    printf("MPI-node: %d. Process id: %d.\n",r->mpi_id, getpid());
-}
-
-void reb_mpi_finalize(struct reb_simulation* const r){
-    r->mpi_id = 0;
-    r->mpi_num = 0;
-    MPI_Finalize();
-}
-#endif // MPI
 
 static void set_dp7_null(struct reb_dp7 * dp){
     dp->p0 = NULL;
@@ -592,28 +561,9 @@ void reb_init_simulation(struct reb_simulation* r){
     r->tree_root        = NULL;
     r->opening_angle2   = 0.25;
 
-#ifdef MPI
-    r->mpi_id = 0;                            
-    r->mpi_num = 0;                           
-    r->particles_send = NULL;  
-    r->particles_send_N = 0;                  
-    r->particles_send_Nmax = 0;               
-    r->particles_recv = NULL;     
-    r->particles_recv_N = 0;                  
-    r->particles_recv_Nmax = 0;               
-    
-    r->tree_essential_send = NULL;
-    r->tree_essential_send_N = 0;             
-    r->tree_essential_send_Nmax = 0;          
-    r->tree_essential_recv = NULL;
-    r->tree_essential_recv_N = 0;             
-    r->tree_essential_recv_Nmax = 0;          
-
-#else // MPI
 #ifndef LIBREBOUND
     printf("Process id: %d.\n", getpid());
 #endif // LIBREBOUND
-#endif // MPI
 #ifdef OPENMP
     printf("Using OpenMP with %d threads per node.\n",omp_get_max_threads());
 #endif // OPENMP
@@ -668,19 +618,10 @@ int reb_check_exit(struct reb_simulation* const r, const double tmax, double* la
             }
         }
     }
-#ifndef MPI
     if (r->N<=0){
         reb_warning(r,"No particles found. Will exit.");
         r->status = REB_EXIT_NOPARTICLES; // Exit now.
     }
-#else
-    int status_max = 0;
-    MPI_Allreduce(&(r->status), &status_max, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD); 
-    if (status_max>=0){
-        r->status = status_max;
-    }
-
-#endif // MPI
     return r->status;
 }
 
@@ -747,10 +688,6 @@ static void* reb_integrate_raw(void* args){
     signal(SIGINT, reb_sigint_handler);
     struct reb_thread_info* thread_info = (struct reb_thread_info*)args;
 	struct reb_simulation* const r = thread_info->r;
-#ifdef MPI
-    // Distribute particles
-    reb_communication_mpi_distribute_particles(r);
-#endif // MPI
 
     double last_full_dt = r->dt; // need to store r->dt in case timestep gets artificially shrunk to meet exact_finish_time=1
     r->dt_last_done = 0.; // Reset in case first timestep attempt will fail

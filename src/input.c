@@ -35,9 +35,6 @@
 #include "input.h"
 #include "tree.h"
 #include "simulationarchive.h"
-#ifdef MPI
-#include "communication_mpi.h"
-#endif
 
 double reb_read_double(int argc, char** argv, const char* argument, double _default){
     char* value = reb_read_char(argc,argv,argument);

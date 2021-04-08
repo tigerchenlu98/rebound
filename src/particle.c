@@ -37,9 +37,6 @@
 #ifndef COLLISIONS_NONE
 #include "collision.h"
 #endif // COLLISIONS_NONE
-#ifdef MPI
-#include "communication_mpi.h"
-#endif // MPI
 
 #ifdef GRAVITY_GRAPE
 #warning Fix this. 
@@ -115,16 +112,6 @@ void reb_add(struct reb_simulation* const r, struct reb_particle pt){
 		gravity_minimum_mass = pt.m;
 	}
 #endif // GRAVITY_GRAPE
-#ifdef MPI
-	int rootbox = reb_get_rootbox_for_particle(r, pt);
-	int root_n_per_node = r->root_n/r->mpi_num;
-	int proc_id = rootbox/root_n_per_node;
-	if (proc_id != r->mpi_id && r->N >= r->N_active){
-		// Add particle to array and send them to proc_id later. 
-		reb_communication_mpi_add_particle_to_send_queue(r,pt,proc_id);
-		return;
-	}
-#endif // MPI
 	// Add particle to local partical array.
 	reb_add_local(r, pt);
 }

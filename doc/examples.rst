@@ -133,7 +133,6 @@ This allows you, for example, to simulate large gravitationally interacting syst
 
 .. toctree::
    c_example_selfgravity_disc
-   c_example_selfgravity_disc_mpi
 
 
 Planetary rings
@@ -144,7 +143,6 @@ They use values characteristic for Saturn's rings but can also be used for other
 .. toctree::
    c_example_shearing_sheet
    c_example_shearing_sheet_2
-   c_example_shearing_sheet_mpi
    c_example_overstability
    ipython/SaturnsRings
    

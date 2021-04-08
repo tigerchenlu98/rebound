@@ -81,20 +81,4 @@ void reb_tree_add_particle_to_tree(struct reb_simulation* const r, int pt);
  */
 void reb_tree_delete(struct reb_simulation* const r);
 
-#ifdef MPI
-/**
-  * @brief MPI related function used to calculate gravity from nearby nodes
-  * @param node is a pointer to a node cell.
-  */
-void reb_tree_add_essential_node(struct reb_simulation* const r, struct reb_treecell* node);
-/**
-  * @brief MPI related function used to calculate gravity from nearby nodes
-  */
-void reb_tree_prepare_essential_tree_for_gravity(struct reb_simulation* const r);
-/**
-  * @brief MPI related function used to calculate gravity from nearby nodes
-  */
-void reb_tree_prepare_essential_tree_for_collisions(struct reb_simulation* const r);
-#endif // MPI
-
 #endif // _TREE_H

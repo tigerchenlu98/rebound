@@ -28,7 +28,6 @@ REBOUND is an N-body integrator, i.e. a software package that can integrate the 
 * Extensive set of example problems in both C and Python
 * Real-time, 3D OpenGL visualization (C version)
 * Parallelized with OpenMP (for shared memory systems)
-* Parallelized with MPI using an essential tree for gravity and collisions (for distributed memory systems)
 * No libraries are needed, use of OpenGL/glfw3 for visualization is optional
 * The code is fully open-source and can be downloaded freely from https://github.com/hannorein/rebound
 * No configuration is needed to run any of the example problems. Just type `make && ./rebound` in the problem directory to run them

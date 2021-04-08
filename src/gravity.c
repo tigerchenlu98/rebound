@@ -5,9 +5,7 @@
  *
  * @details     This is the crudest implementation of an N-body code
  * which sums up every pair of particles. It is only useful very small 
- * particle numbers (N<~100) as it scales as O(N^2). Note that the MPI
- * implementation is not well tested and only works for very specific
- * problems. This should be resolved in the future. 
+ * particle numbers (N<~100) as it scales as O(N^2). 
  *
  * 
  * @section LICENSE
@@ -40,10 +38,6 @@
 #include "boundary.h"
 #include "integrator_mercurius.h"
 #define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
-
-#ifdef MPI
-#include "communication_mpi.h"
-#endif
 
 /**
   * @brief The function loops over all trees to call calculate_forces_for_particle_from_cell() tree to calculate forces for each particle.
