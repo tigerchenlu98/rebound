@@ -84,35 +84,7 @@ void reb_step(struct reb_simulation* const r){
         r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
    
-    reb_integrator_part1(r);
-
-    // Update and simplify tree. 
-    // Prepare particles for distribution to other nodes. 
-    // This function also creates the tree if called for the first time.
-    if (r->tree_needs_update || r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE || r->collision==REB_COLLISION_LINETREE){
-        // Check for root crossings.
-        reb_boundary_check(r);     
-
-        // Update tree (this will remove particles which left the box)
-        reb_tree_update(r);          
-    }
-
-
-    if (r->tree_root!=NULL && r->gravity==REB_GRAVITY_TREE){
-        // Update center of mass and quadrupole moments in tree in preparation of force calculation.
-        reb_tree_update_gravity_data(r); 
-    }
-
-    // Calculate accelerations. 
-    reb_calculate_acceleration(r);
-    if (r->N_var){
-        reb_calculate_acceleration_var(r);
-    }
-    // Calculate non-gravity accelerations. 
-    if (r->additional_forces) r->additional_forces(r);
-
-    // A 'DKD'-like integrator will do the 'KD' part.
-    reb_integrator_part2(r);
+    reb_integrator_step(r);
     
     if (r->post_timestep_modifications){
         reb_integrator_synchronize(r);

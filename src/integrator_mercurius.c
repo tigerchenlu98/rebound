@@ -402,7 +402,7 @@ double reb_integrator_mercurius_calculate_dcrit_for_particle(struct reb_simulati
 }
 
 
-void reb_integrator_mercurius_part1(struct reb_simulation* r){
+void reb_integrator_mercurius_step(struct reb_simulation* r){
     if (r->var_config_N){
         reb_warning(r,"Mercurius does not work with variational equations.");
     }
@@ -466,11 +466,8 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         // Setting default switching function
         rim->L = reb_integrator_mercurius_L_mercury;
     }
-}
 
-void reb_integrator_mercurius_part2(struct reb_simulation* const r){
-    struct reb_simulation_integrator_mercurius* const rim = &(r->ri_mercurius);
-    const int N = r->N;
+    reb_update_acceleration(r);
    
     if (rim->is_synchronized){
         reb_integrator_mercurius_interaction_step(r,r->dt/2.);

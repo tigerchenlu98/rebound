@@ -36,7 +36,7 @@
 
 // Leapfrog integrator (Drift-Kick-Drift)
 // for non-rotating frame.
-void reb_integrator_leapfrog_part1(struct reb_simulation* r){
+void reb_integrator_leapfrog_step(struct reb_simulation* r){
     r->gravity_ignore_terms = 0;
 	const int N = r->N;
 	struct reb_particle* restrict const particles = r->particles;
@@ -48,11 +48,9 @@ void reb_integrator_leapfrog_part1(struct reb_simulation* r){
 		particles[i].z  += 0.5* dt * particles[i].vz;
 	}
 	r->t+=dt/2.;
-}
-void reb_integrator_leapfrog_part2(struct reb_simulation* r){
-	const int N = r->N;
-	struct reb_particle* restrict const particles = r->particles;
-	const double dt = r->dt;
+
+    reb_update_acceleration(r);
+
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
 		particles[i].vx += dt * particles[i].ax;
@@ -62,7 +60,8 @@ void reb_integrator_leapfrog_part2(struct reb_simulation* r){
 		particles[i].y  += 0.5* dt * particles[i].vy;
 		particles[i].z  += 0.5* dt * particles[i].vz;
 	}
-	r->t+=dt/2.;
+
+    r->t+=dt/2.;
 	r->dt_last_done = r->dt;
 }
 	

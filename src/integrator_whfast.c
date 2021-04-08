@@ -881,11 +881,71 @@ void reb_integrator_whfast_debug_operator_interaction(struct reb_simulation* con
     reb_integrator_whfast_to_inertial(r);
 }
 
-void reb_integrator_whfast_part1(struct reb_simulation* const r){
+void reb_integrator_whfast_synchronize(struct reb_simulation* const r){
+    struct reb_simulation_integrator_whfast* const ri_whfast = &(r->ri_whfast);
+    if (reb_integrator_whfast_init(r)){
+        // Non recoverable error occured.
+        return;
+    }
+    if (ri_whfast->is_synchronized == 0){
+        const int N_real = r->N-r->N_var;
+        const int N_active = (r->N_active==-1 || r->testparticle_type==1)?N_real:r->N_active;
+        struct reb_particle* sync_pj  = NULL;
+        if (ri_whfast->keep_unsynchronized){
+            sync_pj = malloc(sizeof(struct reb_particle)*r->N);
+            memcpy(sync_pj,r->ri_whfast.p_jh,r->N*sizeof(struct reb_particle));
+        }
+        switch (ri_whfast->kernel){
+            case REB_WHFAST_KERNEL_DEFAULT: 
+            case REB_WHFAST_KERNEL_MODIFIEDKICK: 
+            case REB_WHFAST_KERNEL_LAZY: 
+                reb_whfast_kepler_step(r, r->dt/2.);    
+                reb_whfast_com_step(r, r->dt/2.);
+                break;
+            case REB_WHFAST_KERNEL_COMPOSITION:
+                reb_whfast_kepler_step(r, 3.*r->dt/8.);   
+                reb_whfast_com_step(r, 3.*r->dt/8.);
+                break;
+            default:
+                reb_error(r, "WHFast kernel not implemented.");
+                return;
+        };
+        if (ri_whfast->corrector2){
+            reb_whfast_apply_corrector2(r, -1.);
+        }
+        if (ri_whfast->corrector){
+            reb_whfast_apply_corrector(r, -1., ri_whfast->corrector);
+        }
+        switch (ri_whfast->coordinates){
+            case REB_WHFAST_COORDINATES_JACOBI:
+                reb_transformations_jacobi_to_inertial_posvel(r->particles, ri_whfast->p_jh, r->particles, N_real, N_active);
+                break;
+            case REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC:
+                reb_transformations_democraticheliocentric_to_inertial_posvel(r->particles, ri_whfast->p_jh, N_real, N_active);
+                break;
+            case REB_WHFAST_COORDINATES_WHDS:
+                reb_transformations_whds_to_inertial_posvel(r->particles, ri_whfast->p_jh, N_real, N_active);
+                break;
+        };
+        for (int v=0;v<r->var_config_N;v++){
+            struct reb_variational_configuration const vc = r->var_config[v];
+            reb_transformations_jacobi_to_inertial_posvel(r->particles+vc.index, ri_whfast->p_jh+vc.index, r-> particles, N_real, N_active);
+        }
+        if (ri_whfast->keep_unsynchronized){
+            memcpy(r->ri_whfast.p_jh,sync_pj,r->N*sizeof(struct reb_particle));
+            free(sync_pj);
+        }else{
+            ri_whfast->is_synchronized = 1;
+        }
+    }
+}
+
+void reb_integrator_whfast_step(struct reb_simulation* const r){
     struct reb_simulation_integrator_whfast* const ri_whfast = &(r->ri_whfast);
     struct reb_particle* restrict const particles = r->particles;
     const int N = r->N;
     const int N_real = N-r->N_var;
+    const double dt = r->dt;
     const int N_active = (r->N_active==-1 || r->testparticle_type==1)?N_real:r->N_active;
     if (reb_integrator_whfast_init(r)){
         // Non recoverable error occured.
@@ -952,80 +1012,10 @@ void reb_integrator_whfast_part1(struct reb_simulation* const r){
     }
 
     r->t+=r->dt/2.;
-}
+    
+    reb_update_acceleration(r);
 
-void reb_integrator_whfast_synchronize(struct reb_simulation* const r){
-    struct reb_simulation_integrator_whfast* const ri_whfast = &(r->ri_whfast);
-    if (reb_integrator_whfast_init(r)){
-        // Non recoverable error occured.
-        return;
-    }
-    if (ri_whfast->is_synchronized == 0){
-        const int N_real = r->N-r->N_var;
-        const int N_active = (r->N_active==-1 || r->testparticle_type==1)?N_real:r->N_active;
-        struct reb_particle* sync_pj  = NULL;
-        if (ri_whfast->keep_unsynchronized){
-            sync_pj = malloc(sizeof(struct reb_particle)*r->N);
-            memcpy(sync_pj,r->ri_whfast.p_jh,r->N*sizeof(struct reb_particle));
-        }
-        switch (ri_whfast->kernel){
-            case REB_WHFAST_KERNEL_DEFAULT: 
-            case REB_WHFAST_KERNEL_MODIFIEDKICK: 
-            case REB_WHFAST_KERNEL_LAZY: 
-                reb_whfast_kepler_step(r, r->dt/2.);    
-                reb_whfast_com_step(r, r->dt/2.);
-                break;
-            case REB_WHFAST_KERNEL_COMPOSITION:
-                reb_whfast_kepler_step(r, 3.*r->dt/8.);   
-                reb_whfast_com_step(r, 3.*r->dt/8.);
-                break;
-            default:
-                reb_error(r, "WHFast kernel not implemented.");
-                return;
-        };
-        if (ri_whfast->corrector2){
-            reb_whfast_apply_corrector2(r, -1.);
-        }
-        if (ri_whfast->corrector){
-            reb_whfast_apply_corrector(r, -1., ri_whfast->corrector);
-        }
-        switch (ri_whfast->coordinates){
-            case REB_WHFAST_COORDINATES_JACOBI:
-                reb_transformations_jacobi_to_inertial_posvel(r->particles, ri_whfast->p_jh, r->particles, N_real, N_active);
-                break;
-            case REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC:
-                reb_transformations_democraticheliocentric_to_inertial_posvel(r->particles, ri_whfast->p_jh, N_real, N_active);
-                break;
-            case REB_WHFAST_COORDINATES_WHDS:
-                reb_transformations_whds_to_inertial_posvel(r->particles, ri_whfast->p_jh, N_real, N_active);
-                break;
-        };
-        for (int v=0;v<r->var_config_N;v++){
-            struct reb_variational_configuration const vc = r->var_config[v];
-            reb_transformations_jacobi_to_inertial_posvel(r->particles+vc.index, ri_whfast->p_jh+vc.index, r-> particles, N_real, N_active);
-        }
-        if (ri_whfast->keep_unsynchronized){
-            memcpy(r->ri_whfast.p_jh,sync_pj,r->N*sizeof(struct reb_particle));
-            free(sync_pj);
-        }else{
-            ri_whfast->is_synchronized = 1;
-        }
-    }
-}
-
-void reb_integrator_whfast_part2(struct reb_simulation* const r){
-    struct reb_simulation_integrator_whfast* const ri_whfast = &(r->ri_whfast);
-    struct reb_particle* restrict const particles = r->particles;
     struct reb_particle* const p_j = ri_whfast->p_jh;
-    const double dt = r->dt;
-    const int N = r->N;
-    const int N_real = r->N-r->N_var;
-    const int N_active = (r->N_active==-1 || r->testparticle_type==1)?N_real:r->N_active;
-    if (p_j==NULL){
-        // Non recoverable error occured earlier. 
-        // Skipping rest of integration to avoid segmentation fault.
-        return;
-    }
     
     switch (ri_whfast->kernel){
         case REB_WHFAST_KERNEL_DEFAULT: 

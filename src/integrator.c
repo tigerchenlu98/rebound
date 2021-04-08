@@ -35,6 +35,8 @@
 #include <string.h>
 #include "rebound.h"
 #include "gravity.h"
+#include "boundary.h"
+#include "tree.h"
 #include "output.h"
 #include "integrator.h"
 #include "integrator_whfast.h"
@@ -46,72 +48,37 @@
 #include "integrator_janus.h"
 #include "integrator_eos.h"
 
-void reb_integrator_part1(struct reb_simulation* r){
+void reb_integrator_step(struct reb_simulation* r){
 	switch(r->integrator){
 		case REB_INTEGRATOR_IAS15:
-			reb_integrator_ias15_part1(r);
+			reb_integrator_ias15_step(r);
 			break;
 		case REB_INTEGRATOR_LEAPFROG:
-			reb_integrator_leapfrog_part1(r);
+			reb_integrator_leapfrog_step(r);
 			break;
 		case REB_INTEGRATOR_SEI:
-			reb_integrator_sei_part1(r);
+			reb_integrator_sei_step(r);
 			break;
 		case REB_INTEGRATOR_WHFAST:
-			reb_integrator_whfast_part1(r);
+			reb_integrator_whfast_step(r);
 			break;
 		case REB_INTEGRATOR_SABA:
-			reb_integrator_saba_part1(r);
+			reb_integrator_saba_step(r);
 			break;
 		case REB_INTEGRATOR_MERCURIUS:
-			reb_integrator_mercurius_part1(r);
+			reb_integrator_mercurius_step(r);
 			break;
 		case REB_INTEGRATOR_JANUS:
-			reb_integrator_janus_part1(r);
+			reb_integrator_janus_step(r);
 			break;
 		case REB_INTEGRATOR_EOS:
-			reb_integrator_eos_part1(r);
+			reb_integrator_eos_step(r);
 			break;
 		default:
 			break;
 	}
 }
-
-void reb_integrator_part2(struct reb_simulation* r){
-	switch(r->integrator){
-		case REB_INTEGRATOR_IAS15:
-			reb_integrator_ias15_part2(r);
-			break;
-		case REB_INTEGRATOR_LEAPFROG:
-			reb_integrator_leapfrog_part2(r);
-			break;
-		case REB_INTEGRATOR_SEI:
-			reb_integrator_sei_part2(r);
-			break;
-		case REB_INTEGRATOR_WHFAST:
-			reb_integrator_whfast_part2(r);
-			break;
-		case REB_INTEGRATOR_SABA:
-			reb_integrator_saba_part2(r);
-			break;
-		case REB_INTEGRATOR_MERCURIUS:
-			reb_integrator_mercurius_part2(r);
-			break;
-		case REB_INTEGRATOR_JANUS:
-			reb_integrator_janus_part2(r);
-			break;
-		case REB_INTEGRATOR_EOS:
-			reb_integrator_eos_part2(r);
-			break;
-        case REB_INTEGRATOR_NONE:
-            r->t += r->dt;
-            r->dt_last_done = r->dt;
-            break;
-		default:
-			break;
-	}
-}
-	
+    
 void reb_integrator_synchronize(struct reb_simulation* r){
 	switch(r->integrator){
 		case REB_INTEGRATOR_IAS15:
@@ -143,16 +110,6 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 	}
 }
 
-void reb_integrator_init(struct reb_simulation* r){
-	switch(r->integrator){
-		case REB_INTEGRATOR_SEI:
-			reb_integrator_sei_init(r);
-			break;
-		default:
-			break;
-	}
-}
-
 void reb_integrator_reset(struct reb_simulation* r){
 	r->integrator = REB_INTEGRATOR_IAS15;
 	r->gravity_ignore_terms = 0;
@@ -167,11 +124,26 @@ void reb_integrator_reset(struct reb_simulation* r){
 }
 
 void reb_update_acceleration(struct reb_simulation* r){
-	// This should probably go elsewhere
+    // Update and simplify tree. 
+    // This function also creates the tree if called for the first time.
+    if (r->tree_needs_update || r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE || r->collision==REB_COLLISION_LINETREE){
+        // Check for root crossings.
+        reb_boundary_check(r);     
+
+        // Update tree (this will remove particles which left the box)
+        reb_tree_update(r);          
+    }
+    if (r->tree_root!=NULL && r->gravity==REB_GRAVITY_TREE){
+        // Update center of mass and quadrupole moments in tree in preparation of force calculation.
+        reb_tree_update_gravity_data(r); 
+    }
+
+    // Main force calculation:
 	reb_calculate_acceleration(r);
 	if (r->N_var){
 		reb_calculate_acceleration_var(r);
 	}
+
 	if (r->additional_forces  && (r->integrator != REB_INTEGRATOR_MERCURIUS || r->ri_mercurius.mode==0)){
         // For Mercurius:
         // Additional forces are only calculated in the kick step, not during close encounter

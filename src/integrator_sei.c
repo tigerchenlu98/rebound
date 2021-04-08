@@ -64,24 +64,22 @@ void reb_integrator_sei_part1(struct reb_simulation* const r){
     r->gravity_ignore_terms = 0;
 	const int N = r->N;
 	struct reb_particle* const particles = r->particles;
+	const struct reb_simulation_integrator_sei ri_sei = r->ri_sei;
 	if (r->ri_sei.OMEGAZ==-1){
 		r->ri_sei.OMEGAZ=r->ri_sei.OMEGA;
 	}
 	if (r->ri_sei.lastdt!=r->dt){
         reb_integrator_sei_init(r);
 	}
-	const struct reb_simulation_integrator_sei ri_sei = r->ri_sei;
+
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
 		operator_H012(r->dt, ri_sei, &(particles[i]));
 	}
 	r->t+=r->dt/2.;
-}
 
-void reb_integrator_sei_part2(struct reb_simulation* r){
-	const int N = r->N;
-	struct reb_particle* const particles = r->particles;
-	const struct reb_simulation_integrator_sei ri_sei = r->ri_sei;
+    reb_update_acceleration(r);
+
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
 		operator_phi1(r->dt, &(particles[i]));
