@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <math.h>
 #include "rebound.h"
+#include "integrator_sei.h"
 
 extern double OMEGA;
 extern double OMEGAZ;
@@ -27,8 +28,8 @@ double coefficient_of_restitution(const struct reb_simulation*r, double v){
 int main(int argc, char* argv[]){
     struct reb_simulation* r = reb_create_simulation();
     // Setup constants
-    r->ri_sei.OMEGA         = 1.;
-    r->ri_sei.OMEGAZ         = 3.6;
+    r->sei_config->OMEGA         = 1.;
+    r->sei_config->OMEGAZ         = 3.6;
     r->dt                = 2e-3*2.*M_PI;
     double particle_r         = 1;
     double tau            = 1.64;
