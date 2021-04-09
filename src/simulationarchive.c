@@ -615,25 +615,24 @@ void reb_simulationarchive_snapshot(struct reb_simulation* const r, const char* 
 
             // Create buffer containing current binary file
             struct reb_output_stream new_stream;
-            new_stream->buf = NULL;
-            new_stream->size = 0;
-            new_stream->allocated = 0;
+            new_stream.buf = NULL;
+            new_stream.size = 0;
+            new_stream.allocated = 0;
             
             reb_output_stream_write_binary(&new_stream, r);
             
             // Create buffer containing diff
-            char* buf_diff;
-            size_t size_diff;
-            reb_binary_diff(buf_old, size_old, new_stream.buf, new_stream.size, &buf_diff, &size_diff);
+            struct reb_output_stream ostream = {0};
+            reb_binary_diff_with_options(buf_old, size_old, new_stream.buf, new_stream.size, &ostream, 0);
             
             // Update blob info and Write diff to binary file
             struct reb_simulationarchive_blob blob = {0};
             fseek(of, -sizeof(struct reb_simulationarchive_blob), SEEK_END);  
             fread(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
-            blob.offset_next = size_diff+sizeof(struct reb_binary_field);
+            blob.offset_next = ostream.size+sizeof(struct reb_binary_field);
             fseek(of, -sizeof(struct reb_simulationarchive_blob), SEEK_END);  
             fwrite(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
-            fwrite(buf_diff, size_diff, 1, of); 
+            fwrite(ostream.buf, ostream.size, 1, of); 
             field.type = REB_BINARY_FIELD_TYPE_END;
             field.size = 0;
             fwrite(&field,sizeof(struct reb_binary_field), 1, of);
@@ -645,7 +644,7 @@ void reb_simulationarchive_snapshot(struct reb_simulation* const r, const char* 
             fclose(of);
             free(new_stream.buf);
             free(buf_old);
-            free(buf_diff);
+            free(ostream.buf);
         }
     }
 }

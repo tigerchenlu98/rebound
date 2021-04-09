@@ -41,13 +41,40 @@
 #include "integrator.h"
 #include "integrator_sei.h"
 #include "output.h"
+#include "input.h"
 
 
 static void operator_H012(double dt, const struct reb_integrator_sei_config config, struct reb_particle* p);
 static void operator_phi1(double dt, struct reb_particle* p);
 
+int reb_integrator_sei_config_load(struct reb_integrator_sei_config* config, struct reb_input_stream* stream, struct reb_binary_field field){
+    switch (field.type){
+        case REB_BINARY_FIELD_TYPE_SEI_OMEGA:
+            reb_input_stream_fread(stream, &config->OMEGA, field.size, 1);
+            return 1;
+        case REB_BINARY_FIELD_TYPE_SEI_OMEGAZ:
+            reb_input_stream_fread(stream, &config->OMEGAZ, field.size, 1);
+            return 1;
+        case REB_BINARY_FIELD_TYPE_SEI_LASTDT:
+            reb_input_stream_fread(stream, &config->lastdt, field.size, 1);
+            return 1;
+        case REB_BINARY_FIELD_TYPE_SEI_SINDT:
+            reb_input_stream_fread(stream, &config->sindt, field.size, 1);
+            return 1;
+        case REB_BINARY_FIELD_TYPE_SEI_TANDT:
+            reb_input_stream_fread(stream, &config->tandt, field.size, 1);
+            return 1;
+        case REB_BINARY_FIELD_TYPE_SEI_SINDTZ:
+            reb_input_stream_fread(stream, &config->sindtz, field.size, 1);
+            return 1;
+        case REB_BINARY_FIELD_TYPE_SEI_TANDTZ:
+            reb_input_stream_fread(stream, &config->tandtz, field.size, 1);
+            return 1;
+        default:
+            return 0;
+    }
+}
 
-void reb_integrator_config_sei_load(struct reb_integrator_sei_config* config);
 void reb_integrator_config_sei_save(struct reb_integrator_sei_config* config, struct reb_output_stream* stream){
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_OMEGA,    &(config->OMEGA),    sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_OMEGAZ,   &(config->OMEGAZ),   sizeof(double));
@@ -58,11 +85,11 @@ void reb_integrator_config_sei_save(struct reb_integrator_sei_config* config, st
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_TANDTZ,   &(config->tandtz),   sizeof(double));
 }
 
-struct reb_integrator_sei_config* reb_integrator_config_sei_alloc(){
+struct reb_integrator_sei_config* reb_integrator_sei_config_alloc(){
     struct reb_integrator_sei_config* config = calloc(1, sizeof(struct reb_integrator_sei_config)); // sets all variables to zero
     return config;
 }
-void reb_integrator_config_sei_free(struct reb_integrator_sei_config* config){
+void reb_integrator_sei_config_free(struct reb_integrator_sei_config* config){
     free(config);
 }
 

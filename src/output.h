@@ -36,5 +36,6 @@ struct reb_output_stream{
 
 void reb_output_stream_write_binary(struct reb_output_stream*, struct reb_simulation* r);
 void reb_output_stream_write_field(struct reb_output_stream* stream, enum REB_BINARY_FIELD_TYPE type, void* restrict data, size_t size);
+void reb_output_stream_write(struct reb_output_stream* stream, void* restrict data, size_t size);
 
 #endif

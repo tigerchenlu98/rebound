@@ -386,7 +386,8 @@ int reb_diff_simulations(struct reb_simulation* r1, struct reb_simulation* r2, i
     
     reb_output_stream_write_binary(&stream2, r2);
 
-    int ret = reb_binary_diff_with_options(stream1.buf, stream1.size, stream2.buf, stream2.size, NULL, NULL, output_option);
+    struct reb_output_stream ostream = {0};
+    int ret = reb_binary_diff_with_options(stream1.buf, stream1.size, stream2.buf, stream2.size, &ostream, output_option);
     
     free(stream1.buf);
     free(stream2.buf);

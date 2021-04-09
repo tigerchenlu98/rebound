@@ -34,6 +34,7 @@
 #include "collision.h"
 #include "input.h"
 #include "tree.h"
+#include "integrator_sei.h"
 #include "simulationarchive.h"
 
 double reb_read_double(int argc, char** argv, const char* argument, double _default){
@@ -83,6 +84,7 @@ char* reb_read_char(int argc, char** argv, const char* argument){
     return NULL;
 }
 
+
 static size_t reb_fread(void *restrict ptr, size_t size, size_t nitems, FILE *restrict stream, char **restrict mem_stream){
     if (mem_stream!=NULL){
         // read from memory
@@ -94,6 +96,11 @@ static size_t reb_fread(void *restrict ptr, size_t size, size_t nitems, FILE *re
         return fread(ptr,size,nitems,stream);
     }
     return 0; 
+}
+
+size_t reb_input_stream_fread(struct reb_input_stream* stream, void *restrict ptr, size_t size, size_t nitems){
+    // Should be combined into one function
+    return reb_fread(ptr, size, nitems, stream->file_stream, stream->mem_stream);
 }
 
 static int reb_fseek(FILE *stream, long offset, int whence, char **restrict mem_stream){
@@ -161,6 +168,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
     if (numread<1){
         return 0; // End of file
     }
+    struct reb_input_stream stream = {.mem_stream = mem_stream, .file_stream = inf};
     switch (field.type){
         CASE(T,                  &r->t);
         CASE(G,                  &r->G);
@@ -229,13 +237,6 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
         break;
         CASE(BOUNDARY,           &r->boundary);
         CASE(GRAVITY,            &r->gravity);
-        CASE(SEI_OMEGA,          &r->ri_sei.OMEGA);
-        CASE(SEI_OMEGAZ,         &r->ri_sei.OMEGAZ);
-        CASE(SEI_LASTDT,         &r->ri_sei.lastdt);
-        CASE(SEI_SINDT,          &r->ri_sei.sindt);
-        CASE(SEI_TANDT,          &r->ri_sei.tandt);
-        CASE(SEI_SINDTZ,         &r->ri_sei.sindtz);
-        CASE(SEI_TANDTZ,         &r->ri_sei.tandtz);
         CASE(WHFAST_CORRECTOR,   &r->ri_whfast.corrector);
         CASE(WHFAST_RECALCJAC,   &r->ri_whfast.recalculate_coordinates_this_timestep);
         CASE(WHFAST_SAFEMODE,    &r->ri_whfast.safe_mode);
@@ -402,10 +403,18 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
             }
             break;
         default:
-            if (warnings){
-                *warnings |= REB_INPUT_BINARY_WARNING_FIELD_UNKOWN;
+            {   
+                // All others
+                int found = 0;
+                found |= reb_integrator_sei_config_load(r->sei_config, &stream, field);
+                // No match found. Unknown field.
+                if (!found){
+                    if (warnings){
+                        *warnings |= REB_INPUT_BINARY_WARNING_FIELD_UNKOWN;
+                    }
+                    reb_fseek(inf,field.size,SEEK_CUR,mem_stream);
+                }
             }
-            reb_fseek(inf,field.size,SEEK_CUR,mem_stream);
             break;
     }
     return 1;

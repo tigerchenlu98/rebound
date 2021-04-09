@@ -54,25 +54,19 @@ static inline int reb_binary_diff_particle(struct reb_particle p1, struct reb_pa
     return differ;
 }
 
-// Wrapper for backwards compatibility
-void reb_binary_diff(char* buf1, size_t size1, char* buf2, size_t size2, char** bufp, size_t* sizep){
-    // Ignores return value
-    reb_binary_diff_with_options(buf1, size1, buf2, size2, bufp, sizep, 0);
-}
-
-int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t size2, char** bufp, size_t* sizep, int output_option){
+int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t size2, struct reb_output_stream* ostream, int output_option){
     if (!buf1 || !buf2 || size1<64 || size2<64){
         printf("Cannot read input buffers.\n");
         return 0;
     }
 
     int are_different = 0;
-    
+   
     if (output_option==0){
-        *bufp = NULL;
-        *sizep = 0;
+        ostream->buf = NULL;
+        ostream->size = 0;
+        ostream->allocated = 0;
     }
-    size_t allocatedsize = 0;
 
     // Header.
     if(memcmp(buf1,buf2,64)!=0){
@@ -124,7 +118,7 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
                 are_different = 1.;
                 switch(output_option){
                     case 0:
-                        reb_output_stream_write(bufp, &allocatedsize, sizep, &field1,sizeof(struct reb_binary_field));
+                        reb_output_stream_write(ostream, &field1, sizeof(struct reb_binary_field));
                         break;
                     case 1:
                         printf("Field %d not in simulation 2.\n",field1.type);
@@ -167,8 +161,8 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
             }
             switch(output_option){
                 case 0:
-                    reb_output_stream_write(bufp, &allocatedsize, sizep, &field2,sizeof(struct reb_binary_field));
-                    reb_output_stream_write(bufp, &allocatedsize, sizep, buf2+pos2,field2.size);
+                    reb_output_stream_write(ostream, &field2, sizeof(struct reb_binary_field));
+                    reb_output_stream_write(ostream, buf2+pos2, field2.size);
                     break;
                 case 1:
                     printf("Field %d differs.\n",field1.type);
@@ -232,8 +226,8 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
         are_different = 1.;
         switch(output_option){
             case 0:
-                reb_output_stream_write(bufp, &allocatedsize, sizep, &field2,sizeof(struct reb_binary_field));
-                reb_output_stream_write(bufp, &allocatedsize, sizep, buf2+pos2,field2.size);
+                reb_output_stream_write(ostream, &field2,sizeof(struct reb_binary_field));
+                reb_output_stream_write(ostream, buf2+pos2,field2.size);
                 break;
             case 1:
                 printf("Field %d not in simulation 1.\n",field2.type);
