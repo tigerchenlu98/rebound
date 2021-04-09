@@ -361,8 +361,9 @@ void _reb_copy_simulation_with_messages(struct reb_simulation* r_copy,  struct r
     // Set to old version by default. Will be overwritten if new version was used.
     r_copy->simulationarchive_version = 0;
 
-    char* bufp = stream.buf; // bufp will be changed
-    while(reb_input_field(r_copy, NULL, warnings, &bufp)){ }
+    struct reb_input_stream istream = {0};
+    istream.mem_stream = stream.buf;
+    while(reb_input_field(r_copy, &istream, warnings)){ }
     free(stream.buf);
     
 }

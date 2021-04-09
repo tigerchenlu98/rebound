@@ -84,62 +84,59 @@ char* reb_read_char(int argc, char** argv, const char* argument){
     return NULL;
 }
 
-// last argument should really be just a char*
-static size_t reb_fread(void *restrict ptr, size_t size, size_t nitems, FILE * stream, char * restrict * mem_stream){
-    if (mem_stream!=NULL){
+size_t reb_input_stream_fread(struct reb_input_stream* stream, void *restrict ptr, size_t size, size_t nitems){
+    if (stream->mem_stream!=NULL){
         // read from memory
-        memcpy(ptr,*mem_stream,size*nitems);
-        *mem_stream = (char*)(*mem_stream)+ size*nitems;
+        memcpy(ptr,stream->mem_stream,size*nitems);
+        stream->mem_stream = (char*)(stream->mem_stream)+ size*nitems;
         return size*nitems;
-    }else if(stream!=NULL){
+    }else if(stream->file_stream!=NULL){
         // read from file
-        return fread(ptr,size,nitems,stream);
+        size_t s =  fread(ptr,size,nitems,stream->file_stream);
+        return s;
     }
     return 0; 
 }
 
-size_t reb_input_stream_fread(struct reb_input_stream* stream, void *restrict ptr, size_t size, size_t nitems){
-    // Should be combined into one function
-    return reb_fread(ptr, size, nitems, stream->file_stream, &(stream->mem_stream));
-}
-
-static int reb_fseek(FILE *stream, long offset, int whence, char **restrict mem_stream){
-    if (mem_stream!=NULL){
+static int reb_fseek(struct reb_input_stream* stream, long offset, int whence){
+    if (stream->mem_stream!=NULL){
         // read from memory
         if (whence==SEEK_CUR){
-            *mem_stream = (char*)(*mem_stream)+offset;
+            stream->mem_stream = (char*)(stream->mem_stream)+offset;
             return 0;
         }
         return -1;
-    }else if(stream!=NULL){
+    }else if(stream->file_stream!=NULL){
         // read from file
-        return fseek(stream,offset,whence);
+        return fseek(stream->file_stream,offset,whence);
     }
     return -1;
 }
 
 
-void reb_read_dp7(struct reb_dp7* dp7, const int N3, FILE* inf, char **restrict mem_stream){
-    reb_fread(dp7->p0,sizeof(double),N3,inf,mem_stream);
-    reb_fread(dp7->p1,sizeof(double),N3,inf,mem_stream);
-    reb_fread(dp7->p2,sizeof(double),N3,inf,mem_stream);
-    reb_fread(dp7->p3,sizeof(double),N3,inf,mem_stream);
-    reb_fread(dp7->p4,sizeof(double),N3,inf,mem_stream);
-    reb_fread(dp7->p5,sizeof(double),N3,inf,mem_stream);
-    reb_fread(dp7->p6,sizeof(double),N3,inf,mem_stream);
+void reb_read_dp7(struct reb_input_stream* stream, struct reb_dp7* dp7, const int N3){
+    reb_input_stream_fread(stream, dp7->p0,sizeof(double),N3);
+    reb_input_stream_fread(stream, dp7->p1,sizeof(double),N3);
+    reb_input_stream_fread(stream, dp7->p2,sizeof(double),N3);
+    reb_input_stream_fread(stream, dp7->p3,sizeof(double),N3);
+    reb_input_stream_fread(stream, dp7->p4,sizeof(double),N3);
+    reb_input_stream_fread(stream, dp7->p5,sizeof(double),N3);
+    reb_input_stream_fread(stream, dp7->p6,sizeof(double),N3);
 }
 
 // Macro to read a single field from a binary file.
 #define CASE(typename, value) case REB_BINARY_FIELD_TYPE_##typename: \
     {\
-        reb_fread(value, field.size,1,inf,mem_stream);\
+        reb_input_stream_fread(stream, value, field.size, 1);\
+            if (field.size==sizeof(double))\
+                printf("fromddddddddd file %d %f\n",field.type, *(double*)(value));\
     }\
     break;
 
 #define CASE_MALLOC(typename, valueref) case REB_BINARY_FIELD_TYPE_##typename: \
     {\
         valueref = malloc(field.size);\
-        reb_fread(valueref, field.size,1,inf,mem_stream);\
+        reb_input_stream_fread(stream, valueref, field.size,1);\
     }\
     break;
 
@@ -152,25 +149,21 @@ void reb_read_dp7(struct reb_dp7* dp7, const int N3, FILE* inf, char **restrict 
         valueref.p4 = malloc(field.size/7);\
         valueref.p5 = malloc(field.size/7);\
         valueref.p6 = malloc(field.size/7);\
-        reb_fread(valueref.p0, field.size/7,1,inf,mem_stream);\
-        reb_fread(valueref.p1, field.size/7,1,inf,mem_stream);\
-        reb_fread(valueref.p2, field.size/7,1,inf,mem_stream);\
-        reb_fread(valueref.p3, field.size/7,1,inf,mem_stream);\
-        reb_fread(valueref.p4, field.size/7,1,inf,mem_stream);\
-        reb_fread(valueref.p5, field.size/7,1,inf,mem_stream);\
-        reb_fread(valueref.p6, field.size/7,1,inf,mem_stream);\
+        reb_input_stream_fread(stream, valueref.p0, field.size/7,1);\
+        reb_input_stream_fread(stream, valueref.p1, field.size/7,1);\
+        reb_input_stream_fread(stream, valueref.p2, field.size/7,1);\
+        reb_input_stream_fread(stream, valueref.p3, field.size/7,1);\
+        reb_input_stream_fread(stream, valueref.p4, field.size/7,1);\
+        reb_input_stream_fread(stream, valueref.p5, field.size/7,1);\
+        reb_input_stream_fread(stream, valueref.p6, field.size/7,1);\
     }\
     break;
     
-int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_messages* warnings, char ** mem_stream){
+int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, enum reb_input_binary_messages* warnings){
     struct reb_binary_field field;
-    int numread = reb_fread(&field,sizeof(struct reb_binary_field),1,inf,mem_stream);
+    int numread = reb_input_stream_fread(stream, &field, sizeof(struct reb_binary_field), 1);
     if (numread<1){
         return 0; // End of file
-    }
-    struct reb_input_stream stream = {.mem_stream = NULL, .file_stream = inf};
-    if (mem_stream){
-        stream.mem_stream = *mem_stream;
     }
     switch (field.type){
         CASE(T,                  &r->t);
@@ -231,7 +224,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
         CASE(VISUALIZATION,      &r->visualization);
         case REB_BINARY_FIELD_TYPE_INTEGRATOR: 
         {
-            reb_fread(&r->integrator, field.size,1,inf,mem_stream);\
+            reb_input_stream_fread(stream, &r->integrator, field.size,1);
             // This is for backwards compatibility. To be removed in the future.
             if (r->integrator == REB_INTEGRATOR_IAS15){
                 r->ri_ias15.neworder = 0;
@@ -282,7 +275,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
         case 138: 
             {
             unsigned int k = 0;
-            reb_fread(&k, field.size,1,inf,mem_stream);
+            reb_input_stream_fread(stream, &k, field.size,1);
             r->ri_saba.type/=0x100;
             r->ri_saba.type += k-1;
             }
@@ -290,7 +283,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
         case 139: 
             {
             unsigned int corrector = 0;
-            reb_fread(&corrector, field.size,1,inf,mem_stream);
+            reb_input_stream_fread(stream, &corrector, field.size,1);
             r->ri_saba.type%=0x100;
             r->ri_saba.type += 0x100*corrector;
             }
@@ -307,7 +300,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
             r->allocatedN = (int)(field.size/sizeof(struct reb_particle));
             if (field.size){
                 r->particles = malloc(field.size);
-                reb_fread(r->particles, field.size,1,inf,mem_stream);
+                reb_input_stream_fread(stream, r->particles, field.size,1);
             }
             if (r->allocatedN<r->N && warnings){
                 *warnings |= REB_INPUT_BINARY_WARNING_PARTICLES;
@@ -330,7 +323,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
             r->ri_whfast.allocated_N = (int)(field.size/sizeof(struct reb_particle));
             if (field.size){
                 r->ri_whfast.p_jh = malloc(field.size);
-                reb_fread(r->ri_whfast.p_jh, field.size,1,inf,mem_stream);
+                reb_input_stream_fread(stream, r->ri_whfast.p_jh, field.size,1);
             }
             break;
         case REB_BINARY_FIELD_TYPE_JANUS_PINT:
@@ -340,7 +333,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
             r->ri_janus.allocated_N = (int)(field.size/sizeof(struct reb_particle_int));
             if (field.size){
                 r->ri_janus.p_int = malloc(field.size);
-                reb_fread(r->ri_janus.p_int, field.size,1,inf,mem_stream);
+                reb_input_stream_fread(stream, r->ri_janus.p_int, field.size,1);
             }
             break;
         case REB_BINARY_FIELD_TYPE_VARCONFIG:
@@ -349,7 +342,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
             }
             if (r->var_config_N>0){
                 r->var_config = malloc(field.size);
-                reb_fread(r->var_config, field.size,1,inf,mem_stream);
+                reb_input_stream_fread(stream, r->var_config, field.size,1);
                 for (int l=0;l<r->var_config_N;l++){
                     r->var_config[l].sim = r;
                 }
@@ -362,7 +355,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
             r->ri_mercurius.dcrit_allocatedN = (int)(field.size/sizeof(double));
             if (field.size){
                 r->ri_mercurius.dcrit = malloc(field.size);
-                reb_fread(r->ri_mercurius.dcrit, field.size,1,inf,mem_stream);
+                reb_input_stream_fread(stream, r->ri_mercurius.dcrit, field.size,1);
             }
             break;
         CASE_MALLOC(IAS15_AT,     r->ri_ias15.at);
@@ -383,7 +376,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
         case REB_BINARY_FIELD_TYPE_FUNCTIONPOINTERS:
             {
                 int fpwarn;
-                reb_fread(&fpwarn, field.size,1,inf,mem_stream);
+                reb_input_stream_fread(stream, &fpwarn, field.size,1);
                 if (fpwarn && warnings){
                     *warnings |= REB_INPUT_BINARY_WARNING_POINTERS;
                 }
@@ -398,7 +391,7 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
                 const char* header = "REBOUND Binary File. Version: ";
                 sprintf(curvbuf,"%s%s",header+sizeof(struct reb_binary_field), reb_version_str);
                 
-                objects += reb_fread(readbuf,sizeof(char),bufsize,inf,mem_stream);
+                objects += reb_input_stream_fread(stream, readbuf,sizeof(char),bufsize);
                 // Note: following compares version, but ignores githash.
                 if(strncmp(readbuf,curvbuf,bufsize)!=0){
                     *warnings |= REB_INPUT_BINARY_WARNING_VERSION;
@@ -409,13 +402,13 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
             {   
                 // All others
                 int found = 0;
-                found |= reb_integrator_sei_config_load(r->sei_config, &stream, field);
+                found |= reb_integrator_sei_config_load(r->sei_config, stream, field);
                 // No match found. Unknown field.
                 if (!found){
                     if (warnings){
                         *warnings |= REB_INPUT_BINARY_WARNING_FIELD_UNKOWN;
                     }
-                    reb_fseek(inf,field.size,SEEK_CUR,mem_stream);
+                    reb_fseek(stream, field.size, SEEK_CUR);
                 }
             }
             break;

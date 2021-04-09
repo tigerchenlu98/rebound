@@ -40,15 +40,15 @@
 void reb_output_stream_write(struct reb_output_stream* stream, void* restrict data, size_t size){
     // Increase size
     int increased = 0;
-    while (stream->allocated==0 || stream->size+size>(stream->allocated)){
+    while (stream->allocated==0 || stream->size+size > stream->allocated){
         increased = 1;
-	    stream->allocated = (stream->allocated) ? (stream->allocated) * 2 : 32;
+	    stream->allocated = stream->allocated ? stream->allocated * 2 : 32;
     }
     if (increased){
         stream->buf = realloc(stream->buf, stream->allocated);
     }
     // Copy data to buffer
-    memcpy((stream->buf)+(stream->size), data, size);
+    memcpy(stream->buf + stream->size, data, size);
     stream->size += size;
 }
 
@@ -130,16 +130,16 @@ void reb_output_orbits(struct reb_simulation* r, char* filename){
 }
 
 void static inline reb_save_dp7(struct reb_output_stream* stream, struct reb_dp7* dp7, const int N3){
-    reb_output_stream_write(stream, dp7->p0,sizeof(double)*N3);
-    reb_output_stream_write(stream, dp7->p1,sizeof(double)*N3);
-    reb_output_stream_write(stream, dp7->p2,sizeof(double)*N3);
-    reb_output_stream_write(stream, dp7->p3,sizeof(double)*N3);
-    reb_output_stream_write(stream, dp7->p4,sizeof(double)*N3);
-    reb_output_stream_write(stream, dp7->p5,sizeof(double)*N3);
-    reb_output_stream_write(stream, dp7->p6,sizeof(double)*N3);
+    reb_output_stream_write(stream, dp7->p0, sizeof(double)*N3);
+    reb_output_stream_write(stream, dp7->p1, sizeof(double)*N3);
+    reb_output_stream_write(stream, dp7->p2, sizeof(double)*N3);
+    reb_output_stream_write(stream, dp7->p3, sizeof(double)*N3);
+    reb_output_stream_write(stream, dp7->p4, sizeof(double)*N3);
+    reb_output_stream_write(stream, dp7->p5, sizeof(double)*N3);
+    reb_output_stream_write(stream, dp7->p6, sizeof(double)*N3);
 }
 
-void reb_output_stream_write_field(struct reb_output_stream* stream, enum REB_BINARY_FIELD_TYPE type, void* restrict data, size_t size){
+void reb_output_stream_write_field(struct reb_output_stream* stream, enum REB_BINARY_FIELD_TYPE type, void* data, size_t size){
     // Write a single field to a binary file.
     struct reb_binary_field field;
     // Memset forces padding to be set to 0 (not necessary but
@@ -150,14 +150,12 @@ void reb_output_stream_write_field(struct reb_output_stream* stream, enum REB_BI
     reb_output_stream_write(stream, data, size);
 }
 
-#define RBF_ REB_BINARY_FIELD_TYPE_
-
 void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb_simulation* r){
     // Output header.
     char header[64] = "\0";
     int cwritten = sprintf(header,"REBOUND Binary File. Version: %s",reb_version_str);
     snprintf(header+cwritten+1,64-cwritten-1,"%s",reb_githash_str);
-    reb_output_stream_write(stream, header,sizeof(char)*64);
+    reb_output_stream_write(stream, header, sizeof(char)*64);
    
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_T,                  &r->t,                              sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_G,                  &r->G,                              sizeof(double));

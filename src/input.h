@@ -30,8 +30,8 @@ struct reb_input_stream {
    size_t size;
 };
 
-void reb_read_dp7(struct reb_dp7* dp7, const int N3, FILE* inf, char **restrict mem_stream); ///< Internal function to read dp7 structs from file.
-int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_messages* warnings, char **restrict mem_stream); ///< Read one field from inf stream into r. 
+void reb_read_dp7(struct reb_input_stream* stream, struct reb_dp7* dp7, const int N3);
+int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, enum reb_input_binary_messages* warnings); ///< Read one field from inf stream into r. 
 size_t reb_input_stream_fread(struct reb_input_stream* stream, void *restrict ptr, size_t size, size_t nitems);
 
 struct reb_simulation* reb_input_process_warnings(struct reb_simulation* r, enum reb_input_binary_messages warnings); ///< Process warning messages and print them on screen.
