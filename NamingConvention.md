@@ -6,6 +6,7 @@ Naming Convention for REBOUND Version 4
 | module prefix                      | `reb_`                             |                        |
 | Macros, constants                  | `REB_PI`                           | `REB_PI`               | 
 | Structs                            | `RebSimulation`, `RebParticle`     |                        | 
+| Variables                          | `particle_number`                  | `particle_number`      |
 | Classes                            |                                    | `TestParticle`         | 
 | Functions operating on structs     | `reb_simulation_free()`            |                        | 
 | Instance methods                   |                                    | `Simulation.free()`    | 

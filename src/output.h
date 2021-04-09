@@ -24,10 +24,17 @@
  */
 #ifndef _OUTPUT_H
 #define _OUTPUT_H
-struct reb_simulation;
 
-#include <stdio.h>
-void reb_output_binary_to_stream(struct reb_simulation* r, char** bufp, size_t* sizep);
-void reb_output_stream_write(char** bufp, size_t* allocatedsize, size_t* sizep, void* restrict data, size_t size); ///< Replacement for memstream
+struct reb_simulation;
+struct reb_output_stream;
+
+struct reb_output_stream{
+    char* buf;
+    size_t allocated;
+    size_t size;
+};
+
+void reb_output_stream_write_binary(struct reb_output_stream*, struct reb_simulation* r);
+void reb_output_stream_write_field(struct reb_output_stream* stream, enum REB_BINARY_FIELD_TYPE type, void* restrict data, size_t size);
 
 #endif

@@ -116,7 +116,8 @@ void reb_integrator_reset(struct reb_simulation* r){
 	reb_integrator_ias15_reset(r);
 	reb_integrator_mercurius_reset(r);
 	reb_integrator_leapfrog_reset(r);
-	reb_integrator_sei_reset(r);
+	reb_integrator_sei_config_free(r->sei_config);
+	r->sei_config = reb_integrator_sei_config_alloc();
 	reb_integrator_whfast_reset(r);
 	reb_integrator_saba_reset(r);
 	reb_integrator_janus_reset(r);

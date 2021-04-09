@@ -39,6 +39,7 @@
 #include "integrator_saba.h"
 #include "integrator_whfast.h"
 #include "integrator_ias15.h"
+#include "integrator_sei.h"
 #include "integrator_mercurius.h"
 #include "boundary.h"
 #include "gravity.h"
@@ -346,9 +347,12 @@ struct reb_simulation* reb_create_simulation(){
 
 
 void _reb_copy_simulation_with_messages(struct reb_simulation* r_copy,  struct reb_simulation* r, enum reb_input_binary_messages* warnings){
-    char* bufp;
-    size_t sizep;
-    reb_output_binary_to_stream(r, &bufp,&sizep);
+    struct reb_output_stream stream;
+    stream.buf = NULL;
+    stream.size = 0;
+    stream.allocated = 0;
+    
+    reb_output_stream_write_binary(&stream, r);
     
     reb_reset_temporary_pointers(r_copy);
     reb_reset_function_pointers(r_copy);
@@ -357,9 +361,9 @@ void _reb_copy_simulation_with_messages(struct reb_simulation* r_copy,  struct r
     // Set to old version by default. Will be overwritten if new version was used.
     r_copy->simulationarchive_version = 0;
 
-    char* bufp_beginning = bufp; // bufp will be changed
+    char* bufp = stream.buf; // bufp will be changed
     while(reb_input_field(r_copy, NULL, warnings, &bufp)){ }
-    free(bufp_beginning);
+    free(stream.buf);
     
 }
 
@@ -368,16 +372,24 @@ int reb_diff_simulations(struct reb_simulation* r1, struct reb_simulation* r2, i
         // Not implemented
         return -1;
     }
-    char* bufp1;
-    char* bufp2;
-    size_t sizep1, sizep2;
-    reb_output_binary_to_stream(r1, &bufp1,&sizep1);
-    reb_output_binary_to_stream(r2, &bufp2,&sizep2);
-
-    int ret = reb_binary_diff_with_options(bufp1, sizep1, bufp2, sizep2, NULL, NULL, output_option);
+    struct reb_output_stream stream1;
+    stream1.buf = NULL;
+    stream1.size = 0;
+    stream1.allocated = 0;
     
-    free(bufp1);
-    free(bufp2);
+    reb_output_stream_write_binary(&stream1, r1);
+    
+    struct reb_output_stream stream2;
+    stream2.buf = NULL;
+    stream2.size = 0;
+    stream2.allocated = 0;
+    
+    reb_output_stream_write_binary(&stream2, r2);
+
+    int ret = reb_binary_diff_with_options(stream1.buf, stream1.size, stream2.buf, stream2.size, NULL, NULL, output_option);
+    
+    free(stream1.buf);
+    free(stream2.buf);
     return ret;
 }
 
@@ -468,7 +480,10 @@ void reb_init_simulation(struct reb_simulation* r){
 
 
     // Integrators  
+    r->sei_config = reb_integrator_sei_config_alloc();
+
     // ********** WHFAST
+
     // the defaults below are chosen to safeguard the user against spurious results, but
     // will be slower and less accurate
     r->ri_whfast.corrector = 0;
@@ -492,11 +507,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_ias15.min_dt      = 0;
     r->ri_ias15.epsilon_global  = 1;
     r->ri_ias15.iterations_max_exceeded = 0;    
-    
-    // ********** SEI
-    r->ri_sei.OMEGA     = 1;
-    r->ri_sei.OMEGAZ    = -1;
-    r->ri_sei.lastdt    = 0;
     
     // ********** MERCURIUS
     r->ri_mercurius.mode = 0;

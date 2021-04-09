@@ -614,14 +614,17 @@ void reb_simulationarchive_snapshot(struct reb_simulation* const r, const char* 
             fread(buf_old, size_old,1,of);
 
             // Create buffer containing current binary file
-            char* buf_new;
-            size_t size_new;
-            reb_output_binary_to_stream(r, &buf_new, &size_new);
+            struct reb_output_stream new_stream;
+            new_stream->buf = NULL;
+            new_stream->size = 0;
+            new_stream->allocated = 0;
+            
+            reb_output_stream_write_binary(&new_stream, r);
             
             // Create buffer containing diff
             char* buf_diff;
             size_t size_diff;
-            reb_binary_diff(buf_old, size_old, buf_new, size_new, &buf_diff, &size_diff);
+            reb_binary_diff(buf_old, size_old, new_stream.buf, new_stream.size, &buf_diff, &size_diff);
             
             // Update blob info and Write diff to binary file
             struct reb_simulationarchive_blob blob = {0};
@@ -640,7 +643,7 @@ void reb_simulationarchive_snapshot(struct reb_simulation* const r, const char* 
             fwrite(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
 
             fclose(of);
-            free(buf_new);
+            free(new_stream.buf);
             free(buf_old);
             free(buf_diff);
         }

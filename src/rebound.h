@@ -279,26 +279,6 @@ struct reb_simulation_integrator_mercurius {
     struct reb_vec3d com_vel;       ///< Used internally to keep track of the centre of mass during the timestep
 };
 
-/**
- * @brief This structure contains variables used by the SEI integrator.
- * @details This is where the user sets the orbital frequency OMEGA for 
- * shearing sheet simulations.
- */
-struct reb_simulation_integrator_sei {
-    double OMEGA;       ///< Epicyclic/orbital frequency.
-    double OMEGAZ;      ///< Epicyclic frequency in vertical direction.
-
-    /**
-     * @cond PRIVATE
-     * Internal data structures below. Nothing to be changed by the user.
-     */
-    double lastdt;      ///< Cached sin(), tan() for this value of dt.
-    double sindt;       ///< Cached sin() 
-    double tandt;       ///< Cached tan() 
-    double sindtz;      ///< Cached sin(), z axis
-    double tandtz;      ///< Cached tan(), z axis
-    /** @endcond */
-};
 
 /**
  * @brief This structure contains variables used by the SABA integrator.
@@ -990,7 +970,7 @@ struct reb_simulation {
      * \name Integrator structs (the contain integrator specific variables and temporary data structures) 
      * @{
      */
-    struct reb_simulation_integrator_sei ri_sei;        ///< The SEI struct 
+    struct reb_integrator_sei_config* sei_config;        ///< The SEI struct 
     struct reb_simulation_integrator_whfast ri_whfast;  ///< The WHFast struct 
     struct reb_simulation_integrator_saba ri_saba;      ///< The SABA struct 
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct

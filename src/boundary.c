@@ -36,6 +36,7 @@
 #include "rebound.h"
 #include "boundary.h"
 #include "tree.h"
+#include "integrator_sei.h"
 
 void reb_boundary_check(struct reb_simulation* const r){
 	struct reb_particle* const particles = r->particles;
@@ -84,7 +85,7 @@ void reb_boundary_check(struct reb_simulation* const r){
 		case REB_BOUNDARY_SHEAR:
 		{
 			// The offset of ghostcell is time dependent.
-			const double OMEGA = r->ri_sei.OMEGA;
+			const double OMEGA = r->sei_config->OMEGA;
 			const double offsetp1 = -fmod(-1.5*OMEGA*boxsize.x*r->t+boxsize.y/2.,boxsize.y)-boxsize.y/2.; 
 			const double offsetm1 = -fmod( 1.5*OMEGA*boxsize.x*r->t-boxsize.y/2.,boxsize.y)+boxsize.y/2.; 
 			struct reb_particle* const particles = r->particles;
@@ -163,7 +164,7 @@ struct reb_ghostbox reb_boundary_get_ghostbox(struct reb_simulation* const r, in
 		}
 		case REB_BOUNDARY_SHEAR:
 		{
-			const double OMEGA = r->ri_sei.OMEGA;
+			const double OMEGA = r->sei_config->OMEGA;
 			struct reb_ghostbox gb;
 			// Ghostboxes habe a finite velocity.
 			gb.shiftvx = 0.;
