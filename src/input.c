@@ -168,7 +168,10 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
     if (numread<1){
         return 0; // End of file
     }
-    struct reb_input_stream stream = {.mem_stream = *mem_stream, .file_stream = inf};
+    struct reb_input_stream stream = {.mem_stream = NULL, .file_stream = inf};
+    if (mem_stream){
+        stream.mem_stream = *mem_stream;
+    }
     switch (field.type){
         CASE(T,                  &r->t);
         CASE(G,                  &r->G);
