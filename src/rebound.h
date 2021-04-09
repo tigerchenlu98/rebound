@@ -74,7 +74,21 @@ struct reb_output_stream;
 struct reb_input_stream;
 struct reb_display_data;
 struct reb_treecell;
+struct reb_binary_field;
+struct reb_integrator;
 
+// Describes an available integrator
+struct reb_integrator {
+    const char* name;
+    int id;
+    void* config;
+    void (*step)(struct reb_simulation);
+    void (*synchronize)(struct reb_simulation);
+    void (*config_alloc)(struct reb_simulation);
+    void (*config_free)(struct reb_simulation);
+    size_t (*config_load)(struct reb_integrator* integrator, struct reb_input_stream* stream, struct reb_binary_field field);
+    void (*config_save)(struct reb_integrator* integrator, struct reb_output_stream* stream);
+};
 /**
  * @brief Structure representing one REBOUND particle.
  * @details This structure is used to represent one particle. 
@@ -632,11 +646,6 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_GRAVITY = 53,
     REB_BINARY_FIELD_TYPE_OMEGA = 54,
     REB_BINARY_FIELD_TYPE_OMEGAZ = 55,
-    REB_BINARY_FIELD_TYPE_SEI_LASTDT = 56,
-    REB_BINARY_FIELD_TYPE_SEI_SINDT = 57,
-    REB_BINARY_FIELD_TYPE_SEI_TANDT = 58,
-    REB_BINARY_FIELD_TYPE_SEI_SINDTZ = 59,
-    REB_BINARY_FIELD_TYPE_SEI_TANDTZ = 60,
     REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR = 61,
     REB_BINARY_FIELD_TYPE_WHFAST_RECALCJAC = 62, 
     REB_BINARY_FIELD_TYPE_WHFAST_SAFEMODE = 63,
@@ -702,11 +711,13 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_IAS15_NEWORDER = 153,
     REB_BINARY_FIELD_TYPE_RAND_SEED = 154,
     REB_BINARY_FIELD_TYPE_TESTPARTICLEHIDEWARNINGS = 155,
-
+    REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG = 0xFF000000,
     REB_BINARY_FIELD_TYPE_HEADER = 1329743186,  // Corresponds to REBO (first characters of header text)
     REB_BINARY_FIELD_TYPE_SABLOB = 9998,        // SA Blob
     REB_BINARY_FIELD_TYPE_END = 9999,
 };
+
+#define REB_BF(integrator, variable) (REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG | (REB_INTEGRATOR_##integrator<<16) | variable)
 
 /**
  * @brief This structure is used to save and load binary files.
@@ -946,6 +957,10 @@ struct reb_simulation {
         REB_INTEGRATOR_EOS = 11,     ///< Embedded Operator Splitting (EOS) integrator family (Rein 2019)
         } integrator;
 
+    struct reb_integrator* integrators_available;
+    unsigned int integrators_available_N;
+    struct reb_integrator* integrator_selected; // should become just "integrator"
+
     /**
      * @brief Available boundary conditions
      */
@@ -974,7 +989,6 @@ struct reb_simulation {
      * \name Integrator structs (the contain integrator specific variables and temporary data structures) 
      * @{
      */
-    struct reb_integrator_sei_config* sei_config;        ///< The SEI struct 
     struct reb_simulation_integrator_whfast ri_whfast;  ///< The WHFast struct 
     struct reb_simulation_integrator_saba ri_saba;      ///< The SABA struct 
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct

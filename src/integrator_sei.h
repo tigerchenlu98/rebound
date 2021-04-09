@@ -26,10 +26,12 @@
 #define _INTEGRATOR_SEI_H
 #include "input.h"
 
-void reb_integrator_sei_step(struct reb_simulation* r);        ///< Internal function used to call a specific integrator
-void reb_integrator_sei_synchronize(struct reb_simulation* r); ///< Internal function used to call a specific integrator
+void reb_integrator_sei_register(struct reb_simulation* r);
+void reb_integrator_sei_step(struct reb_simulation* const r, struct reb_integrator* integrator);
+void reb_integrator_sei_synchronize(struct reb_simulation* r);
 struct reb_integrator_sei_config* reb_integrator_sei_config_alloc();
 void reb_integrator_sei_config_free(struct reb_integrator_sei_config* config);
-int reb_integrator_sei_config_load(struct reb_integrator_sei_config* config, struct reb_input_stream* stream, struct reb_binary_field field);
-void reb_integrator_sei_config_save(struct reb_integrator_sei_config* config);
+size_t reb_integrator_sei_config_load(struct reb_integrator* integrator, struct reb_input_stream* stream, struct reb_binary_field field);
+void reb_integrator_sei_config_save(struct reb_integrator* integrator, struct reb_output_stream* stream);
+
 #endif

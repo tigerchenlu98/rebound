@@ -64,6 +64,7 @@ const int reb_max_messages_N = 10;
 const char* reb_build_str = __DATE__ " " __TIME__;  // Date and time build string. 
 const char* reb_version_str = "3.16.0";         // **VERSIONLINE** This line gets updated automatically. Do not edit manually.
 const char* reb_githash_str = STRINGIFY(GITHASH);             // This line gets updated automatically. Do not edit manually.
+    
 
 static int reb_error_message_waiting(struct reb_simulation* const r);
 
@@ -476,9 +477,9 @@ void reb_init_simulation(struct reb_simulation* r){
     r->gravity      = REB_GRAVITY_BASIC;
     r->collision    = REB_COLLISION_NONE;
 
+    reb_integrator_sei_register(r);
 
-    // Integrators  
-    r->sei_config = reb_integrator_sei_config_alloc();
+    r->integrator_selected = r->integrators_available; // first integrator is the selected one
 
     // ********** WHFAST
 

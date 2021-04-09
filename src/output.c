@@ -329,6 +329,10 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
             reb_save_dp7(stream, &(r->ri_ias15.er), N3);
         }
     }
+    for (int i=0; i<r->integrators_available_N; i++){
+        struct reb_integrator* integrator = &(r->integrators_available[i]);
+        integrator->config_save(integrator, stream);
+    }
     // To output size of binary file, need to calculate it first. 
     r->simulationarchive_size_first = (stream->size)+sizeof(struct reb_binary_field)*2+sizeof(long)+sizeof(struct reb_simulationarchive_blob);
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SASIZEFIRST,        &r->simulationarchive_size_first,   sizeof(long));

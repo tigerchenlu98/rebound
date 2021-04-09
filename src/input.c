@@ -401,8 +401,14 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         default:
             {   
                 // All others
-                int found = 0;
-                found |= reb_integrator_sei_config_load(r->sei_config, stream, field);
+                size_t found = 0;
+                for (int i=0;i<r->integrators_available_N;i++){
+                    struct reb_integrator* integrator = &(r->integrators_available[i]);
+                    found |= integrator->config_load(integrator, stream, field);
+                    if (found){
+                        break;
+                    }
+                }
                 // No match found. Unknown field.
                 if (!found){
                     if (warnings){
