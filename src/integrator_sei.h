@@ -26,22 +26,6 @@
 #define _INTEGRATOR_SEI_H
 #include "input.h"
 
-/**
- * @brief This structure contains variables used by the SEI integrator.
- * @details This is where the user sets the orbital frequency OMEGA for 
- * shearing sheet simulations.
- */
-struct reb_integrator_sei_config {
-    double OMEGA;       ///< Epicyclic/orbital frequency.
-    double OMEGAZ;      ///< Epicyclic frequency in vertical direction.
-
-    double lastdt;      ///< Cached sin(), tan() for this value of dt.
-    double sindt;       ///< Cached sin() 
-    double tandt;       ///< Cached tan() 
-    double sindtz;      ///< Cached sin(), z axis
-    double tandtz;      ///< Cached tan(), z axis
-};
-
 void reb_integrator_sei_step(struct reb_simulation* r);        ///< Internal function used to call a specific integrator
 void reb_integrator_sei_synchronize(struct reb_simulation* r); ///< Internal function used to call a specific integrator
 struct reb_integrator_sei_config* reb_integrator_sei_config_alloc();

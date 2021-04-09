@@ -97,34 +97,6 @@ class reb_collision(Structure):
         return '<{0}.{1} object at {2}, p1={3}, p2={4}>'.format(self.__module__, type(self).__name__, hex(id(self)), self.p1, self.p2)
     
 
-class reb_simulation_integrator_sei(Structure):
-    """
-    This class is an abstraction of the C-struct reb_simulation_integrator_sei.
-    It controls the behaviour of the symplectic SEI integrator for shearing
-    sheet calculations. It is described in Rein and Tremaine (2011).
-    
-    This struct should be accessed via the simulation class only. Here is an 
-    example:
-
-    >>> sim = rebound.Simulation()
-    >>> sim.sei_config.contents.OMEGA =  1.58
-    
-    :ivar float OMEGA:          
-        The epicyclic frequency OMEGA. For simulations making use of shearing 
-        sheet boundary conditions, REBOUND needs to know the epicyclic frequency. 
-        By default, OMEGA is 1. For more details read Rein and Tremaine 2011.
-    :ivar float OMEGAZ:          
-        The z component of the epicyclic frequency OMEGA. By default, it is assuming
-        OMEGAZ is the same as OMEGA.
-    """
-    _fields_ = [("OMEGA", c_double),
-                ("OMEGAZ", c_double),
-                ("_lastdt", c_double),
-                ("_sindt", c_double),
-                ("_tandt", c_double),
-                ("_sindtz", c_double),
-                ("_tandtz", c_double)]
-
 class reb_simulation_integrator_ias15(Structure):
     """
     This class is an abstraction of the C-struct reb_simulation_integrator_ias15.
@@ -2071,6 +2043,8 @@ class reb_display_data(Structure):
 Simulation._fields_ = [
                 ("t", c_double),
                 ("G", c_double),
+                ("Omega", c_double),
+                ("Omega_z", c_double),
                 ("softening", c_double),
                 ("dt", c_double),
                 ("dt_last_done", c_double),
@@ -2151,7 +2125,7 @@ Simulation._fields_ = [
                 ("_integrator", c_int),
                 ("_boundary", c_int),
                 ("_gravity", c_int),
-                ("sei_config", POINTER(reb_simulation_integrator_sei)), 
+                ("_sei_config", c_void_p), 
                 ("ri_whfast", reb_simulation_integrator_whfast),
                 ("ri_saba", reb_simulation_integrator_saba),
                 ("ri_ias15", reb_simulation_integrator_ias15),

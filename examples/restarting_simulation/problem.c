@@ -21,7 +21,7 @@ int main(int argc, char* argv[]){
         r->collision    = REB_COLLISION_DIRECT;
         r->collision_resolve = reb_collision_resolve_hardsphere;
         r->boundary     = REB_BOUNDARY_SHEAR;
-        r->ri_sei.OMEGA    = 1.;    
+        r->Omega      = 1.;    
         r->dt         = 1e-4*2.*M_PI; 
         r->exact_finish_time = 1; // Finish exactly at tmax in reb_integrate(). Default is already 1.
         r->nghostx = 1; r->nghosty = 1; r->nghostz = 0;
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
             p.x  = ((double)rand()/(double)RAND_MAX-0.5)*r->boxsize.x;
             p.y  = ((double)rand()/(double)RAND_MAX-0.5)*r->boxsize.y;
             p.z  = 0.1*((double)rand()/(double)RAND_MAX-0.5)*r->boxsize.z;
-            p.vy = -1.5*p.x*r->ri_sei.OMEGA;
+            p.vy = -1.5*p.x*r->Omega;
             p.m  = 0.0001;
             p.r  = 0.1;
             reb_add(r, p);

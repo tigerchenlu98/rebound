@@ -630,8 +630,8 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_INTEGRATOR = 51,
     REB_BINARY_FIELD_TYPE_BOUNDARY = 52,
     REB_BINARY_FIELD_TYPE_GRAVITY = 53,
-    REB_BINARY_FIELD_TYPE_SEI_OMEGA = 54,
-    REB_BINARY_FIELD_TYPE_SEI_OMEGAZ = 55,
+    REB_BINARY_FIELD_TYPE_OMEGA = 54,
+    REB_BINARY_FIELD_TYPE_OMEGAZ = 55,
     REB_BINARY_FIELD_TYPE_SEI_LASTDT = 56,
     REB_BINARY_FIELD_TYPE_SEI_SINDT = 57,
     REB_BINARY_FIELD_TYPE_SEI_TANDT = 58,
@@ -802,6 +802,8 @@ struct reb_simulation {
      */
     double  t;                      ///< Current simulation time. 
     double  G;                      ///< Gravitational constant. Default: 1. 
+    double  Omega;                  ///< Epicyclic/orbital frequency used for shearing sheet simulation with SEI integrator. Default: 1. 
+    double  Omega_z;                ///< Vertical epicyclic frequency used for shearing sheet simulation with SEI integrator. Default: NAN (use Omega). 
     double  softening;              ///< Gravitational softening parameter. Default: 0. 
     double  dt;                     ///< Current timestep. 
     double  dt_last_done;           ///< Last dt used by integrator

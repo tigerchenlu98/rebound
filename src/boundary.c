@@ -36,7 +36,6 @@
 #include "rebound.h"
 #include "boundary.h"
 #include "tree.h"
-#include "integrator_sei.h"
 
 void reb_boundary_check(struct reb_simulation* const r){
 	struct reb_particle* const particles = r->particles;
@@ -85,9 +84,9 @@ void reb_boundary_check(struct reb_simulation* const r){
 		case REB_BOUNDARY_SHEAR:
 		{
 			// The offset of ghostcell is time dependent.
-			const double OMEGA = r->sei_config->OMEGA;
-			const double offsetp1 = -fmod(-1.5*OMEGA*boxsize.x*r->t+boxsize.y/2.,boxsize.y)-boxsize.y/2.; 
-			const double offsetm1 = -fmod( 1.5*OMEGA*boxsize.x*r->t-boxsize.y/2.,boxsize.y)+boxsize.y/2.; 
+			const double Omega = r->Omega;
+			const double offsetp1 = -fmod(-1.5*Omega*boxsize.x*r->t+boxsize.y/2.,boxsize.y)-boxsize.y/2.; 
+			const double offsetm1 = -fmod( 1.5*Omega*boxsize.x*r->t-boxsize.y/2.,boxsize.y)+boxsize.y/2.; 
 			struct reb_particle* const particles = r->particles;
 #pragma omp parallel for schedule(guided)
 			for (int i=0;i<N;i++){
@@ -95,12 +94,12 @@ void reb_boundary_check(struct reb_simulation* const r){
 				while(particles[i].x>boxsize.x/2.){
 					particles[i].x -= boxsize.x;
 					particles[i].y += offsetp1;
-					particles[i].vy += 3./2.*OMEGA*boxsize.x;
+					particles[i].vy += 3./2.*Omega*boxsize.x;
 				}
 				while(particles[i].x<-boxsize.x/2.){
 					particles[i].x += boxsize.x;
 					particles[i].y += offsetm1;
-					particles[i].vy -= 3./2.*OMEGA*boxsize.x;
+					particles[i].vy -= 3./2.*Omega*boxsize.x;
 				}
 				// Azimuthal
 				while(particles[i].y>boxsize.y/2.){
@@ -164,11 +163,11 @@ struct reb_ghostbox reb_boundary_get_ghostbox(struct reb_simulation* const r, in
 		}
 		case REB_BOUNDARY_SHEAR:
 		{
-			const double OMEGA = r->sei_config->OMEGA;
+			const double Omega = r->Omega;
 			struct reb_ghostbox gb;
 			// Ghostboxes habe a finite velocity.
 			gb.shiftvx = 0.;
-			gb.shiftvy = -1.5*(double)i*OMEGA*r->boxsize.x;
+			gb.shiftvy = -1.5*(double)i*Omega*r->boxsize.x;
 			gb.shiftvz = 0.;
 			// The shift in the y direction is time dependent. 
 			double shift;

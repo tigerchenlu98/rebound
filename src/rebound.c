@@ -409,6 +409,8 @@ void reb_init_simulation(struct reb_simulation* r){
     reb_reset_function_pointers(r);
     r->t        = 0; 
     r->G        = 1;
+    r->Omega    = 1;
+    r->Omega_z  = nan(""); // Will default to Omega
     r->softening    = 0;
     r->dt       = 0.001;
     r->dt_last_done = 0.;

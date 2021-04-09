@@ -166,6 +166,8 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
     switch (field.type){
         CASE(T,                  &r->t);
         CASE(G,                  &r->G);
+        CASE(OMEGA,              &r->Omega);
+        CASE(OMEGAZ,             &r->Omega_z);
         CASE(SOFTENING,          &r->softening);
         CASE(DT,                 &r->dt);
         CASE(DTLASTDONE,         &r->dt_last_done);

@@ -85,7 +85,7 @@ void reb_output_timing(struct reb_simulation* r, const double tmax){
     }
     printf("N_tot= %- 9d  ",N_tot);
     if (r->integrator==REB_INTEGRATOR_SEI){
-        printf("t= %- 9f [orb]  ",r->t*r->sei_config->OMEGA/2./M_PI);
+        printf("t= %- 9f [orb]  ",r->t*r->Omega/2./M_PI);
     }else{
         printf("t= %- 9f  ",r->t);
     }
@@ -159,6 +159,8 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
    
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_T,                  &r->t,                              sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_G,                  &r->G,                              sizeof(double));
+    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_OMEGA,              &r->Omega,                          sizeof(double));
+    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_OMEGAZ,             &r->Omega_z,                        sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SOFTENING,          &r->softening,                      sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_DT,                 &r->dt,                             sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_DTLASTDONE,         &r->dt_last_done,                   sizeof(double));
@@ -382,14 +384,14 @@ void reb_output_velocity_dispersion(struct reb_simulation* r, char* filename){
         struct reb_particle p = r->particles[i];
         A.x = A.x + (p.vx-A.x)/(double)(i+1);
         if (r->integrator==REB_INTEGRATOR_SEI){
-            A.y = A.y + (p.vy+1.5*r->sei_config->OMEGA*p.x-A.y)/(double)(i+1);
+            A.y = A.y + (p.vy+1.5*r->Omega*p.x-A.y)/(double)(i+1);
         }else{
             A.y = A.y + (p.vy-A.y)/(double)(i+1);
         }
         A.z = A.z + (p.vz-A.z)/(double)(i+1);
         Q.x = Q.x + (p.vx-Aim1.x)*(p.vx-A.x);
         if (r->integrator==REB_INTEGRATOR_SEI){
-            Q.y = Q.y + (p.vy+1.5*r->sei_config->OMEGA*p.x-Aim1.y)*(p.vy+1.5*r->sei_config->OMEGA*p.x-A.y);
+            Q.y = Q.y + (p.vy+1.5*r->Omega*p.x-Aim1.y)*(p.vy+1.5*r->Omega*p.x-A.y);
         }else{
             Q.y = Q.y + (p.vy-Aim1.y)*(p.vy-A.y);
         }

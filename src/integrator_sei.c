@@ -44,17 +44,20 @@
 #include "input.h"
 
 
-static void operator_H012(double dt, const struct reb_integrator_sei_config config, struct reb_particle* p);
+struct reb_integrator_sei_config {
+    // Cached values
+    double lastdt;      ///< Cached sin(), tan() for this value of dt.
+    double sindt;       ///< Cached sin() 
+    double tandt;       ///< Cached tan() 
+    double sindtz;      ///< Cached sin(), z axis
+    double tandtz;      ///< Cached tan(), z axis
+};
+
+static void operator_H012(double dt, const double Omega, const double Omega_z, const struct reb_integrator_sei_config config, struct reb_particle* p);
 static void operator_phi1(double dt, struct reb_particle* p);
 
 int reb_integrator_sei_config_load(struct reb_integrator_sei_config* config, struct reb_input_stream* stream, struct reb_binary_field field){
     switch (field.type){
-        case REB_BINARY_FIELD_TYPE_SEI_OMEGA:
-            reb_input_stream_fread(stream, &config->OMEGA, field.size, 1);
-            return 1;
-        case REB_BINARY_FIELD_TYPE_SEI_OMEGAZ:
-            reb_input_stream_fread(stream, &config->OMEGAZ, field.size, 1);
-            return 1;
         case REB_BINARY_FIELD_TYPE_SEI_LASTDT:
             reb_input_stream_fread(stream, &config->lastdt, field.size, 1);
             return 1;
@@ -76,8 +79,6 @@ int reb_integrator_sei_config_load(struct reb_integrator_sei_config* config, str
 }
 
 void reb_integrator_config_sei_save(struct reb_integrator_sei_config* config, struct reb_output_stream* stream){
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_OMEGA,    &(config->OMEGA),    sizeof(double));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_OMEGAZ,   &(config->OMEGAZ),   sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_LASTDT,   &(config->lastdt),   sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_SINDT,    &(config->sindt),    sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SEI_TANDT,    &(config->tandt),    sizeof(double));
@@ -87,7 +88,6 @@ void reb_integrator_config_sei_save(struct reb_integrator_sei_config* config, st
 
 struct reb_integrator_sei_config* reb_integrator_sei_config_alloc(){
     struct reb_integrator_sei_config* config = calloc(1, sizeof(struct reb_integrator_sei_config)); // sets all variables to zero
-    config->OMEGAZ=-1;
     return config;
 }
 void reb_integrator_sei_config_free(struct reb_integrator_sei_config* config){
@@ -99,24 +99,27 @@ void reb_integrator_sei_step(struct reb_simulation* const r){
 	const int N = r->N;
 	struct reb_particle* const particles = r->particles;
 	struct reb_integrator_sei_config* const config = r->sei_config;
+        
+    double const Omega = r->Omega;
+    double Omega_z = r->Omega_z;
+    if (isnan(Omega_z)){
+        Omega_z = Omega;
+    }
 	
     if (config->lastdt!=r->dt){
         /**
          * Pre-calculates sin() and tan() needed for SEI. 
          */
-        if (config->OMEGAZ==-1){
-            config->OMEGAZ=config->OMEGA;
-        }
-        config->sindt = sin(config->OMEGA*(-r->dt/2.));
-        config->tandt = tan(config->OMEGA*(-r->dt/4.));
-        config->sindtz = sin(config->OMEGAZ*(-r->dt/2.));
-        config->tandtz = tan(config->OMEGAZ*(-r->dt/4.));
+        config->sindt = sin(Omega*(-r->dt/2.));
+        config->tandt = tan(Omega*(-r->dt/4.));
+        config->sindtz = sin(Omega_z*(-r->dt/2.));
+        config->tandtz = tan(Omega_z*(-r->dt/4.));
         config->lastdt = r->dt;
 	}
 
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
-		operator_H012(r->dt, *config, &(particles[i]));
+		operator_H012(r->dt, Omega, Omega_z, *config, &(particles[i]));
 	}
 	r->t+=r->dt/2.;
 
@@ -125,7 +128,7 @@ void reb_integrator_sei_step(struct reb_simulation* const r){
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
 		operator_phi1(r->dt, &(particles[i]));
-		operator_H012(r->dt, *config, &(particles[i]));
+		operator_H012(r->dt, Omega, Omega_z, *config, &(particles[i]));
 	}
 	r->t+=r->dt/2.;
 	r->dt_last_done = r->dt;
@@ -140,10 +143,10 @@ void reb_integrator_sei_synchronize(struct reb_simulation* r){
  * @brief This function evolves a particle under the unperturbed
  * Hamiltonian H0 exactly up to machine precission.
  */
-static void operator_H012(double dt, const struct reb_integrator_sei_config config, struct reb_particle* p){
+static void operator_H012(double dt, const double Omega, const double Omega_z, const struct reb_integrator_sei_config config, struct reb_particle* p){
 		
 	// Integrate vertical motion
-	const double zx = p->z * config.OMEGAZ;
+	const double zx = p->z * Omega_z;
 	const double zy = p->vz;
 	
 	// Rotation implemeted as 3 shear operators
@@ -151,15 +154,15 @@ static void operator_H012(double dt, const struct reb_integrator_sei_config conf
 	const double zt1 =  zx - config.tandtz*zy;			
 	const double zyt =  config.sindtz*zt1 + zy;
 	const double zxt =  zt1 - config.tandtz*zyt;	
-	p->z  = zxt/config.OMEGAZ;
+	p->z  = zxt/Omega_z;
 	p->vz = zyt;
 
 	// Integrate motion in xy directions
-	const double aO = 2.*p->vy + 4.*p->x*config.OMEGA;	// Center of epicyclic motion
-	const double bO = p->y*config.OMEGA - 2.*p->vx;	
+	const double aO = 2.*p->vy + 4.*p->x*Omega;	// Center of epicyclic motion
+	const double bO = p->y*Omega - 2.*p->vx;	
 
-	const double ys = (p->y*config.OMEGA-bO)/2.; 		// Epicycle vector
-	const double xs = (p->x*config.OMEGA-aO); 
+	const double ys = (p->y*Omega-bO)/2.; 		// Epicycle vector
+	const double xs = (p->x*Omega-aO); 
 	
 	// Rotation implemeted as 3 shear operators
 	// to avoid round-off errors
@@ -167,8 +170,8 @@ static void operator_H012(double dt, const struct reb_integrator_sei_config conf
 	const double yst  =  config.sindt*xst1 + ys;
 	const double xst  =  xst1 - config.tandt*yst;	
 
-	p->x  = (xst+aO)    /config.OMEGA;			
-	p->y  = (yst*2.+bO) /config.OMEGA - 3./4.*aO*dt;	
+	p->x  = (xst+aO)    /Omega;			
+	p->y  = (yst*2.+bO) /Omega - 3./4.*aO*dt;	
 	p->vx = yst;
 	p->vy = -xst*2. -3./2.*aO;
 }
