@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <math.h>
 #include "rebound.h"
+#include "integrator_sei.h"
 
 int collision_resolve_hardsphere_pullaway(struct reb_simulation* r, struct reb_collision c);
 
@@ -32,7 +33,7 @@ int main(int argc, char* argv[]) {
     r->collision            = REB_COLLISION_TREE;
     r->collision_resolve = collision_resolve_hardsphere_pullaway;
     double OMEGA             = 0.00013143527;    // 1/s
-    r->ri_sei.OMEGA         = OMEGA;
+    r->sei_config->OMEGA         = OMEGA;
     r->G                 = 6.67428e-11;        // N / (1e-5 kg)^2 m^2
     r->softening             = 0.1;            // m
     r->dt                 = 1e-3*2.*M_PI/OMEGA;    // s
@@ -91,11 +92,11 @@ double coefficient_of_restitution_bridges(const struct reb_simulation* const r, 
 }
 
 void heartbeat(struct reb_simulation* const r){
-    if (reb_output_check(r, 1e-3*2.*M_PI/r->ri_sei.OMEGA)){
+    if (reb_output_check(r, 1e-3*2.*M_PI/r->sei_config->OMEGA)){
         reb_output_timing(r, 0);
         //reb_output_append_velocity_dispersion("veldisp.txt");
     }
-    if (reb_output_check(r, 2.*M_PI/r->ri_sei.OMEGA)){
+    if (reb_output_check(r, 2.*M_PI/r->sei_config->OMEGA)){
         //reb_output_ascii("position.txt");
     }
 }
