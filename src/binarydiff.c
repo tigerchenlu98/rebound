@@ -33,6 +33,7 @@
 #include "rebound.h"
 #include "tools.h"
 #include "output.h"
+#include "input.h"
 #include "binarydiff.h"
 
 
@@ -54,8 +55,8 @@ static inline int reb_binary_diff_particle(struct reb_particle p1, struct reb_pa
     return differ;
 }
 
-int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t size2, struct reb_output_stream* ostream, int output_option){
-    if (!buf1 || !buf2 || size1<64 || size2<64){
+int reb_binary_diff(struct reb_input_stream* istream1, struct reb_input_stream* istream2, struct reb_output_stream* ostream, int output_option){
+    if (!istream1->mem_stream || !istream1->mem_stream || istream1->size<64 || istream2->size<64){
         printf("Cannot read input buffers.\n");
         return 0;
     }
@@ -69,7 +70,7 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
     }
 
     // Header.
-    if(memcmp(buf1,buf2,64)!=0){
+    if(memcmp(istream1->mem_stream,istream2->mem_stream,64)!=0){
         printf("Header in binary files are different.\n");
     }
 
@@ -77,28 +78,28 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
     size_t pos2 = 64;
     
     while(1){
-        if (pos1+sizeof(struct reb_binary_field)>size1) break;
-        struct reb_binary_field field1 = *(struct reb_binary_field*)(buf1+pos1);
+        if (pos1+sizeof(struct reb_binary_field)>!istream1->size) break;
+        struct reb_binary_field field1 = *(struct reb_binary_field*)(istream1->mem_stream+pos1);
         pos1 += sizeof(struct reb_binary_field);
         if (field1.type==REB_BINARY_FIELD_TYPE_END){
             break;
         }
-        if (pos2+sizeof(struct reb_binary_field)>size2) pos2 = 64;
-        struct reb_binary_field field2 = *(struct reb_binary_field*)(buf2+pos2);
+        if (pos2+sizeof(struct reb_binary_field)>!istream2->size) pos2 = 64;
+        struct reb_binary_field field2 = *(struct reb_binary_field*)(istream2->mem_stream+pos2);
         pos2 += sizeof(struct reb_binary_field);
         
         // Fields might not be in the same order.
         if (field1.type!=field2.type){
-            // Will search for element in buf2, starting at beginning just past header
-            // Note that we ignore all ADDITIONAL fields in buf2 that were not present in buf1 
+            // Will search for element in istream2->mem_stream, starting at beginning just past header
+            // Note that we ignore all ADDITIONAL fields in istream2->mem_stream that were not present in istream1->mem_stream 
             pos2 = 64;
             int notfound = 0; 
             while(1) {
-                if (pos2+sizeof(struct reb_binary_field)>size2){
+                if (pos2+sizeof(struct reb_binary_field)>!istream2->size){
                     notfound = 1;
                     break;
                 }
-                field2 = *(struct reb_binary_field*)(buf2+pos2);
+                field2 = *(struct reb_binary_field*)(istream2->mem_stream+pos2);
                 pos2 += sizeof(struct reb_binary_field);
                 if(field2.type==REB_BINARY_FIELD_TYPE_END){
                     notfound = 1;
@@ -130,22 +131,22 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
             }
         }
         // Can assume field1.type == field2.type from here on
-        if (pos1+field1.size>size1) printf("Corrupt binary file buf1.\n");
-        if (pos2+field2.size>size2) printf("Corrupt binary file buf2.\n");
+        if (pos1+field1.size>!istream1->size) printf("Corrupt binary file istream1->mem_stream.\n");
+        if (pos2+field2.size>!istream2->size) printf("Corrupt binary file istream2->mem_stream.\n");
         int fields_differ = 0;
         if (field1.size==field2.size){
             switch (field1.type){
                 case REB_BINARY_FIELD_TYPE_PARTICLES:
                     {
-                        struct reb_particle* pb1 = (struct reb_particle*)(buf1+pos1);
-                        struct reb_particle* pb2 = (struct reb_particle*)(buf2+pos2);
+                        struct reb_particle* pb1 = (struct reb_particle*)(istream1->mem_stream+pos1);
+                        struct reb_particle* pb2 = (struct reb_particle*)(istream2->mem_stream+pos2);
                         for (unsigned int i=0;i<field1.size/sizeof(struct reb_particle);i++){
                             fields_differ |= reb_binary_diff_particle(pb1[i],pb2[i]);
                         }
                     }
                     break;
                 default:
-                    if (memcmp(buf1+pos1,buf2+pos2,field1.size)!=0){
+                    if (memcmp(istream1->mem_stream+pos1,istream2->mem_stream+pos2,field1.size)!=0){
                         fields_differ = 1;
                     }
                     break;
@@ -162,7 +163,7 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
             switch(output_option){
                 case 0:
                     reb_output_stream_write(ostream, &field2, sizeof(struct reb_binary_field));
-                    reb_output_stream_write(ostream, buf2+pos2, field2.size);
+                    reb_output_stream_write(ostream, istream2->mem_stream+pos2, field2.size);
                     break;
                 case 1:
                     printf("Field %d differs.\n",field1.type);
@@ -174,18 +175,18 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
         pos1 += field1.size;
         pos2 += field2.size;
     }
-    // Search for fields which are present in buf2 but not in buf1
+    // Search for fields which are present in istream2->mem_stream but not in istream1->mem_stream
     pos1 = 64;
     pos2 = 64;
     while(1){
-        if (pos2+sizeof(struct reb_binary_field)>size2) break;
-        struct reb_binary_field field2 = *(struct reb_binary_field*)(buf2+pos2);
+        if (pos2+sizeof(struct reb_binary_field)>!istream2->size) break;
+        struct reb_binary_field field2 = *(struct reb_binary_field*)(istream2->mem_stream+pos2);
         pos2 += sizeof(struct reb_binary_field);
         if (field2.type==REB_BINARY_FIELD_TYPE_END){
             break;
         }
-        if (pos1+sizeof(struct reb_binary_field)>size1) pos1 = 64;
-        struct reb_binary_field field1 = *(struct reb_binary_field*)(buf1+pos1);
+        if (pos1+sizeof(struct reb_binary_field)>!istream1->size) pos1 = 64;
+        struct reb_binary_field field1 = *(struct reb_binary_field*)(istream1->mem_stream+pos1);
         pos1 += sizeof(struct reb_binary_field);
         
         if (field1.type==field2.type){
@@ -195,15 +196,15 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
             continue;
         }
         // Fields might not be in the same order.
-        // Will search for element in buf1, starting at beginning just past header
+        // Will search for element in istream1->mem_stream, starting at beginning just past header
         pos1 = 64;
         int notfound = 0; 
         while(1) {
-            if (pos1+sizeof(struct reb_binary_field)>size1){
+            if (pos1+sizeof(struct reb_binary_field)>!istream1->size){
                 notfound = 1;
                 break;
             }
-            field1 = *(struct reb_binary_field*)(buf1+pos1);
+            field1 = *(struct reb_binary_field*)(istream1->mem_stream+pos1);
             pos1 += sizeof(struct reb_binary_field);
             if(field1.type==REB_BINARY_FIELD_TYPE_END){
                 notfound = 1;
@@ -227,7 +228,7 @@ int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t si
         switch(output_option){
             case 0:
                 reb_output_stream_write(ostream, &field2,sizeof(struct reb_binary_field));
-                reb_output_stream_write(ostream, buf2+pos2,field2.size);
+                reb_output_stream_write(ostream, istream2->mem_stream+pos2,field2.size);
                 break;
             case 1:
                 printf("Field %d not in simulation 1.\n",field2.type);

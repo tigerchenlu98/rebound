@@ -622,8 +622,10 @@ void reb_simulationarchive_snapshot(struct reb_simulation* const r, const char* 
             reb_output_stream_write_binary(&new_stream, r);
             
             // Create buffer containing diff
+            struct reb_input_stream new_istream = {.mem_stream = new_stream.buf, .size = new_stream.size, .file_stream = NULL};
+            struct reb_input_stream old_istream = {.mem_stream = buf_old, .size = size_old, .file_stream = NULL};
             struct reb_output_stream ostream = {0};
-            reb_binary_diff_with_options(buf_old, size_old, new_stream.buf, new_stream.size, &ostream, 0);
+            reb_binary_diff(&old_istream, &new_istream, &ostream, 0);
             
             // Update blob info and Write diff to binary file
             struct reb_simulationarchive_blob blob = {0};

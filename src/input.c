@@ -84,8 +84,8 @@ char* reb_read_char(int argc, char** argv, const char* argument){
     return NULL;
 }
 
-
-static size_t reb_fread(void *restrict ptr, size_t size, size_t nitems, FILE *restrict stream, char **restrict mem_stream){
+// last argument should really be just a char*
+static size_t reb_fread(void *restrict ptr, size_t size, size_t nitems, FILE * stream, char * restrict * mem_stream){
     if (mem_stream!=NULL){
         // read from memory
         memcpy(ptr,*mem_stream,size*nitems);
@@ -100,7 +100,7 @@ static size_t reb_fread(void *restrict ptr, size_t size, size_t nitems, FILE *re
 
 size_t reb_input_stream_fread(struct reb_input_stream* stream, void *restrict ptr, size_t size, size_t nitems){
     // Should be combined into one function
-    return reb_fread(ptr, size, nitems, stream->file_stream, stream->mem_stream);
+    return reb_fread(ptr, size, nitems, stream->file_stream, &(stream->mem_stream));
 }
 
 static int reb_fseek(FILE *stream, long offset, int whence, char **restrict mem_stream){
@@ -162,13 +162,13 @@ void reb_read_dp7(struct reb_dp7* dp7, const int N3, FILE* inf, char **restrict 
     }\
     break;
     
-int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_messages* warnings, char **restrict mem_stream){
+int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_messages* warnings, char ** mem_stream){
     struct reb_binary_field field;
     int numread = reb_fread(&field,sizeof(struct reb_binary_field),1,inf,mem_stream);
     if (numread<1){
         return 0; // End of file
     }
-    struct reb_input_stream stream = {.mem_stream = mem_stream, .file_stream = inf};
+    struct reb_input_stream stream = {.mem_stream = *mem_stream, .file_stream = inf};
     switch (field.type){
         CASE(T,                  &r->t);
         CASE(G,                  &r->G);

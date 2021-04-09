@@ -372,22 +372,16 @@ int reb_diff_simulations(struct reb_simulation* r1, struct reb_simulation* r2, i
         // Not implemented
         return -1;
     }
-    struct reb_output_stream stream1;
-    stream1.buf = NULL;
-    stream1.size = 0;
-    stream1.allocated = 0;
-    
+    struct reb_output_stream stream1 = {0};
     reb_output_stream_write_binary(&stream1, r1);
     
-    struct reb_output_stream stream2;
-    stream2.buf = NULL;
-    stream2.size = 0;
-    stream2.allocated = 0;
-    
+    struct reb_output_stream stream2 = {0};
     reb_output_stream_write_binary(&stream2, r2);
 
+    struct reb_input_stream istream1 = {.mem_stream = stream1.buf, .size = stream1.size, .file_stream = NULL};
+    struct reb_input_stream istream2 = {.mem_stream = stream2.buf, .size = stream2.size, .file_stream = NULL};
     struct reb_output_stream ostream = {0};
-    int ret = reb_binary_diff_with_options(stream1.buf, stream1.size, stream2.buf, stream2.size, &ostream, output_option);
+    int ret = reb_binary_diff(&istream1, &istream2, &ostream, output_option);
     
     free(stream1.buf);
     free(stream2.buf);

@@ -26,7 +26,8 @@
 
 struct reb_input_stream {
    FILE *restrict file_stream;
-   char **restrict mem_stream;
+   char *restrict mem_stream;
+   size_t size;
 };
 
 void reb_read_dp7(struct reb_dp7* dp7, const int N3, FILE* inf, char **restrict mem_stream); ///< Internal function to read dp7 structs from file.

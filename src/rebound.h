@@ -1456,7 +1456,7 @@ void reb_output_binary(struct reb_simulation* r, const char* filename);
  * @param output_option If set to 0, the differences are written to bufp. If set to 1, printed on the screen. If set to 2, then only the return value indicates any differences.
  * @return 0 is returned if the simulations do not differ (are equal). 1 is return if they differ.
  */
-int reb_binary_diff_with_options(char* buf1, size_t size1, char* buf2, size_t size2, struct reb_output_stream* ostream, int output_option);
+int reb_binary_diff(struct reb_input_stream* istream1, struct reb_input_stream* istream2, struct reb_output_stream* ostream, int output_option);
 
 /**
  * @brief Append the positions and velocities of all particles to an ASCII file.
