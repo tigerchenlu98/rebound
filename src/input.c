@@ -128,8 +128,6 @@ void reb_read_dp7(struct reb_input_stream* stream, struct reb_dp7* dp7, const in
 #define CASE(typename, value) case REB_BINARY_FIELD_TYPE_##typename: \
     {\
         reb_input_stream_fread(stream, value, field.size, 1);\
-            if (field.size==sizeof(double))\
-                printf("fromddddddddd file %d %f\n",field.type, *(double*)(value));\
     }\
     break;
 

@@ -540,11 +540,11 @@ static void reb_display(GLFWwindow* window){
         glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, j);
         
         glUniform1f(data->simplefont_shader_ypos_location, ypos++);
-        if (data->r_copy->integrator==REB_INTEGRATOR_SEI){
-            sprintf(str, "t = %f [orb]  ", data->r_copy->t*data->r_copy->ri_sei.OMEGA/2./M_PI);
-        }else{
+//        if (data->r_copy->integrator==REB_INTEGRATOR_SEI){
+//            sprintf(str, "t = %f [orb]  ", data->r_copy->t*data->r_copy->ri_sei.OMEGA/2./M_PI);
+//        }else{
             sprintf(str, "t = %f  ", data->r_copy->t);
-        }
+//        }
         j = convertLine(str,val);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(val), val);
         glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, j);

@@ -87,6 +87,7 @@ void reb_integrator_config_sei_save(struct reb_integrator_sei_config* config, st
 
 struct reb_integrator_sei_config* reb_integrator_sei_config_alloc(){
     struct reb_integrator_sei_config* config = calloc(1, sizeof(struct reb_integrator_sei_config)); // sets all variables to zero
+    config->OMEGAZ=-1;
     return config;
 }
 void reb_integrator_sei_config_free(struct reb_integrator_sei_config* config){

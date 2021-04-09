@@ -78,13 +78,13 @@ int reb_binary_diff(struct reb_input_stream* istream1, struct reb_input_stream* 
     size_t pos2 = 64;
     
     while(1){
-        if (pos1+sizeof(struct reb_binary_field)>!istream1->size) break;
+        if (pos1+sizeof(struct reb_binary_field)>istream1->size) break;
         struct reb_binary_field field1 = *(struct reb_binary_field*)(istream1->mem_stream+pos1);
         pos1 += sizeof(struct reb_binary_field);
         if (field1.type==REB_BINARY_FIELD_TYPE_END){
             break;
         }
-        if (pos2+sizeof(struct reb_binary_field)>!istream2->size) pos2 = 64;
+        if (pos2+sizeof(struct reb_binary_field)>istream2->size) pos2 = 64;
         struct reb_binary_field field2 = *(struct reb_binary_field*)(istream2->mem_stream+pos2);
         pos2 += sizeof(struct reb_binary_field);
         
@@ -95,7 +95,7 @@ int reb_binary_diff(struct reb_input_stream* istream1, struct reb_input_stream* 
             pos2 = 64;
             int notfound = 0; 
             while(1) {
-                if (pos2+sizeof(struct reb_binary_field)>!istream2->size){
+                if (pos2+sizeof(struct reb_binary_field)>istream2->size){
                     notfound = 1;
                     break;
                 }
@@ -131,8 +131,8 @@ int reb_binary_diff(struct reb_input_stream* istream1, struct reb_input_stream* 
             }
         }
         // Can assume field1.type == field2.type from here on
-        if (pos1+field1.size>!istream1->size) printf("Corrupt binary file istream1->mem_stream.\n");
-        if (pos2+field2.size>!istream2->size) printf("Corrupt binary file istream2->mem_stream.\n");
+        if (pos1+field1.size>istream1->size) printf("Corrupt binary file istream1->mem_stream.\n");
+        if (pos2+field2.size>istream2->size) printf("Corrupt binary file istream2->mem_stream.\n");
         int fields_differ = 0;
         if (field1.size==field2.size){
             switch (field1.type){
@@ -179,13 +179,13 @@ int reb_binary_diff(struct reb_input_stream* istream1, struct reb_input_stream* 
     pos1 = 64;
     pos2 = 64;
     while(1){
-        if (pos2+sizeof(struct reb_binary_field)>!istream2->size) break;
+        if (pos2+sizeof(struct reb_binary_field)>istream2->size) break;
         struct reb_binary_field field2 = *(struct reb_binary_field*)(istream2->mem_stream+pos2);
         pos2 += sizeof(struct reb_binary_field);
         if (field2.type==REB_BINARY_FIELD_TYPE_END){
             break;
         }
-        if (pos1+sizeof(struct reb_binary_field)>!istream1->size) pos1 = 64;
+        if (pos1+sizeof(struct reb_binary_field)>istream1->size) pos1 = 64;
         struct reb_binary_field field1 = *(struct reb_binary_field*)(istream1->mem_stream+pos1);
         pos1 += sizeof(struct reb_binary_field);
         
@@ -200,7 +200,7 @@ int reb_binary_diff(struct reb_input_stream* istream1, struct reb_input_stream* 
         pos1 = 64;
         int notfound = 0; 
         while(1) {
-            if (pos1+sizeof(struct reb_binary_field)>!istream1->size){
+            if (pos1+sizeof(struct reb_binary_field)>istream1->size){
                 notfound = 1;
                 break;
             }
