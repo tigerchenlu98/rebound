@@ -226,7 +226,7 @@ int reb_boundary_particle_is_in_box(const struct reb_simulation* const r, struct
 				return 0;
 			}
 			return 1;
-		case REB_BOUNDARY_NONE:
+		default:
 			return 1;
 	}
 }
