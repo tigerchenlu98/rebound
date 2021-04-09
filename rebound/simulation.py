@@ -107,7 +107,7 @@ class reb_simulation_integrator_sei(Structure):
     example:
 
     >>> sim = rebound.Simulation()
-    >>> sim.ri_sei.OMEGA =  1.58
+    >>> sim.sei_config.contents.OMEGA =  1.58
     
     :ivar float OMEGA:          
         The epicyclic frequency OMEGA. For simulations making use of shearing 
@@ -128,7 +128,7 @@ class reb_simulation_integrator_sei(Structure):
 class reb_simulation_integrator_ias15(Structure):
     """
     This class is an abstraction of the C-struct reb_simulation_integrator_ias15.
-    It controls the behaviour of the SEI integrator. See Rein & Spiegel (2015)
+    It controls the behaviour of the IAS15 integrator. See Rein & Spiegel (2015)
     for more information.
 
     Example usage:
@@ -2151,7 +2151,7 @@ Simulation._fields_ = [
                 ("_integrator", c_int),
                 ("_boundary", c_int),
                 ("_gravity", c_int),
-                ("ri_sei", reb_simulation_integrator_sei), 
+                ("sei_config", POINTER(reb_simulation_integrator_sei)), 
                 ("ri_whfast", reb_simulation_integrator_whfast),
                 ("ri_saba", reb_simulation_integrator_saba),
                 ("ri_ias15", reb_simulation_integrator_ias15),
