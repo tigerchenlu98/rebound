@@ -247,11 +247,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(IAS15_ITERATIONSMAX,&r->ri_ias15.iterations_max_exceeded);
         CASE(IAS15_ALLOCATEDN,   &r->ri_ias15.allocatedN);
         CASE(IAS15_NEWORDER,     &r->ri_ias15.neworder);
-        CASE(JANUS_SCALEPOS,     &r->ri_janus.scale_pos);
-        CASE(JANUS_SCALEVEL,     &r->ri_janus.scale_vel);
-        CASE(JANUS_ORDER,        &r->ri_janus.order);
-        CASE(JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N);
-        CASE(JANUS_RECALC,       &r->ri_janus.recalculate_integer_coordinates_this_timestep);
         CASE(MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac);
         CASE(MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode);
         CASE(MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized);
@@ -320,16 +315,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
             if (field.size){
                 r->ri_whfast.p_jh = malloc(field.size);
                 reb_input_stream_fread(stream, r->ri_whfast.p_jh, field.size,1);
-            }
-            break;
-        case REB_BINARY_FIELD_TYPE_JANUS_PINT:
-            if(r->ri_janus.p_int){
-                free(r->ri_janus.p_int);
-            }
-            r->ri_janus.allocated_N = (int)(field.size/sizeof(struct reb_particle_int));
-            if (field.size){
-                r->ri_janus.p_int = malloc(field.size);
-                reb_input_stream_fread(stream, r->ri_janus.p_int, field.size,1);
             }
             break;
         case REB_BINARY_FIELD_TYPE_VARCONFIG:

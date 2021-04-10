@@ -40,6 +40,7 @@
 #include "integrator_whfast.h"
 #include "integrator_ias15.h"
 #include "integrator_sei.h"
+#include "integrator_janus.h"
 #include "integrator_eos.h"
 #include "integrator_leapfrog.h"
 #include "integrator_mercurius.h"
@@ -330,13 +331,6 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_mercurius.particles_backup = NULL;
     r->ri_mercurius.particles_backup_additionalforces = NULL;
     r->ri_mercurius.encounter_map = NULL;
-    // ********** JANUS
-    r->ri_janus.allocated_N = 0;
-    r->ri_janus.p_int = NULL;
-    r->ri_janus.recalculate_integer_coordinates_this_timestep = 0;
-    r->ri_janus.order = 6;
-    r->ri_janus.scale_pos = 1e-16;
-    r->ri_janus.scale_vel = 1e-16;
 }
 
 int reb_reset_function_pointers(struct reb_simulation* const r){
@@ -501,9 +495,14 @@ void reb_init_simulation(struct reb_simulation* r){
     r->gravity      = REB_GRAVITY_BASIC;
     r->collision    = REB_COLLISION_NONE;
 
-    reb_integrator_sei_register(r);
     reb_integrator_leapfrog_register(r);
+    reb_integrator_sei_register(r);
+    reb_integrator_janus_register(r);
     reb_integrator_eos_register(r);
+
+    for (int i=0; i<r->integrators_available_N; i++){
+        r->integrators_available[i].alloc(&(r->integrators_available[i]), r);
+    }
 
     r->integrator_selected = r->integrators_available; // first integrator is the selected one
 

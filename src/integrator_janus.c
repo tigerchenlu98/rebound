@@ -25,13 +25,8 @@
  *
  */
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <math.h>
-#include <time.h>
-#include <string.h>
-#include <sys/time.h>
 #include "rebound.h"
 #include "particle.h"
 #include "tools.h"
@@ -39,6 +34,10 @@
 #include "boundary.h"
 #include "integrator.h"
 #include "integrator_janus.h"
+#include "input.h"
+#include "output.h"
+
+void reb_integrator_janus_synchronize(struct reb_integrator* integrator, struct reb_simulation* r);
 
 /**
  * Stucture derscribing one specific JANUS scheme
@@ -147,7 +146,7 @@ static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, uns
 }
 
 static void drift(struct reb_simulation* r, double dt, double scale_pos, double scale_vel){
-    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    struct reb_integrator_janus_config* ri_janus = (struct reb_integrator_janus_config*)&(r->integrator_selected->config);
     const unsigned int N = r->N;
     for(unsigned int i=0; i<N; i++){
         ri_janus->p_int[i].x += (REB_PARTICLE_INT_TYPE)(dt*(double)ri_janus->p_int[i].vx*scale_vel/scale_pos) ;
@@ -157,7 +156,7 @@ static void drift(struct reb_simulation* r, double dt, double scale_pos, double 
 }
 
 static void kick(struct reb_simulation* r, double dt, double scale_vel){
-    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    struct reb_integrator_janus_config* ri_janus = (struct reb_integrator_janus_config*)&(r->integrator_selected->config);
     const unsigned int N = r->N;
     for(unsigned int i=0; i<N; i++){
         ri_janus->p_int[i].vx += (REB_PARTICLE_INT_TYPE)(dt*r->particles[i].ax/scale_vel) ;
@@ -166,9 +165,9 @@ static void kick(struct reb_simulation* r, double dt, double scale_vel){
     }
 }
 
-void reb_integrator_janus_step(struct reb_simulation* r){
+void reb_integrator_janus_step(struct reb_integrator* integrator, struct reb_simulation* r){
     r->gravity_ignore_terms = 0;
-    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    struct reb_integrator_janus_config* ri_janus = (struct reb_integrator_janus_config*)&(r->integrator_selected->config);
     const unsigned int N = r->N;
     const double dt = r->dt;
     const double scale_vel  = ri_janus->scale_vel;
@@ -207,7 +206,7 @@ void reb_integrator_janus_step(struct reb_simulation* r){
     }
 
     drift(r,gg(s,0)*dt/2.,scale_pos,scale_vel);
-    to_double(r->particles, r->ri_janus.p_int, r->N, scale_pos, scale_vel); 
+    to_double(r->particles, ri_janus->p_int, r->N, scale_pos, scale_vel); 
 
     reb_update_acceleration(r);
 
@@ -235,7 +234,7 @@ void reb_integrator_janus_step(struct reb_simulation* r){
     kick(r,gg(s,0)*dt, scale_vel);
     for (unsigned int i=1; i<s.stages; i++){
         drift(r,(gg(s,i-1)+gg(s,i))*dt/2.,scale_pos,scale_vel);
-        to_double(r->particles, r->ri_janus.p_int, N, scale_pos, scale_vel); 
+        to_double(r->particles, ri_janus->p_int, N, scale_pos, scale_vel); 
         reb_update_acceleration(r);
         kick(r,gg(s,i)*dt, scale_vel);
     }
@@ -243,26 +242,87 @@ void reb_integrator_janus_step(struct reb_simulation* r){
 
     // Small overhead here: Always get positions and velocities in floating point at 
     // the end of the timestep.
-    reb_integrator_janus_synchronize(r);
+    reb_integrator_janus_synchronize(integrator, r);
 
     r->t += r->dt;
 }
 
-void reb_integrator_janus_synchronize(struct reb_simulation* r){
-    if (r->ri_janus.allocated_N==r->N){
-        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale_pos, r->ri_janus.scale_vel); 
+void reb_integrator_janus_synchronize(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_janus_config* ri_janus = (struct reb_integrator_janus_config*)&(r->integrator_selected->config);
+    if (ri_janus->allocated_N==r->N){
+        to_double(r->particles, ri_janus->p_int, r->N, ri_janus->scale_pos, ri_janus->scale_vel); 
     }
 }
 
-void reb_integrator_janus_reset(struct reb_simulation* r){
-    struct reb_simulation_integrator_janus* const ri_janus = &(r->ri_janus);
-    ri_janus->allocated_N = 0;
-    ri_janus->recalculate_integer_coordinates_this_timestep = 0;
-    ri_janus->order = 2;
-    ri_janus->scale_pos = 1e-16;
-    ri_janus->scale_vel = 1e-16;
-    if (ri_janus->p_int){
-        free(ri_janus->p_int);
-        ri_janus->p_int = NULL;
+enum JANUS_CONFIG {
+    PINT = 1,
+    SCALEPOS = 2,
+    SCALEVEL = 3,
+    ORDER = 4,
+    RECALC = 5,
+};
+
+size_t reb_integrator_janus_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
+    struct reb_integrator_janus_config* config = (struct reb_integrator_janus_config*)integrator->config;
+    switch (field.type){
+        case REB_BF(JANUS, SCALEPOS):
+            return reb_input_stream_fread(stream, &config->scale_pos, field.size, 1);
+        case REB_BF(JANUS, SCALEVEL):
+            return reb_input_stream_fread(stream, &config->scale_vel, field.size, 1);
+        case REB_BF(JANUS, ORDER):
+            return reb_input_stream_fread(stream, &config->order, field.size, 1);
+        case REB_BF(JANUS, RECALC):
+            return reb_input_stream_fread(stream, &config->recalculate_integer_coordinates_this_timestep, field.size, 1);
+        case REB_BF(JANUS, PINT):
+            if(config->p_int){
+                free(config->p_int);
+            }
+            config->allocated_N = (int)(field.size/sizeof(struct reb_particle_int));
+            if (field.size){
+                config->p_int = malloc(field.size);
+                return reb_input_stream_fread(stream, config->p_int, field.size,1);
+            }
+            return 0;
+            break;
+        default:
+            return 0;
     }
+}
+
+void reb_integrator_janus_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
+    struct reb_integrator_janus_config* config = (struct reb_integrator_janus_config*)integrator->config;
+    reb_output_stream_write_field(stream, REB_BF(JANUS, SCALEPOS),    &(config->scale_pos),            sizeof(double));
+    reb_output_stream_write_field(stream, REB_BF(JANUS, SCALEVEL),    &(config->scale_vel),            sizeof(double));
+    reb_output_stream_write_field(stream, REB_BF(JANUS, ORDER),       &(config->order),                sizeof(unsigned int));
+    reb_output_stream_write_field(stream, REB_BF(JANUS, RECALC),      &(config->recalculate_integer_coordinates_this_timestep), sizeof(unsigned int));
+    reb_output_stream_write_field(stream, REB_BF(JANUS, PINT),        config->p_int,                   sizeof(struct reb_particle_int)*config->allocated_N);
+
+}
+
+void* reb_integrator_janus_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_janus_config* config = calloc(1, sizeof(struct reb_integrator_janus_config));
+    config->order = 2;
+    config->scale_pos = 1e-16;
+    config->scale_vel = 1e-16;
+    return config;
+}
+
+void reb_integrator_janus_free(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_janus_config* config = (struct reb_integrator_janus_config*)integrator->config;
+    if (config->p_int){
+        free(config->p_int);
+        config->p_int = NULL;
+    }
+    free(config);
+    integrator->config = NULL;
+}
+
+void reb_integrator_janus_register(struct reb_simulation* r){
+    struct reb_integrator* integrator = reb_simulation_register_integrator(r, "janus", 8);
+    integrator->step        = reb_integrator_janus_step;
+    integrator->synchronize = reb_integrator_janus_synchronize;
+    integrator->alloc       = reb_integrator_janus_alloc;
+    integrator->free        = reb_integrator_janus_free;
+    integrator->load        = reb_integrator_janus_load;
+    integrator->save        = reb_integrator_janus_save;
 }

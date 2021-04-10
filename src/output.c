@@ -231,12 +231,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_ITERATIONSMAX,&r->ri_ias15.iterations_max_exceeded,sizeof(unsigned long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_ALLOCATEDN,   &r->ri_ias15.allocatedN,            sizeof(int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_NEWORDER,     &r->ri_ias15.neworder,              sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_JANUS_SCALEPOS,     &r->ri_janus.scale_pos,             sizeof(double));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_JANUS_SCALEVEL,     &r->ri_janus.scale_vel,             sizeof(double));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_JANUS_ORDER,        &r->ri_janus.order,                 sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N,           sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_JANUS_RECALC,       &r->ri_janus.recalculate_integer_coordinates_this_timestep, sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_JANUS_PINT,         r->ri_janus.p_int,                  sizeof(struct reb_particle_int)*r->ri_janus.allocated_N);
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac,           sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode,         sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized, sizeof(unsigned int));

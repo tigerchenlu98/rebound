@@ -24,8 +24,34 @@
  */
 #ifndef _INTEGRATOR_JANUS_H
 #define _INTEGRATOR_JANUS_H
-void reb_integrator_janus_step(struct reb_simulation* r);           ///< Internal function used to call a specific integrator
-void reb_integrator_janus_synchronize(struct reb_simulation* r);	///< Internal function used to call a specific integrator
-void reb_integrator_janus_reset(struct reb_simulation* r);		///< Internal function used to call a specific integrator
+struct reb_integrator_janus_config {
+    /**
+     * @brief Scale of the problem. Positions get divided by this number before the conversion to an integer. 
+     */
+    double scale_pos;
+    /**
+     * @brief Scale of the problem. Velocities get divided by this number before the conversion to an integer. 
+     */
+    double scale_vel;
+    /**
+     * @brief Order of the scheme. Default is 6. 
+     */
+    unsigned int order; //TODO needs input/output
+    /**
+     * @brief If this flag is set, then janus will recalculate integer coordinates at
+     * the next timestep.
+     */
+    unsigned int recalculate_integer_coordinates_this_timestep;
+    /**
+     * @cond PRIVATE
+     * Internal data structures below. Nothing to be changed by the user.
+     */
+    struct reb_particle_int* p_int;    ///< Integer particle pos/vel
+    unsigned int allocated_N;                   ///< Space allocated in arrays
+    /**
+     * @endcond
+     */
+};
+void reb_integrator_janus_register(struct reb_simulation* r);
 
 #endif

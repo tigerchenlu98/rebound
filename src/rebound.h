@@ -470,34 +470,6 @@ struct reb_particle_int {
  * @endcond
  */
 
-struct reb_simulation_integrator_janus {
-    /**
-     * @brief Scale of the problem. Positions get divided by this number before the conversion to an integer. 
-     */
-    double scale_pos;
-    /**
-     * @brief Scale of the problem. Velocities get divided by this number before the conversion to an integer. 
-     */
-    double scale_vel;
-    /**
-     * @brief Order of the scheme. Default is 6. 
-     */
-    unsigned int order; //TODO needs input/output
-    /**
-     * @brief If this flag is set, then janus will recalculate integer coordinates at
-     * the next timestep.
-     */
-    unsigned int recalculate_integer_coordinates_this_timestep;
-    /**
-     * @cond PRIVATE
-     * Internal data structures below. Nothing to be changed by the user.
-     */
-    struct reb_particle_int* REBOUND_RESTRICT p_int;    ///< Integer particle pos/vel
-    unsigned int allocated_N;                   ///< Space allocated in arrays
-    /**
-     * @endcond
-     */
-};
 
 /**
  * @defgroup MiscRebStructs Miscellaneous REBOUND structures
@@ -650,12 +622,6 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_IAS15_ER = 101,
     REB_BINARY_FIELD_TYPE_WHFAST_PJ = 104,
     REB_BINARY_FIELD_TYPE_VISUALIZATION = 107,
-    REB_BINARY_FIELD_TYPE_JANUS_ALLOCATEDN = 110,
-    REB_BINARY_FIELD_TYPE_JANUS_PINT = 112,
-    REB_BINARY_FIELD_TYPE_JANUS_SCALEPOS = 113,
-    REB_BINARY_FIELD_TYPE_JANUS_SCALEVEL = 114,
-    REB_BINARY_FIELD_TYPE_JANUS_ORDER = 115,
-    REB_BINARY_FIELD_TYPE_JANUS_RECALC = 116,
     REB_BINARY_FIELD_TYPE_WHFAST_COORDINATES = 117,
     REB_BINARY_FIELD_TYPE_MERCURIUS_HILLFAC = 118,
     REB_BINARY_FIELD_TYPE_MERCURIUS_SAFEMODE = 119,
@@ -963,7 +929,6 @@ struct reb_simulation {
     struct reb_simulation_integrator_saba ri_saba;      ///< The SABA struct 
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_mercurius ri_mercurius;      ///< The MERCURIUS struct
-    struct reb_simulation_integrator_janus ri_janus;    ///< The JANUS struct 
     /** @} */
 
     /**
