@@ -399,27 +399,6 @@ struct reb_simulation_integrator_whfast {
 
 
 /**
- * @cond PRIVATE
- * Internal data structures below. Nothing to be changed by the user.
- */
-#define REB_PARTICLE_INT_TYPE int64_t
-/**
- * @brief Integer positions and velocities for particles. Used in JANUS integrator. 
- */
-struct reb_particle_int {
-    REB_PARTICLE_INT_TYPE x;
-    REB_PARTICLE_INT_TYPE y;
-    REB_PARTICLE_INT_TYPE z;
-    REB_PARTICLE_INT_TYPE vx;
-    REB_PARTICLE_INT_TYPE vy;
-    REB_PARTICLE_INT_TYPE vz;
-};
-/**
- * @endcond
- */
-
-
-/**
  * @defgroup MiscRebStructs Miscellaneous REBOUND structures
  * @{
 */

@@ -37,6 +37,47 @@
 #include "input.h"
 #include "output.h"
 
+#define REB_PARTICLE_INT_TYPE int64_t
+/**
+ * @brief Integer positions and velocities for particles. Used in JANUS integrator. 
+ */
+struct reb_particle_int {
+    REB_PARTICLE_INT_TYPE x;
+    REB_PARTICLE_INT_TYPE y;
+    REB_PARTICLE_INT_TYPE z;
+    REB_PARTICLE_INT_TYPE vx;
+    REB_PARTICLE_INT_TYPE vy;
+    REB_PARTICLE_INT_TYPE vz;
+};
+
+struct reb_integrator_janus_config {
+    /**
+     * @brief Scale of the problem. Positions get divided by this number before the conversion to an integer. 
+     */
+    double scale_pos;
+    /**
+     * @brief Scale of the problem. Velocities get divided by this number before the conversion to an integer. 
+     */
+    double scale_vel;
+    /**
+     * @brief Order of the scheme. Default is 6. 
+     */
+    unsigned int order; //TODO needs input/output
+    /**
+     * @brief If this flag is set, then janus will recalculate integer coordinates at
+     * the next timestep.
+     */
+    unsigned int recalculate_integer_coordinates_this_timestep;
+    /**
+     * @cond PRIVATE
+     * Internal data structures below. Nothing to be changed by the user.
+     */
+    struct reb_particle_int* p_int;    ///< Integer particle pos/vel
+    unsigned int allocated_N;                   ///< Space allocated in arrays
+    /**
+     * @endcond
+     */
+};
 void reb_integrator_janus_synchronize(struct reb_integrator* integrator, struct reb_simulation* r);
 
 /**

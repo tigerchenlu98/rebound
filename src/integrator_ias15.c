@@ -218,7 +218,6 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
     reb_update_acceleration(r); 
     
     // New order is better. Old order for backwards compatibility. 
-    double s[9];                // Summation coefficients 
     double* restrict const csx = r->ri_ias15.csx; 
     double* restrict const csv = r->ri_ias15.csv; 
     double* restrict const csa0 = r->ri_ias15.csa0; 
@@ -581,7 +580,6 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
     }
 
     // Find new position and velocity values at end of the sequence
-    double dt_done2 = dt_done*dt_done;
     for(int k=0;k<N3;++k) {
         {
             // Note: dt_done*dt_done is not precalculated to avoid 
