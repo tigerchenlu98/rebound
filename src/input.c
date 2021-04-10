@@ -265,11 +265,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(SANEXTSTEP,         &r->simulationarchive_next_step);
         CASE(SABA_TYPE,          &r->ri_saba.type);
         CASE(SABA_KEEPUNSYNC,    &r->ri_saba.keep_unsynchronized);
-        CASE(EOS_PHI0,           &r->ri_eos.phi0);
-        CASE(EOS_PHI1,           &r->ri_eos.phi1);
-        CASE(EOS_N,              &r->ri_eos.n);
-        CASE(EOS_SAFEMODE,       &r->ri_eos.safe_mode);
-        CASE(EOS_ISSYNCHRON,     &r->ri_eos.is_synchronized);
         CASE(RAND_SEED,          &r->rand_seed);
         // temporary solution for depreciated SABA k and corrector variables.
         // can be removed in future versions

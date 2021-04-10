@@ -255,11 +255,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SABA_KEEPUNSYNC,    &r->ri_saba.keep_unsynchronized,    sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR2,  &r->ri_whfast.corrector2,           sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_KERNEL,      &r->ri_whfast.kernel,               sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_EOS_PHI0,           &r->ri_eos.phi0,                    sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_EOS_PHI1,           &r->ri_eos.phi1,                    sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_EOS_N,              &r->ri_eos.n,                       sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_EOS_SAFEMODE,       &r->ri_eos.safe_mode,               sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_EOS_ISSYNCHRON,     &r->ri_eos.is_synchronized,         sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_RAND_SEED,          &r->rand_seed,                      sizeof(unsigned int));
     int functionpointersused = 0;
     if (r->coefficient_of_restitution ||

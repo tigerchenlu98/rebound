@@ -40,6 +40,7 @@
 #include "integrator_whfast.h"
 #include "integrator_ias15.h"
 #include "integrator_sei.h"
+#include "integrator_eos.h"
 #include "integrator_leapfrog.h"
 #include "integrator_mercurius.h"
 #include "boundary.h"
@@ -502,6 +503,7 @@ void reb_init_simulation(struct reb_simulation* r){
 
     reb_integrator_sei_register(r);
     reb_integrator_leapfrog_register(r);
+    reb_integrator_eos_register(r);
 
     r->integrator_selected = r->integrators_available; // first integrator is the selected one
 
@@ -540,13 +542,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_mercurius.encounterN = 0;
     r->ri_mercurius.hillfac = 3;
     
-    // ********** EOS
-    r->ri_eos.n = 2;
-    r->ri_eos.phi0 = REB_EOS_LF;
-    r->ri_eos.phi1 = REB_EOS_LF;
-    r->ri_eos.safe_mode = 1;
-    r->ri_eos.is_synchronized = 1;
-
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;
     r->tree_root        = NULL;

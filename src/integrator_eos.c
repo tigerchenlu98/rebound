@@ -23,17 +23,15 @@
  *
  */
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <math.h>
-#include <time.h>
-#include <string.h>
 #include "rebound.h"
-#include "integrator.h"
 #include "gravity.h"
+#include "integrator.h"
 #include "integrator_eos.h"
 #include "tools.h"
+#include "input.h"
+#include "output.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
 #define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
 
@@ -62,6 +60,8 @@ static const double plf7_6_4_a[2] = {0.5600879810924619,-0.060087981092461900000
 static const double plf7_6_4_b[2] = {1.5171479707207228, -2.0342959414414456000};
 static const double plf7_6_4_z[6] = {-0.3346222298730800, 1.0975679907321640, -1.0380887460967830, 0.6234776317921379, -1.1027532063031910, -0.0141183222088869};
 static const double plf7_6_4_y[6] = {-1.6218101180868010, 0.0061709468110142, 0.8348493592472594, -0.0511253369989315, 0.5633782670698199, -0.5};
+
+void reb_integrator_eos_synchronize(struct reb_integrator* integrator, struct reb_simulation* r);
                 
 static inline void reb_integrator_eos_interaction_shell0(struct reb_simulation* r, double y, double v){
     // Calculate gravity using standard gravity routine
@@ -364,7 +364,7 @@ static void reb_integrator_eos_drift_shell1(struct reb_simulation* const r, doub
 }
 
 static void reb_integrator_eos_drift_shell0(struct reb_simulation* const r, double _dt){
-    struct reb_simulation_integrator_eos* const reos = &(r->ri_eos);
+    struct reb_integrator_eos_config* const reos = (struct reb_integrator_eos_config*) &(r->integrator_selected->config);
     const int n = reos->n;
     const double dt = _dt/n;
     reb_integrator_eos_preprocessor(r, dt, reos->phi1, reb_integrator_eos_drift_shell1, reb_integrator_eos_interaction_shell1);
@@ -537,12 +537,12 @@ static void reb_integrator_eos_drift_shell0(struct reb_simulation* const r, doub
     reb_integrator_eos_postprocessor(r, dt, reos->phi1, reb_integrator_eos_drift_shell1, reb_integrator_eos_interaction_shell1);
 }
 
-void reb_integrator_eos_step(struct reb_simulation* r){
+void reb_integrator_eos_step(struct reb_integrator* integrator, struct reb_simulation* r){
     if (r->gravity != REB_GRAVITY_BASIC){
         reb_warning(r,"EOS only supports the BASIC gravity routine.");
     }
     
-    struct reb_simulation_integrator_eos* const reos = &(r->ri_eos);
+    struct reb_integrator_eos_config* const reos = (struct reb_integrator_eos_config*) &(r->integrator_selected->config);
     const double dt = r->dt;
 
     double dtfac = 1.;
@@ -666,7 +666,7 @@ void reb_integrator_eos_step(struct reb_simulation* r){
 
     reos->is_synchronized = 0;
     if (reos->safe_mode){
-        reb_integrator_eos_synchronize(r);
+        reb_integrator_eos_synchronize(integrator, r);
     }
     
     r->t+=r->dt;
@@ -681,8 +681,8 @@ void reb_integrator_eos_step(struct reb_simulation* r){
 
 }
 
-void reb_integrator_eos_synchronize(struct reb_simulation* r){
-    struct reb_simulation_integrator_eos* const reos = &(r->ri_eos);
+void reb_integrator_eos_synchronize(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_eos_config* const reos = (struct reb_integrator_eos_config*) &(r->integrator_selected->config);
     const double dt = r->dt;
     if (reos->is_synchronized == 0){
         switch(reos->phi0){
@@ -717,11 +717,64 @@ void reb_integrator_eos_synchronize(struct reb_simulation* r){
     }
 }
 
-void reb_integrator_eos_reset(struct reb_simulation* r){
-    r->ri_eos.n = 2;
-    r->ri_eos.phi0 = REB_EOS_LF;
-    r->ri_eos.phi1 = REB_EOS_LF;
-    r->ri_eos.safe_mode = 1;
-    r->ri_eos.is_synchronized = 1;
+enum EOS_CONFIG {
+    PHI0        = 1,
+    PHI1        = 2,
+    N           = 3,
+    SAFEMODE    = 4,
+    ISSYNCHRON  = 5,
+};
+
+size_t reb_integrator_eos_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
+    struct reb_integrator_eos_config* config = (struct reb_integrator_eos_config*)integrator->config;
+    switch (field.type){
+        case REB_BF(EOS, PHI0):
+            return reb_input_stream_fread(stream, &config->phi0, field.size, 1);
+        case REB_BF(EOS, PHI1):
+            return reb_input_stream_fread(stream, &config->phi1, field.size, 1);
+        case REB_BF(EOS, N):
+            return reb_input_stream_fread(stream, &config->n, field.size, 1);
+        case REB_BF(EOS, SAFEMODE):
+            return reb_input_stream_fread(stream, &config->safe_mode, field.size, 1);
+        case REB_BF(EOS, ISSYNCHRON):
+            return reb_input_stream_fread(stream, &config->is_synchronized, field.size, 1);
+        default:
+            return 0;
+    }
 }
 
+void reb_integrator_eos_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
+    struct reb_integrator_eos_config* config = (struct reb_integrator_eos_config*)integrator->config;
+    reb_output_stream_write_field(stream, REB_BF(EOS, PHI0),        &(config->phi0),        sizeof(enum REB_EOS_TYPE));
+    reb_output_stream_write_field(stream, REB_BF(EOS, PHI1),        &(config->phi1),        sizeof(enum REB_EOS_TYPE));
+    reb_output_stream_write_field(stream, REB_BF(EOS, N),           &(config->n),           sizeof(unsigned int));
+    reb_output_stream_write_field(stream, REB_BF(EOS, SAFEMODE),    &(config->safe_mode),    sizeof(unsigned int));
+    reb_output_stream_write_field(stream, REB_BF(EOS, ISSYNCHRON),  &(config->is_synchronized), sizeof(unsigned int));
+}
+
+void* reb_integrator_eos_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_eos_config* config = calloc(1, sizeof(struct reb_integrator_eos_config));
+    config->n = 2;
+    config->phi0 = REB_EOS_LF;
+    config->phi1 = REB_EOS_LF;
+    config->safe_mode = 1;
+    config->is_synchronized = 1;
+    return config;
+}
+
+void reb_integrator_eos_free(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_eos_config* config = (struct reb_integrator_eos_config*)integrator->config;
+    free(config);
+    integrator->config = NULL;
+}
+
+
+void reb_integrator_eos_register(struct reb_simulation* r){
+    struct reb_integrator* integrator = reb_simulation_register_integrator(r, "eos", 11);
+    integrator->step        = reb_integrator_eos_step;
+    integrator->synchronize = reb_integrator_eos_synchronize;
+    integrator->alloc       = reb_integrator_eos_alloc;
+    integrator->free        = reb_integrator_eos_free;
+    integrator->load        = reb_integrator_eos_load;
+    integrator->save        = reb_integrator_eos_save;
+}
