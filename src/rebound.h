@@ -288,115 +288,6 @@ struct reb_simulation_integrator_mercurius {
 
 
 
-/**
- * @brief This structure contains variables used by the WHFast integrator.
- */
-struct reb_simulation_integrator_whfast {
-    /**
-     * @brief This variable turns on/off different first symplectic correctors for WHFast.
-     * @details These correctors remove terms of order O(eps*dt^2) 
-     * - 0 (default): turns off all first correctors
-     * - 3: uses third order (two-stage) first corrector 
-     * - 5: uses fifth order (four-stage) first corrector 
-     * - 7: uses seventh order (six-stage) first corrector 
-     * - 11: uses eleventh order (ten-stage) first corrector 
-     * - 17: uses 17th order (16-stage) first corrector 
-     */
-    unsigned int corrector;
-    
-    /**
-     * @brief This variable turns on/off the second symplectic correctors for WHFast.
-     * @details 
-     * - 0 (default): turns off second correctors
-     * - 1: uses second corrector 
-     */
-    unsigned int corrector2;
-    
-    /**
-     * @brief This variable determines the kernel of the WHFast integrator.
-     * @details 
-     * - 0 (default): Uses a standard WH kick step 
-     * - 1: uses the exact modified kick (for Newtonian gravity) 
-     * - 2: uses the composition kernel  
-     * - 3: uses the lazy implementer's modified kick   
-     */
-    enum {
-        REB_WHFAST_KERNEL_DEFAULT = 0,
-        REB_WHFAST_KERNEL_MODIFIEDKICK = 1,
-        REB_WHFAST_KERNEL_COMPOSITION = 2,
-        REB_WHFAST_KERNEL_LAZY = 3,
-    }kernel;
-    
-    
-    /**
-     * @brief Chooses the coordinate system for the WHFast algorithm. Default is Jacobi Coordinates.
-     */
-    enum {
-        REB_WHFAST_COORDINATES_JACOBI = 0,                      ///< Jacobi coordinates (default)
-        REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC = 1,      ///< Democratic Heliocentric coordinates
-        REB_WHFAST_COORDINATES_WHDS = 2,                        ///< WHDS coordinates (Hernandez and Dehnen, 2017)
-        } coordinates;
-
-    /** 
-     * @brief Setting this flag to one will recalculate Jacobi/heliocentric coordinates from the particle structure in the next timestep. 
-     * @details After the timestep, the flag gets set back to 0. 
-     * If you want to change particles after every timestep, you 
-     * also need to set this flag to 1 before every timestep.
-     * Default is 0.
-     */ 
-    unsigned int recalculate_coordinates_this_timestep;
-
-    /**
-     * @brief If this flag is set (the default), whfast will recalculate 
-     * jacobi/heliocentric coordinates and synchronize
-     * every timestep, to avoid problems with outputs or particle modifications
-     * between timesteps. 
-     * @details Setting it to 0 will result in a speedup, but care
-     * must be taken to synchronize and recalculate jacobi coordinates when needed.
-     * See AdvWHFast.ipynb in the python_tutorials folder (navigate to it on github
-     * if you don't have ipython notebook installed).  The explanation is general, and
-     * the python and C flags have the same names.
-     */
-    unsigned int safe_mode;
-
-    /**
-     * @brief Jacobi/heliocentric coordinates
-     * @details This array contains the Jacobi/heliocentric
-     * coordinates of all particles.
-     * It is automatically filled and updated by WHfast.
-     * Access this array with caution.
-     */
-    struct reb_particle* REBOUND_RESTRICT p_jh;
-    
-    /**
-     * @brief Internal temporary array used for lazy implementer's kernel method
-     */
-    struct reb_particle* REBOUND_RESTRICT p_temp;
-    
-    /**
-     * @brief Generate inertial coordinates at the end of the integration, but do not change the Jacobi/heliocentric coordinates
-     * @details Danger zone! Only use this flag if you are absolutely sure
-     * what you are doing. This is intended for
-     * simulation which have to be reproducible on a bit by bit basis.
-     */
-    unsigned int keep_unsynchronized;
-
-    /**
-     * @cond PRIVATE
-     * Internal data structures below. Nothing to be changed by the user.
-     */
-
-    unsigned int is_synchronized;   ///< Flag to determine if current particle structure is synchronized
-    unsigned int allocated_N;       ///< Space allocated in p_jh array
-    unsigned int allocated_Ntemp;   ///< Space allocated in p_temp array
-    unsigned int timestep_warning;  ///< Counter of timestep warnings
-    unsigned int recalculate_coordinates_but_not_synchronized_warning;   ///< Counter of Jacobi synchronization errors
-    /**
-     * @endcond
-     */
-};
-
-
 
 /**
  * @defgroup MiscRebStructs Miscellaneous REBOUND structures
@@ -518,12 +409,6 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_GRAVITY = 53,
     REB_BINARY_FIELD_TYPE_OMEGA = 54,
     REB_BINARY_FIELD_TYPE_OMEGAZ = 55,
-    REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR = 61,
-    REB_BINARY_FIELD_TYPE_WHFAST_RECALCJAC = 62, 
-    REB_BINARY_FIELD_TYPE_WHFAST_SAFEMODE = 63,
-    REB_BINARY_FIELD_TYPE_WHFAST_KEEPUNSYNC = 64,
-    REB_BINARY_FIELD_TYPE_WHFAST_ISSYNCHRON = 65,
-    REB_BINARY_FIELD_TYPE_WHFAST_TIMESTEPWARN = 66,
     REB_BINARY_FIELD_TYPE_IAS15_EPSILON = 69,
     REB_BINARY_FIELD_TYPE_IAS15_MINDT = 70,
     REB_BINARY_FIELD_TYPE_IAS15_EPSILONGLOBAL = 71,
@@ -545,9 +430,7 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_IAS15_E = 99,
     REB_BINARY_FIELD_TYPE_IAS15_BR = 100,
     REB_BINARY_FIELD_TYPE_IAS15_ER = 101,
-    REB_BINARY_FIELD_TYPE_WHFAST_PJ = 104,
     REB_BINARY_FIELD_TYPE_VISUALIZATION = 107,
-    REB_BINARY_FIELD_TYPE_WHFAST_COORDINATES = 117,
     REB_BINARY_FIELD_TYPE_MERCURIUS_HILLFAC = 118,
     REB_BINARY_FIELD_TYPE_MERCURIUS_SAFEMODE = 119,
     REB_BINARY_FIELD_TYPE_MERCURIUS_ISSYNCHRON = 120,
@@ -562,8 +445,6 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_SAAUTOSTEP = 135,
     REB_BINARY_FIELD_TYPE_SANEXTSTEP = 136,
     REB_BINARY_FIELD_TYPE_STEPSDONE = 137,
-    REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR2 = 143,
-    REB_BINARY_FIELD_TYPE_WHFAST_KERNEL = 144,
     REB_BINARY_FIELD_TYPE_DTLASTDONE = 145,
     REB_BINARY_FIELD_TYPE_IAS15_NEWORDER = 153,
     REB_BINARY_FIELD_TYPE_RAND_SEED = 154,
@@ -842,7 +723,6 @@ struct reb_simulation {
      * \name Integrator structs (the contain integrator specific variables and temporary data structures) 
      * @{
      */
-    struct reb_simulation_integrator_whfast ri_whfast;  ///< The WHFast struct 
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_mercurius ri_mercurius;      ///< The MERCURIUS struct
     /** @} */

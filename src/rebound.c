@@ -118,7 +118,7 @@ void reb_step(struct reb_simulation* const r){
     if (r->pre_timestep_modifications){
         reb_integrator_synchronize(r);
         r->pre_timestep_modifications(r);
-        r->ri_whfast.recalculate_coordinates_this_timestep = 1;
+        //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
         r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
    
@@ -127,7 +127,7 @@ void reb_step(struct reb_simulation* const r){
     if (r->post_timestep_modifications){
         reb_integrator_synchronize(r);
         r->post_timestep_modifications(r);
-        r->ri_whfast.recalculate_coordinates_this_timestep = 1;
+        //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
         r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
 
@@ -276,7 +276,7 @@ void reb_free_pointers(struct reb_simulation* const r){
     }
     free(r->gravity_cs  );
     free(r->collisions  );
-    reb_integrator_whfast_reset(r);
+    // reb_integrator_whfast_reset(r); TODO! call free, then alloc
     reb_integrator_ias15_reset(r);
     reb_integrator_mercurius_reset(r);
     if(r->free_particle_ap){
@@ -310,12 +310,6 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->particle_lookup_table = NULL;
     r->N_lookup = 0;
     r->allocatedN_lookup = 0;
-    // ********** WHFAST
-    r->ri_whfast.allocated_N    = 0;
-    r->ri_whfast.allocated_Ntemp= 0;
-    r->ri_whfast.p_jh           = NULL;
-    r->ri_whfast.p_temp         = NULL;
-    r->ri_whfast.keep_unsynchronized = 0;
     // ********** IAS15
     r->ri_ias15.allocatedN      = 0;
     set_dp7_null(&(r->ri_ias15.g));
@@ -507,6 +501,7 @@ void reb_init_simulation(struct reb_simulation* r){
     reb_integrator_leapfrog_register(r);
     reb_integrator_sei_register(r);
     reb_integrator_janus_register(r);
+    reb_integrator_whfast_register(r);
     reb_integrator_eos_register(r);
     reb_integrator_saba_register(r);
 
@@ -518,20 +513,6 @@ void reb_init_simulation(struct reb_simulation* r){
 
     r->integrator_selected = r->integrators_available; // first integrator is the selected one
 
-    // ********** WHFAST
-
-    // the defaults below are chosen to safeguard the user against spurious results, but
-    // will be slower and less accurate
-    r->ri_whfast.corrector = 0;
-    r->ri_whfast.corrector2 = 0;
-    r->ri_whfast.kernel = 0;
-    r->ri_whfast.coordinates = REB_WHFAST_COORDINATES_JACOBI;
-    r->ri_whfast.safe_mode = 1;
-    r->ri_whfast.recalculate_coordinates_this_timestep = 0;
-    r->ri_whfast.is_synchronized = 1;
-    r->ri_whfast.timestep_warning = 0;
-    r->ri_whfast.recalculate_coordinates_but_not_synchronized_warning = 0;
-    
     // ********** IAS15
     r->ri_ias15.epsilon         = 1e-9;
     r->ri_ias15.min_dt      = 0;
