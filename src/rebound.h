@@ -182,17 +182,6 @@ struct reb_simulation_integrator_ias15 {
     unsigned int epsilon_global;
 
     /**
-     * @brief This parameter controls the order of operations.
-     * @details The order of floating point operations can affect the long term energy error. In the original version of IAS15, 
-     * the order of floating point operations leads to a linear energy error growth when a fixed timestep is used (Hernandez + Holman 2019).
-     * By default, this parameter is now set to 1 which uses a different order and thus avoids this issue. Note that using IAS15 as a 
-     * non-adaptive integrator is rarely beneficial. This flag only exists to allow for backwards compatibility. All new simulations should 
-     * use neworder=1.
-     **/
-    unsigned int neworder;
-
-    
-    /**
      * @cond PRIVATE
      * Internal data structures below. Nothing to be changed by the user.
      */

@@ -228,7 +228,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global,        sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_ITERATIONSMAX,&r->ri_ias15.iterations_max_exceeded,sizeof(unsigned long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_ALLOCATEDN,   &r->ri_ias15.allocatedN,            sizeof(int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_NEWORDER,     &r->ri_ias15.neworder,              sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac,           sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode,         sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized, sizeof(unsigned int));

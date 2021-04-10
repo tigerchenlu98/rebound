@@ -221,15 +221,7 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(WALLTIME,           &r->walltime);
         CASE(COLLISION,          &r->collision);
         CASE(VISUALIZATION,      &r->visualization);
-        case REB_BINARY_FIELD_TYPE_INTEGRATOR: 
-        {
-            reb_input_stream_fread(stream, &r->integrator, field.size,1);
-            // This is for backwards compatibility. To be removed in the future.
-            if (r->integrator == REB_INTEGRATOR_IAS15){
-                r->ri_ias15.neworder = 0;
-            }
-        }
-        break;
+        CASE(INTEGRATOR,         &r->integrator);
         CASE(BOUNDARY,           &r->boundary);
         CASE(GRAVITY,            &r->gravity);
         CASE(WHFAST_CORRECTOR,   &r->ri_whfast.corrector);
@@ -244,7 +236,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global);
         CASE(IAS15_ITERATIONSMAX,&r->ri_ias15.iterations_max_exceeded);
         CASE(IAS15_ALLOCATEDN,   &r->ri_ias15.allocatedN);
-        CASE(IAS15_NEWORDER,     &r->ri_ias15.neworder);
         CASE(MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac);
         CASE(MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode);
         CASE(MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized);
