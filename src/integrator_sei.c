@@ -82,6 +82,7 @@ void reb_integrator_sei_save(struct reb_integrator* integrator, struct reb_simul
 }
 
 void* reb_integrator_sei_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+    printf("alloc\n");
     struct reb_integrator_sei_config* config = calloc(1, sizeof(struct reb_integrator_sei_config)); // sets all variables to zero
     return config;
 }

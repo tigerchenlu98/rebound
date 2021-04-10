@@ -78,7 +78,9 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 		case REB_INTEGRATOR_SEI:
 		case REB_INTEGRATOR_JANUS:
 		case REB_INTEGRATOR_EOS:
-            r->integrator_selected->synchronize(r->integrator_selected, r);
+            if (r->integrator_selected->synchronize){
+                r->integrator_selected->synchronize(r->integrator_selected, r);
+            }
 			break;
 		case REB_INTEGRATOR_WHFAST:
 			reb_integrator_whfast_synchronize(r);

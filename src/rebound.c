@@ -71,6 +71,17 @@ const char* reb_githash_str = STRINGIFY(GITHASH);             // This line gets 
 
 static int reb_error_message_waiting(struct reb_simulation* const r);
 
+void reb_simulation_set_integrator(struct reb_simulation* r, const char* name){
+    for (int i=0; i<r->integrators_available_N; i++){
+        if (strcmp(r->integrators_available[i].name,name)==0){
+            r->integrator_selected = &(r->integrators_available[i]);
+            return;
+        }
+    }
+    printf("Error: Integrator not found.");
+    exit(EXIT_FAILURE);
+}
+
 struct reb_integrator* reb_simulation_register_integrator(struct reb_simulation* r, const char* name, int id){
     for (int i=0; i<r->integrators_available_N; i++){
         if (r->integrators_available[i].id == id){
@@ -501,7 +512,9 @@ void reb_init_simulation(struct reb_simulation* r){
     reb_integrator_eos_register(r);
 
     for (int i=0; i<r->integrators_available_N; i++){
-        r->integrators_available[i].alloc(&(r->integrators_available[i]), r);
+        if (r->integrators_available[i].alloc){
+            r->integrators_available[i].config = r->integrators_available[i].alloc(&(r->integrators_available[i]), r);
+        }
     }
 
     r->integrator_selected = r->integrators_available; // first integrator is the selected one
