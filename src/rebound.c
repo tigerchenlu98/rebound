@@ -247,16 +247,6 @@ void reb_configure_box(struct reb_simulation* const r, const double root_size, c
     }
 }
 
-static void set_dp7_null(struct reb_dp7 * dp){
-    dp->p0 = NULL;
-    dp->p1 = NULL;
-    dp->p2 = NULL;
-    dp->p3 = NULL;
-    dp->p4 = NULL;
-    dp->p5 = NULL;
-    dp->p6 = NULL;
-}
-
 void reb_free_simulation(struct reb_simulation* const r){
     reb_free_pointers(r);
     free(r);
@@ -277,7 +267,7 @@ void reb_free_pointers(struct reb_simulation* const r){
     free(r->gravity_cs  );
     free(r->collisions  );
     // reb_integrator_whfast_reset(r); TODO! call free, then alloc
-    reb_integrator_ias15_reset(r);
+    //reb_integrator_ias15_reset(r);
     //reb_integrator_mercurius_reset(r);
     if(r->free_particle_ap){
         for(int i=0; i<r->N; i++){
@@ -310,24 +300,6 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->particle_lookup_table = NULL;
     r->N_lookup = 0;
     r->allocatedN_lookup = 0;
-    // ********** IAS15
-    r->ri_ias15.allocatedN      = 0;
-    set_dp7_null(&(r->ri_ias15.g));
-    set_dp7_null(&(r->ri_ias15.b));
-    set_dp7_null(&(r->ri_ias15.csb));
-    set_dp7_null(&(r->ri_ias15.e));
-    set_dp7_null(&(r->ri_ias15.br));
-    set_dp7_null(&(r->ri_ias15.er));
-    r->ri_ias15.at          = NULL;
-    r->ri_ias15.x0          = NULL;
-    r->ri_ias15.v0          = NULL;
-    r->ri_ias15.a0          = NULL;
-    r->ri_ias15.csx         = NULL;
-    r->ri_ias15.csv         = NULL;
-    r->ri_ias15.csa0        = NULL;
-    r->ri_ias15.at          = NULL;
-    r->ri_ias15.map_allocated_N      = 0;
-    r->ri_ias15.map         = NULL;
 }
 
 int reb_reset_function_pointers(struct reb_simulation* const r){
@@ -495,6 +467,7 @@ void reb_init_simulation(struct reb_simulation* r){
     reb_integrator_janus_register(r);
     reb_integrator_whfast_register(r);
     reb_integrator_mercurius_register(r);
+    reb_integrator_ias15_register(r);
     reb_integrator_eos_register(r);
     reb_integrator_saba_register(r);
 
@@ -506,12 +479,6 @@ void reb_init_simulation(struct reb_simulation* r){
 
     r->integrator_selected = r->integrators_available; // first integrator is the selected one
 
-    // ********** IAS15
-    r->ri_ias15.epsilon         = 1e-9;
-    r->ri_ias15.min_dt      = 0;
-    r->ri_ias15.epsilon_global  = 1;
-    r->ri_ias15.iterations_max_exceeded = 0;    
-    
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;
     r->tree_root        = NULL;

@@ -36,7 +36,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <math.h>
 #include <time.h>
 #include <string.h>
@@ -52,6 +51,8 @@ void integrator_generate_constants(void);
 #include "tools.h"
 #include "integrator.h"
 #include "integrator_ias15.h"
+#include "input.h"
+#include "output.h"
 
 /**
  * @brief Struct containing pointers to intermediate values
@@ -155,7 +156,11 @@ static inline void add_cs(double* p, double* csp, double inp){
     *p = t;
 }
 
-void reb_integrator_ias15_alloc(struct reb_simulation* r){
+
+ 
+// Does the actual timestep.
+static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
+    struct reb_integrator_ias15_config* config = (struct reb_integrator_ias15_config*) &(r->integrator_selected->config);
     int N3;
     printf("this needs fixing\n");
     exit(EXIT_FAILURE);
@@ -164,42 +169,36 @@ void reb_integrator_ias15_alloc(struct reb_simulation* r){
 ///////////////    }else{ 
 ///////////////        N3 = 3*r->N;
 ///////////////    }
-    if (N3 > r->ri_ias15.allocatedN) {
-        realloc_dp7(&(r->ri_ias15.g),N3);
-        realloc_dp7(&(r->ri_ias15.b),N3);
-        realloc_dp7(&(r->ri_ias15.csb),N3);
-        realloc_dp7(&(r->ri_ias15.e),N3);
-        realloc_dp7(&(r->ri_ias15.br),N3);
-        realloc_dp7(&(r->ri_ias15.er),N3);
-        r->ri_ias15.at = realloc(r->ri_ias15.at,sizeof(double)*N3);
-        r->ri_ias15.x0 = realloc(r->ri_ias15.x0,sizeof(double)*N3);
-        r->ri_ias15.v0 = realloc(r->ri_ias15.v0,sizeof(double)*N3);
-        r->ri_ias15.a0 = realloc(r->ri_ias15.a0,sizeof(double)*N3);
-        r->ri_ias15.csx= realloc(r->ri_ias15.csx,sizeof(double)*N3);
-        r->ri_ias15.csv= realloc(r->ri_ias15.csv,sizeof(double)*N3);
-        r->ri_ias15.csa0 = realloc(r->ri_ias15.csa0,sizeof(double)*N3);
-        double* restrict const csx = r->ri_ias15.csx; 
-        double* restrict const csv = r->ri_ias15.csv; 
+    if (N3 > config->allocated_N) {
+        realloc_dp7(&(config->g),N3);
+        realloc_dp7(&(config->b),N3);
+        realloc_dp7(&(config->csb),N3);
+        realloc_dp7(&(config->e),N3);
+        realloc_dp7(&(config->br),N3);
+        realloc_dp7(&(config->er),N3);
+        config->at = realloc(config->at,sizeof(double)*N3);
+        config->x0 = realloc(config->x0,sizeof(double)*N3);
+        config->v0 = realloc(config->v0,sizeof(double)*N3);
+        config->a0 = realloc(config->a0,sizeof(double)*N3);
+        config->csx= realloc(config->csx,sizeof(double)*N3);
+        config->csv= realloc(config->csv,sizeof(double)*N3);
+        config->csa0 = realloc(config->csa0,sizeof(double)*N3);
+        double* restrict const csx = config->csx; 
+        double* restrict const csv = config->csv; 
         for (int i=0;i<N3;i++){
             // Kill compensated summation coefficients
             csx[i] = 0;
             csv[i] = 0;
         }
-        r->ri_ias15.allocatedN = N3;
+        config->allocated_N = N3;
     }
-    if (N3/3 > r->ri_ias15.map_allocated_N){
-        r->ri_ias15.map = realloc(r->ri_ias15.map,sizeof(int)*(N3/3));
+    if (N3/3 > config->map_allocated_N){
+        config->map = realloc(config->map,sizeof(int)*(N3/3));
         for (int i=0;i<N3/3;i++){
-            r->ri_ias15.map[i] = i;
+            config->map[i] = i;
         }
-        r->ri_ias15.map_allocated_N = N3/3;
+        config->map_allocated_N = N3/3;
     }
-
-}
- 
-// Does the actual timestep.
-static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
-    reb_integrator_ias15_alloc(r);
 
     struct reb_particle* const particles = r->particles;
     int N;
@@ -215,27 +214,28 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
 ///////////////        }
 ///////////////    }else{ 
 ///////////////        N = r->N;
-///////////////        map = r->ri_ias15.map; // identity map
+///////////////        map = config->map; // identity map
 ///////////////    }
-    const int N3 = 3*N;
+    
+    N3 = 3*N; // combine with previous N3
     
     reb_update_acceleration(r); 
     
     // New order is better. Old order for backwards compatibility. 
-    double* restrict const csx = r->ri_ias15.csx; 
-    double* restrict const csv = r->ri_ias15.csv; 
-    double* restrict const csa0 = r->ri_ias15.csa0; 
-    double* restrict const at = r->ri_ias15.at; 
-    double* restrict const x0 = r->ri_ias15.x0; 
-    double* restrict const v0 = r->ri_ias15.v0; 
-    double* restrict const a0 = r->ri_ias15.a0; 
+    double* restrict const csx = config->csx; 
+    double* restrict const csv = config->csv; 
+    double* restrict const csa0 = config->csa0; 
+    double* restrict const at = config->at; 
+    double* restrict const x0 = config->x0; 
+    double* restrict const v0 = config->v0; 
+    double* restrict const a0 = config->a0; 
     struct reb_vec3d* gravity_cs = r->gravity_cs; 
-    const struct reb_dpconst7 g  = dpcast(r->ri_ias15.g);
-    const struct reb_dpconst7 e  = dpcast(r->ri_ias15.e);
-    const struct reb_dpconst7 b  = dpcast(r->ri_ias15.b);
-    const struct reb_dpconst7 csb= dpcast(r->ri_ias15.csb);
-    const struct reb_dpconst7 er = dpcast(r->ri_ias15.er);
-    const struct reb_dpconst7 br = dpcast(r->ri_ias15.br);
+    const struct reb_dpconst7 g  = dpcast(config->g);
+    const struct reb_dpconst7 e  = dpcast(config->e);
+    const struct reb_dpconst7 b  = dpcast(config->b);
+    const struct reb_dpconst7 csb= dpcast(config->csb);
+    const struct reb_dpconst7 er = dpcast(config->er);
+    const struct reb_dpconst7 br = dpcast(config->br);
     for(int k=0;k<N;k++) {
         int mk = map[k];
         x0[3*k]   = particles[mk].x;
@@ -305,9 +305,9 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
             break;
         }
         if (iterations>=12){
-            r->ri_ias15.iterations_max_exceeded++;
+            config->iterations_max_exceeded++;
             const int integrator_iterations_warning = 10;
-            if (r->ri_ias15.iterations_max_exceeded==integrator_iterations_warning ){
+            if (config->iterations_max_exceeded==integrator_iterations_warning ){
                 reb_warning(r, "At least 10 predictor corrector loops in IAS15 did not converge. This is typically an indication of the timestep being too large.");
             }
             break;                              // Quit predictor corrector loop
@@ -466,7 +466,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
                         add_cs(&(b.p6[k]), &(csb.p6[k]), tmp);
                         
                         // Monitor change in b.p6[k] relative to at[k]. The predictor corrector scheme is converged if it is close to 0.
-                        if (r->ri_ias15.epsilon_global){
+                        if (config->epsilon_global){
                             const double ak  = fabs(at[k]);
                             if (isnormal(ak) && ak>maxak){
                                 maxak = ak;
@@ -484,7 +484,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
                             }
                         }
                     } 
-                    if (r->ri_ias15.epsilon_global){
+                    if (config->epsilon_global){
                         predictor_corrector_error = maxb6ktmp/maxak;
                     }
                     
@@ -498,18 +498,18 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
     // Find new timestep
     const double dt_done = r->dt;
     
-    if (r->ri_ias15.epsilon>0){
+    if (config->epsilon>0){
         // Estimate error (given by last term in series expansion) 
         // There are two options:
-        // r->ri_ias15.epsilon_global==1  (default)
+        // config->epsilon_global==1  (default)
         //   First, we determine the maximum acceleration and the maximum of the last term in the series. 
         //   Then, the two are divided.
-        // r->ri_ias15.epsilon_global==0
+        // config->epsilon_global==0
         //   Here, the fractional error is calculated for each particle individually and we use the maximum of the fractional error.
         //   This might fail in cases where a particle does not experience any (physical) acceleration besides roundoff errors. 
         double integrator_error = 0.0;
         unsigned int Nreal = N - r->N_var;
-        if (r->ri_ias15.epsilon_global){
+        if (config->epsilon_global){
             double maxak = 0.0;
             double maxb6k = 0.0;
             for(int i=0;i<Nreal;i++){ // Looping over all particles and all 3 components of the acceleration. 
@@ -546,12 +546,12 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
         double dt_new;
         if  (isnormal(integrator_error)){   
             // if error estimate is available increase by more educated guess
-            dt_new = sqrt7(r->ri_ias15.epsilon/integrator_error)*dt_done;
+            dt_new = sqrt7(config->epsilon/integrator_error)*dt_done;
         }else{                  // In the rare case that the error estimate doesn't give a finite number (e.g. when all forces accidentally cancel up to machine precission).
             dt_new = dt_done/safety_factor; // by default, increase timestep a little
         }
         
-        if (fabs(dt_new)<r->ri_ias15.min_dt) dt_new = copysign(r->ri_ias15.min_dt,dt_new);
+        if (fabs(dt_new)<config->min_dt) dt_new = copysign(config->min_dt,dt_new);
         
         if (fabs(dt_new/dt_done) < safety_factor) { // New timestep is significantly smaller.
             // Reset particles
@@ -702,7 +702,7 @@ static void copybuffers(const struct reb_dpconst7 _a, const struct reb_dpconst7 
 }
 
 // Do nothing here. This is only used in a leapfrog-like DKD integrator. IAS15 performs one complete timestep.
-void reb_integrator_ias15_step(struct reb_simulation* r){
+void reb_integrator_ias15_step(struct reb_integrator* ingtegrator, struct reb_simulation* r){
     r->gravity_ignore_terms = 0;
 
 #ifdef GENERATE_CONSTANTS
@@ -713,20 +713,19 @@ void reb_integrator_ias15_step(struct reb_simulation* r){
     while(!reb_integrator_ias15_step_internal(r));
 }
 
-void reb_integrator_ias15_synchronize(struct reb_simulation* r){
-}
 void reb_integrator_ias15_clear(struct reb_simulation* r){
-    const int N3 = r->ri_ias15.allocatedN;
+    struct reb_integrator_ias15_config* config = (struct reb_integrator_ias15_config*) &(r->integrator_selected->config);
+    const int N3 = config->allocated_N;
     if (N3){
-        clear_dp7(&(r->ri_ias15.g),N3);
-        clear_dp7(&(r->ri_ias15.e),N3);
-        clear_dp7(&(r->ri_ias15.b),N3);
-        clear_dp7(&(r->ri_ias15.csb),N3);
-        clear_dp7(&(r->ri_ias15.er),N3);
-        clear_dp7(&(r->ri_ias15.br),N3);
+        clear_dp7(&(config->g),N3);
+        clear_dp7(&(config->e),N3);
+        clear_dp7(&(config->b),N3);
+        clear_dp7(&(config->csb),N3);
+        clear_dp7(&(config->er),N3);
+        clear_dp7(&(config->br),N3);
         
-        double* restrict const csx = r->ri_ias15.csx; 
-        double* restrict const csv = r->ri_ias15.csv; 
+        double* restrict const csx = config->csx; 
+        double* restrict const csv = config->csv; 
         for (int i=0;i<N3;i++){
             // Kill compensated summation coefficients
             csx[i] = 0;
@@ -735,32 +734,6 @@ void reb_integrator_ias15_clear(struct reb_simulation* r){
     }
 }
 
-void reb_integrator_ias15_reset(struct reb_simulation* r){
-    r->ri_ias15.allocatedN  = 0;
-    r->ri_ias15.map_allocated_N  = 0;
-    free_dp7(&(r->ri_ias15.g));
-    free_dp7(&(r->ri_ias15.e));
-    free_dp7(&(r->ri_ias15.b));
-    free_dp7(&(r->ri_ias15.csb));
-    free_dp7(&(r->ri_ias15.er));
-    free_dp7(&(r->ri_ias15.br));
-    free(r->ri_ias15.at);
-    r->ri_ias15.at =  NULL;
-    free(r->ri_ias15.x0);
-    r->ri_ias15.x0 =  NULL;
-    free(r->ri_ias15.v0);
-    r->ri_ias15.v0 =  NULL;
-    free(r->ri_ias15.a0);
-    r->ri_ias15.a0 =  NULL;
-    free(r->ri_ias15.csx);
-    r->ri_ias15.csx=  NULL;
-    free(r->ri_ias15.csv);
-    r->ri_ias15.csv=  NULL;
-    free(r->ri_ias15.csa0);
-    r->ri_ias15.csa0 =  NULL;
-    free(r->ri_ias15.map);
-    r->ri_ias15.map =  NULL;
-}
 
 #ifdef GENERATE_CONSTANTS
 void integrator_generate_constants(void){
@@ -847,3 +820,222 @@ void integrator_generate_constants(void){
     exit(0);
 }
 #endif // GENERATE_CONSTANTS
+
+enum IAS15_CONFIG {
+    EPSILON = 1,
+    MINDT = 2,
+    EPSILONGLOBAL = 3,
+    ITERATIONSMAX = 4,
+    ALLOCATEDN = 5,
+    AT = 6,
+    X0 = 7,
+    V0 = 8,
+    A0 = 9,
+    CSX = 10,
+    CSV = 11,
+    CSA0 = 12,
+
+    G0 = 20,
+    G1 = 21,
+    G2 = 22,
+    G3 = 23,
+    G4 = 24,
+    G5 = 25,
+    G6 = 26,
+    
+    B0 = 30,
+    B1 = 31,
+    B2 = 32,
+    B3 = 33,
+    B4 = 34,
+    B5 = 35,
+    B6 = 36,
+    
+    CSB0 = 40,
+    CSB1 = 41,
+    CSB2 = 42,
+    CSB3 = 43,
+    CSB4 = 44,
+    CSB5 = 45,
+    CSB6 = 46,
+    
+    E0 = 50,
+    E1 = 51,
+    E2 = 52,
+    E3 = 53,
+    E4 = 54,
+    E5 = 55,
+    E6 = 56,
+    
+    ER0 = 60,
+    ER1 = 61,
+    ER2 = 62,
+    ER3 = 63,
+    ER4 = 64,
+    ER5 = 65,
+    ER6 = 66,
+    
+    BR0 = 70,
+    BR1 = 71,
+    BR2 = 72,
+    BR3 = 73,
+    BR4 = 74,
+    BR5 = 75,
+    BR6 = 76,
+    
+};
+
+size_t reb_integrator_ias15_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
+    struct reb_integrator_ias15_config* config = (struct reb_integrator_ias15_config*)integrator->config;
+    switch (field.type){
+        case REB_BF(IAS15, EPSILON):
+            return reb_input_stream_fread(stream, &config->epsilon, field.size, 1);
+        case REB_BF(IAS15, MINDT):
+            return reb_input_stream_fread(stream, &config->min_dt, field.size, 1);
+        case REB_BF(IAS15, EPSILONGLOBAL):
+            return reb_input_stream_fread(stream, &config->epsilon_global, field.size, 1);
+        case REB_BF(IAS15, ITERATIONSMAX):
+            return reb_input_stream_fread(stream, &config->iterations_max_exceeded, field.size, 1);
+            //TODO REIMPLEMENT:
+        //CASE_MALLOC_DP7(IAS15_G,  r->ri_ias15.g);
+        //CASE_MALLOC_DP7(IAS15_B,  r->ri_ias15.b);
+        //CASE_MALLOC_DP7(IAS15_CSB,r->ri_ias15.csb);
+        //CASE_MALLOC_DP7(IAS15_E,  r->ri_ias15.e);
+        //CASE_MALLOC_DP7(IAS15_BR, r->ri_ias15.br);
+        //CASE_MALLOC_DP7(IAS15_ER, r->ri_ias15.er);
+        case REB_BF(IAS15, AT):
+            if(config->at){
+                free(config->at);
+            }
+            config->allocated_N = (int)(field.size/sizeof(double));
+            if (field.size){
+                config->at = malloc(field.size);
+                return reb_input_stream_fread(stream, config->at, field.size,1);
+            }
+            return 0;
+            break;
+        case REB_BF(IAS15, X0):
+            if(config->x0){
+                free(config->x0);
+            }
+            config->allocated_N = (int)(field.size/sizeof(double));
+            if (field.size){
+                config->x0 = malloc(field.size);
+                return reb_input_stream_fread(stream, config->x0, field.size,1);
+            }
+            return 0;
+            break;
+        case REB_BF(IAS15, V0):
+            if(config->v0){
+                free(config->v0);
+            }
+            config->allocated_N = (int)(field.size/sizeof(double));
+            if (field.size){
+                config->v0 = malloc(field.size);
+                return reb_input_stream_fread(stream, config->v0, field.size,1);
+            }
+            return 0;
+            break;
+        case REB_BF(IAS15, A0):
+            if(config->a0){
+                free(config->a0);
+            }
+            config->allocated_N = (int)(field.size/sizeof(double));
+            if (field.size){
+                config->a0 = malloc(field.size);
+                return reb_input_stream_fread(stream, config->a0, field.size,1);
+            }
+            return 0;
+            break;
+        case REB_BF(IAS15, CSX):
+            if(config->csx){
+                free(config->csx);
+            }
+            config->allocated_N = (int)(field.size/sizeof(double));
+            if (field.size){
+                config->csx = malloc(field.size);
+                return reb_input_stream_fread(stream, config->csx, field.size,1);
+            }
+            return 0;
+            break;
+        case REB_BF(IAS15, CSV):
+            if(config->csv){
+                free(config->csv);
+            }
+            config->allocated_N = (int)(field.size/sizeof(double));
+            if (field.size){
+                config->csv = malloc(field.size);
+                return reb_input_stream_fread(stream, config->csv, field.size,1);
+            }
+            return 0;
+            break;
+        case REB_BF(IAS15, CSA0):
+            if(config->csa0){
+                free(config->csa0);
+            }
+            config->allocated_N = (int)(field.size/sizeof(double));
+            if (field.size){
+                config->csa0 = malloc(field.size);
+                return reb_input_stream_fread(stream, config->csa0, field.size,1);
+            }
+            return 0;
+            break;
+        default:
+            return 0;
+    }
+}
+
+void reb_integrator_ias15_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
+    struct reb_integrator_ias15_config* config = (struct reb_integrator_ias15_config*)integrator->config;
+    int N3 = config->allocated_N;
+    reb_output_stream_write_field(stream, REB_BF(IAS15, EPSILON),      &(config->epsilon),               sizeof(double));
+    reb_output_stream_write_field(stream, REB_BF(IAS15, MINDT),        &(config->min_dt),                sizeof(double));
+    reb_output_stream_write_field(stream, REB_BF(IAS15, EPSILONGLOBAL),&(config->epsilon_global),        sizeof(unsigned int));
+    reb_output_stream_write_field(stream, REB_BF(IAS15, ITERATIONSMAX),&(config->iterations_max_exceeded),sizeof(unsigned long));
+    reb_output_stream_write_field(stream, REB_BF(IAS15, ALLOCATEDN),   &(config->allocated_N),            sizeof(int));
+    reb_output_stream_write_field(stream, REB_BF(IAS15, AT),           config->at,     sizeof(double)*N3);
+    reb_output_stream_write_field(stream, REB_BF(IAS15, X0),           config->x0,     sizeof(double)*N3);
+    reb_output_stream_write_field(stream, REB_BF(IAS15, V0),           config->v0,     sizeof(double)*N3);
+    reb_output_stream_write_field(stream, REB_BF(IAS15, A0),           config->a0,     sizeof(double)*N3);
+    reb_output_stream_write_field(stream, REB_BF(IAS15, CSX),          config->csx,    sizeof(double)*N3);
+    reb_output_stream_write_field(stream, REB_BF(IAS15, CSV),          config->csv,    sizeof(double)*N3);
+    reb_output_stream_write_field(stream, REB_BF(IAS15, CSA0),         config->csa0,   sizeof(double)*N3);
+}
+
+void* reb_integrator_ias15_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_ias15_config* config = calloc(1, sizeof(struct reb_integrator_ias15_config));
+    config->epsilon         = 1e-9;
+    config->min_dt      = 0;
+    config->epsilon_global  = 1;
+    config->iterations_max_exceeded = 0;
+    return config;
+}
+
+void reb_integrator_ias15_free(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_ias15_config* config = (struct reb_integrator_ias15_config*)integrator->config;
+    free_dp7(&(config->g));
+    free_dp7(&(config->e));
+    free_dp7(&(config->b));
+    free_dp7(&(config->csb));
+    free_dp7(&(config->er));
+    free_dp7(&(config->br));
+    free(config->at);
+    free(config->x0);
+    free(config->v0);
+    free(config->a0);
+    free(config->csx);
+    free(config->csv);
+    free(config->csa0);
+    free(config->map);
+    free(config);
+}
+
+void reb_integrator_ias15_register(struct reb_simulation* r){
+    struct reb_integrator* integrator = reb_simulation_register_integrator(r, "ias15", 3); // 3 is a new index to avoid 0
+    integrator->step        = reb_integrator_ias15_step;
+    integrator->synchronize = NULL;
+    integrator->alloc       = reb_integrator_ias15_alloc;
+    integrator->free        = reb_integrator_ias15_free;
+    integrator->load        = reb_integrator_ias15_load;
+    integrator->save        = reb_integrator_ias15_save;
+}

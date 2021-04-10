@@ -106,19 +106,6 @@ struct reb_vec3d {
 };
 
 /**
- * @brief Generic 7d pointer, for internal use only (IAS15).
- */
-struct reb_dp7 {
-    double* p0; ///< 0 substep
-    double* p1; ///< 1 substep
-    double* p2; ///< 2 substep
-    double* p3; ///< 3 substep
-    double* p4; ///< 4 substep
-    double* p5; ///< 5 substep
-    double* p6; ///< 6 substep
-};
-
-/**
  * @details Structure that contains the relative position and velocity of a ghostbox.
  */
 struct reb_ghostbox{
@@ -128,75 +115,6 @@ struct reb_ghostbox{
     double shiftvx;     ///< Relative x velocity
     double shiftvy;     ///< Relative y velocity
     double shiftvz;     ///< Relative z velocity
-};
-
-/**
- * @defgroup IntegratorStructs Configuration structures for integrators
- * @{
-*/
-/**
- * @brief This structure contains variables and pointer used by the IAS15 integrator.
- */
-struct reb_simulation_integrator_ias15 {
-    /**
-     * @brief This parameter controls the accuracy of the integrator.
-     * @details Set to 0 to make IAS15 a non-adaptive integrator.
-     * The default value is: 1e-9.
-     **/
-    double epsilon;
-
-    /**
-     * @brief The minimum allowed timestep.
-     * @details The default value is 0 (no minimal timestep).
-     * Set a finite value to this variable if the IAS15 integrator has problems
-     * and the timestep becomes excessively small.
-     **/
-    double min_dt;
-    
-    /** 
-     * @brief Flag that determines how relative acceleration error is estimated.
-     * @details If set to 1, estimate the fractional error by max(acceleration_error)/max(acceleration), 
-     * where max is take over all particles. If set to 0, estimate the fractional error by 
-     * max(acceleration_error/acceleration).
-     **/
-    unsigned int epsilon_global;
-
-    /**
-     * @cond PRIVATE
-     * Internal data structures below. Nothing to be changed by the user.
-     */
-    /**
-     * @brief Counter how many times the iteration did not converge. 
-     */
-    unsigned long iterations_max_exceeded;
-
-
-
-    int allocatedN;             ///< Size of allocated arrays.
-
-    double* at;            ///< Temporary buffer for acceleration
-    double* x0;            ///<                      position (used for initial values at h=0)
-    double* v0;            ///<                      velocity
-    double* a0;            ///<                      acceleration
-    double* csx;           ///<                      compensated summation for x
-    double* csv;           ///<                      compensated summation for v
-    double* csa0;          ///<                      compensated summation for a
-
-    struct reb_dp7 g;
-    struct reb_dp7 b;
-    struct reb_dp7 csb;         ///< Compensated summation for b
-    struct reb_dp7 e;
-
-    // The following values are used for resetting the b and e coefficients if a timestep gets rejected
-    struct reb_dp7 br;
-    struct reb_dp7 er;
-
-    int* map;               // map to particles (identity map for non-mercurius simulations)
-    int map_allocated_N;    // allocated size for map
-    /**
-     * @endcond
-     */
-
 };
 
 
@@ -321,27 +239,9 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_GRAVITY = 53,
     REB_BINARY_FIELD_TYPE_OMEGA = 54,
     REB_BINARY_FIELD_TYPE_OMEGAZ = 55,
-    REB_BINARY_FIELD_TYPE_IAS15_EPSILON = 69,
-    REB_BINARY_FIELD_TYPE_IAS15_MINDT = 70,
-    REB_BINARY_FIELD_TYPE_IAS15_EPSILONGLOBAL = 71,
-    REB_BINARY_FIELD_TYPE_IAS15_ITERATIONSMAX = 72,
     REB_BINARY_FIELD_TYPE_PARTICLES = 85,
     REB_BINARY_FIELD_TYPE_VARCONFIG = 86,
     REB_BINARY_FIELD_TYPE_FUNCTIONPOINTERS = 87,
-    REB_BINARY_FIELD_TYPE_IAS15_ALLOCATEDN = 88,
-    REB_BINARY_FIELD_TYPE_IAS15_AT = 89,
-    REB_BINARY_FIELD_TYPE_IAS15_X0 = 90,
-    REB_BINARY_FIELD_TYPE_IAS15_V0 = 91,
-    REB_BINARY_FIELD_TYPE_IAS15_A0 = 92,
-    REB_BINARY_FIELD_TYPE_IAS15_CSX = 93,
-    REB_BINARY_FIELD_TYPE_IAS15_CSV = 94,
-    REB_BINARY_FIELD_TYPE_IAS15_CSA0 = 95,
-    REB_BINARY_FIELD_TYPE_IAS15_G = 96,
-    REB_BINARY_FIELD_TYPE_IAS15_B = 97,
-    REB_BINARY_FIELD_TYPE_IAS15_CSB = 98,
-    REB_BINARY_FIELD_TYPE_IAS15_E = 99,
-    REB_BINARY_FIELD_TYPE_IAS15_BR = 100,
-    REB_BINARY_FIELD_TYPE_IAS15_ER = 101,
     REB_BINARY_FIELD_TYPE_VISUALIZATION = 107,
     REB_BINARY_FIELD_TYPE_SAVERSION = 125,
     REB_BINARY_FIELD_TYPE_WALLTIME = 126,
@@ -352,7 +252,6 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_SANEXTSTEP = 136,
     REB_BINARY_FIELD_TYPE_STEPSDONE = 137,
     REB_BINARY_FIELD_TYPE_DTLASTDONE = 145,
-    REB_BINARY_FIELD_TYPE_IAS15_NEWORDER = 153,
     REB_BINARY_FIELD_TYPE_RAND_SEED = 154,
     REB_BINARY_FIELD_TYPE_TESTPARTICLEHIDEWARNINGS = 155,
     REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG = 0xFF000000,
@@ -622,14 +521,6 @@ struct reb_simulation {
         REB_GRAVITY_MERCURIUS = 4,  ///< Special gravity routine only for MERCURIUS
         REB_GRAVITY_JACOBI = 5,     ///< Special gravity routine which includes the Jacobi terms for WH integrators 
         } gravity;
-    /** @} */
-
-
-    /**
-     * \name Integrator structs (the contain integrator specific variables and temporary data structures) 
-     * @{
-     */
-    struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     /** @} */
 
     /**

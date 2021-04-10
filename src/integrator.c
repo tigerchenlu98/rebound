@@ -39,13 +39,10 @@
 #include "tree.h"
 #include "output.h"
 #include "integrator.h"
-#include "integrator_ias15.h"
    
 void reb_integrator_step(struct reb_simulation* r){
 	switch(r->integrator){
 		case REB_INTEGRATOR_IAS15:
-			reb_integrator_ias15_step(r);
-			break;
 		case REB_INTEGRATOR_LEAPFROG:
 		case REB_INTEGRATOR_SEI:
 		case REB_INTEGRATOR_SABA:
@@ -63,8 +60,6 @@ void reb_integrator_step(struct reb_simulation* r){
 void reb_integrator_synchronize(struct reb_simulation* r){
 	switch(r->integrator){
 		case REB_INTEGRATOR_IAS15:
-			reb_integrator_ias15_synchronize(r);
-			break;
 		case REB_INTEGRATOR_LEAPFROG:
 		case REB_INTEGRATOR_SEI:
 		case REB_INTEGRATOR_WHFAST:
@@ -84,7 +79,7 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 void reb_integrator_reset(struct reb_simulation* r){
 	r->integrator = REB_INTEGRATOR_IAS15;
 	r->gravity_ignore_terms = 0;
-	reb_integrator_ias15_reset(r);
+	//reb_integrator_ias15_reset(r);
 	//reb_integrator_mercurius_reset(r);
 	//reb_integrator_sei_config_free(r->sei_config);   // TODO!
 	//r->sei_config = reb_integrator_sei_config_alloc();

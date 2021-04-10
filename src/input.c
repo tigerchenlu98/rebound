@@ -114,17 +114,6 @@ static int reb_fseek(struct reb_input_stream* stream, long offset, int whence){
     return -1;
 }
 
-
-void reb_read_dp7(struct reb_input_stream* stream, struct reb_dp7* dp7, const int N3){
-    reb_input_stream_fread(stream, dp7->p0,sizeof(double),N3);
-    reb_input_stream_fread(stream, dp7->p1,sizeof(double),N3);
-    reb_input_stream_fread(stream, dp7->p2,sizeof(double),N3);
-    reb_input_stream_fread(stream, dp7->p3,sizeof(double),N3);
-    reb_input_stream_fread(stream, dp7->p4,sizeof(double),N3);
-    reb_input_stream_fread(stream, dp7->p5,sizeof(double),N3);
-    reb_input_stream_fread(stream, dp7->p6,sizeof(double),N3);
-}
-
 // Macro to read a single field from a binary file.
 #define CASE(typename, value) case REB_BINARY_FIELD_TYPE_##typename: \
     {\
@@ -132,32 +121,6 @@ void reb_read_dp7(struct reb_input_stream* stream, struct reb_dp7* dp7, const in
     }\
     break;
 
-#define CASE_MALLOC(typename, valueref) case REB_BINARY_FIELD_TYPE_##typename: \
-    {\
-        valueref = malloc(field.size);\
-        reb_input_stream_fread(stream, valueref, field.size,1);\
-    }\
-    break;
-
-#define CASE_MALLOC_DP7(typename, valueref) case REB_BINARY_FIELD_TYPE_##typename: \
-    {\
-        valueref.p0 = malloc(field.size/7);\
-        valueref.p1 = malloc(field.size/7);\
-        valueref.p2 = malloc(field.size/7);\
-        valueref.p3 = malloc(field.size/7);\
-        valueref.p4 = malloc(field.size/7);\
-        valueref.p5 = malloc(field.size/7);\
-        valueref.p6 = malloc(field.size/7);\
-        reb_input_stream_fread(stream, valueref.p0, field.size/7,1);\
-        reb_input_stream_fread(stream, valueref.p1, field.size/7,1);\
-        reb_input_stream_fread(stream, valueref.p2, field.size/7,1);\
-        reb_input_stream_fread(stream, valueref.p3, field.size/7,1);\
-        reb_input_stream_fread(stream, valueref.p4, field.size/7,1);\
-        reb_input_stream_fread(stream, valueref.p5, field.size/7,1);\
-        reb_input_stream_fread(stream, valueref.p6, field.size/7,1);\
-    }\
-    break;
-    
 int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, enum reb_input_binary_messages* warnings){
     struct reb_binary_field field;
     int numread = reb_input_stream_fread(stream, &field, sizeof(struct reb_binary_field), 1);
@@ -224,11 +187,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(INTEGRATOR,         &r->integrator);
         CASE(BOUNDARY,           &r->boundary);
         CASE(GRAVITY,            &r->gravity);
-        CASE(IAS15_EPSILON,      &r->ri_ias15.epsilon);
-        CASE(IAS15_MINDT,        &r->ri_ias15.min_dt);
-        CASE(IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global);
-        CASE(IAS15_ITERATIONSMAX,&r->ri_ias15.iterations_max_exceeded);
-        CASE(IAS15_ALLOCATEDN,   &r->ri_ias15.allocatedN);
         CASE(PYTHON_UNIT_L,      &r->python_unit_l);
         CASE(PYTHON_UNIT_M,      &r->python_unit_m);
         CASE(PYTHON_UNIT_T,      &r->python_unit_t);
@@ -271,19 +229,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
                 }
             }
             break;
-        CASE_MALLOC(IAS15_AT,     r->ri_ias15.at);
-        CASE_MALLOC(IAS15_X0,     r->ri_ias15.x0);
-        CASE_MALLOC(IAS15_V0,     r->ri_ias15.v0);
-        CASE_MALLOC(IAS15_A0,     r->ri_ias15.a0);
-        CASE_MALLOC(IAS15_CSX,    r->ri_ias15.csx);
-        CASE_MALLOC(IAS15_CSV,    r->ri_ias15.csv);
-        CASE_MALLOC(IAS15_CSA0,   r->ri_ias15.csa0);
-        CASE_MALLOC_DP7(IAS15_G,  r->ri_ias15.g);
-        CASE_MALLOC_DP7(IAS15_B,  r->ri_ias15.b);
-        CASE_MALLOC_DP7(IAS15_CSB,r->ri_ias15.csb);
-        CASE_MALLOC_DP7(IAS15_E,  r->ri_ias15.e);
-        CASE_MALLOC_DP7(IAS15_BR, r->ri_ias15.br);
-        CASE_MALLOC_DP7(IAS15_ER, r->ri_ias15.er);
         case REB_BINARY_FIELD_TYPE_END:
             return 0;
         case REB_BINARY_FIELD_TYPE_FUNCTIONPOINTERS:

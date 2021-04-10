@@ -315,7 +315,9 @@ static void reb_mercurius_encounter_step(struct reb_simulation* const r, const d
     const double old_t = r->t;
     double t_needed = r->t + _dt; 
         
-    reb_integrator_ias15_reset(r);
+    printf("Need to do ias15 reset");
+    exit(EXIT_FAILURE);
+    // reb_integrator_ias15_reset(r); // TODO
     
     r->dt = 0.0001*_dt; // start with a small timestep.
     
@@ -324,7 +326,7 @@ static void reb_mercurius_encounter_step(struct reb_simulation* const r, const d
         r->particles[0].vx = 0; // star does not move in dh 
         r->particles[0].vy = 0;
         r->particles[0].vz = 0;
-        reb_integrator_ias15_step(r);
+        reb_integrator_ias15_step(NULL, r);  // TODO  need to do differently. first argumnet should not be null
         r->particles[0].vx = star.vx; // restore every timestep for collisions
         r->particles[0].vy = star.vy;
         r->particles[0].vz = star.vz;
@@ -611,7 +613,9 @@ void reb_integrator_mercurius_particle_add(struct reb_simulation* r, unsigned in
         config->recalculate_dcrit_this_timestep       = 1;
         config->recalculate_coordinates_this_timestep = 1;
     }else{  // IAS15 part
-        reb_integrator_ias15_reset(r); 
+        printf("Need to do ias15 reset");
+        exit(EXIT_FAILURE);
+        // reb_integrator_ias15_reset(r); // TODO
         if (config->dcrit_allocatedN<r->N){
             config->dcrit              = realloc(config->dcrit, sizeof(double)*r->N);
             config->dcrit_allocatedN = r->N;
@@ -641,7 +645,9 @@ void reb_integrator_mercurius_particle_remove(struct reb_simulation* r, unsigned
             }
         }
     }
-    reb_integrator_ias15_reset(r);
+    printf("Need to do ias15 reset");
+    exit(EXIT_FAILURE);
+    // reb_integrator_ias15_reset(r); // TODO
     if (config->mode==1){
         int after_to_be_removed_particle = 0;
         int encounter_index = -1;
@@ -670,6 +676,7 @@ void reb_integrator_mercurius_register(struct reb_simulation* r){
     integrator->load        = reb_integrator_mercurius_load;
     integrator->save        = reb_integrator_mercurius_save;
     integrator->particle_add= reb_integrator_mercurius_particle_add;
+    integrator->particle_remove= reb_integrator_mercurius_particle_remove;
 }
 
 void reb_integator_mercurius_calculate_acceleration_whfast_part(struct reb_simulation* r){
