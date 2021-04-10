@@ -31,7 +31,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 #include <math.h>
 #include <time.h>
 #include "particle.h"
@@ -39,6 +39,7 @@
 #include "rebound.h"
 #include "boundary.h"
 #include "tree.h"
+#include "integrator_mercurius.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
 #define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
 
@@ -49,15 +50,16 @@ void reb_collision_search(struct reb_simulation* const r){
     int N = r->N - r->N_var;
     int Ninner = N;
     int* mercurius_map = NULL;
-    if (r->integrator==REB_INTEGRATOR_MERCURIUS){
-        if (r->ri_mercurius.mode==0){
+    if (strcmp(r->integrator_selected->name,"mercurius")==0){
+        struct reb_integrator_mercurius_config* config = (struct reb_integrator_mercurius_config*) &(r->integrator_selected->config);
+        if (config->mode==0){
             // After jump step, only collisions with star might occur.
             // All other collisions in encounter step/
             Ninner = 1;
         }else{
-            N = r->ri_mercurius.encounterN;
+            N = config->encounterN;
             Ninner = N;
-            mercurius_map = r->ri_mercurius.encounter_map;
+            mercurius_map = config->encounter_map;
         }
     }
     int collisions_N = 0;
@@ -692,46 +694,47 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
     struct reb_particle* pj = &(r->particles[j]);
                 
     double invmass = 1.0/(pi->m + pj->m);
-    
-    //Scale out energy from collision - initial energy
-    double Ei=0, Ef=0;
-    if(r->track_energy_offset){
-        {
-            double vx = pi->vx;
-            double vy = pi->vy;
-            double vz = pi->vz;
-            // Calculate energy difference in inertial frame
-            if (r->integrator == REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.mode==1){
-                vx += r->ri_mercurius.com_vel.x;
-                vy += r->ri_mercurius.com_vel.y;
-                vz += r->ri_mercurius.com_vel.z;
-            }
-
-            Ei += 0.5*pi->m*(vx*vx + vy*vy + vz*vz);
-        }
-        {
-            double vx = pj->vx;
-            double vy = pj->vy;
-            double vz = pj->vz;
-            if (r->integrator == REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.mode==1){
-                vx += r->ri_mercurius.com_vel.x;
-                vy += r->ri_mercurius.com_vel.y;
-                vz += r->ri_mercurius.com_vel.z;
-            }
-
-            Ei += 0.5*pj->m*(vx*vx + vy*vy + vz*vz);
-        }
-        const int N_active = ((r->N_active==-1)?r->N-r->N_var:r->N_active);
-        // No potential energy between test particles
-        if (i<N_active || j<N_active){
-            double x = pi->x - pj->x;
-            double y = pi->y - pj->y;
-            double z = pi->z - pj->z;
-            double _r = sqrt(x*x + y*y + z*z);
-
-            Ei += - r->G*pi->m*pj->m/_r;
-        }
-    }
+   
+   // TODO REIMPLEMENT: 
+/////////////    //Scale out energy from collision - initial energy
+/////////////    double Ei=0, Ef=0;
+/////////////    if(r->track_energy_offset){
+/////////////        {
+/////////////            double vx = pi->vx;
+/////////////            double vy = pi->vy;
+/////////////            double vz = pi->vz;
+/////////////            // Calculate energy difference in inertial frame
+/////////////            if (r->integrator == REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.mode==1){
+/////////////                vx += r->ri_mercurius.com_vel.x;
+/////////////                vy += r->ri_mercurius.com_vel.y;
+/////////////                vz += r->ri_mercurius.com_vel.z;
+/////////////            }
+/////////////
+/////////////            Ei += 0.5*pi->m*(vx*vx + vy*vy + vz*vz);
+/////////////        }
+/////////////        {
+/////////////            double vx = pj->vx;
+/////////////            double vy = pj->vy;
+/////////////            double vz = pj->vz;
+/////////////            if (r->integrator == REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.mode==1){
+/////////////                vx += r->ri_mercurius.com_vel.x;
+/////////////                vy += r->ri_mercurius.com_vel.y;
+/////////////                vz += r->ri_mercurius.com_vel.z;
+/////////////            }
+/////////////
+/////////////            Ei += 0.5*pj->m*(vx*vx + vy*vy + vz*vz);
+/////////////        }
+/////////////        const int N_active = ((r->N_active==-1)?r->N-r->N_var:r->N_active);
+/////////////        // No potential energy between test particles
+/////////////        if (i<N_active || j<N_active){
+/////////////            double x = pi->x - pj->x;
+/////////////            double y = pi->y - pj->y;
+/////////////            double z = pi->z - pj->z;
+/////////////            double _r = sqrt(x*x + y*y + z*z);
+/////////////
+/////////////            Ei += - r->G*pi->m*pj->m/_r;
+/////////////        }
+/////////////    }
     
     // Merge by conserving mass, volume and momentum
     pi->vx = (pi->vx*pi->m + pj->vx*pj->m)*invmass;
@@ -745,22 +748,23 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
     pi->lastcollision = r->t;
     
 
-    // Keeping track of energy offst
-    if(r->track_energy_offset){
-        {
-            double vx = pi->vx;
-            double vy = pi->vy;
-            double vz = pi->vz;
-            if (r->integrator == REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.mode==1){
-                vx += r->ri_mercurius.com_vel.x;
-                vy += r->ri_mercurius.com_vel.y;
-                vz += r->ri_mercurius.com_vel.z;
-            }
-
-            Ef += 0.5*pi->m*(vx*vx + vy*vy + vz*vz);
-        }
-        r->energy_offset += Ei - Ef;
-    }
+////////////////    // TODO REIMPLEMENT
+////////////////    // Keeping track of energy offst
+////////////////    if(r->track_energy_offset){
+////////////////        {
+////////////////            double vx = pi->vx;
+////////////////            double vy = pi->vy;
+////////////////            double vz = pi->vz;
+////////////////            if (r->integrator == REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.mode==1){
+////////////////                vx += r->ri_mercurius.com_vel.x;
+////////////////                vy += r->ri_mercurius.com_vel.y;
+////////////////                vz += r->ri_mercurius.com_vel.z;
+////////////////            }
+////////////////
+////////////////            Ef += 0.5*pi->m*(vx*vx + vy*vy + vz*vz);
+////////////////        }
+////////////////        r->energy_offset += Ei - Ef;
+////////////////    }
     
     return swap?1:2; // Remove particle p2 from simulation
 }

@@ -40,7 +40,6 @@
 #include "output.h"
 #include "integrator.h"
 #include "integrator_ias15.h"
-#include "integrator_mercurius.h"
    
 void reb_integrator_step(struct reb_simulation* r){
 	switch(r->integrator){
@@ -50,13 +49,11 @@ void reb_integrator_step(struct reb_simulation* r){
 		case REB_INTEGRATOR_LEAPFROG:
 		case REB_INTEGRATOR_SEI:
 		case REB_INTEGRATOR_SABA:
+		case REB_INTEGRATOR_MERCURIUS:
 		case REB_INTEGRATOR_WHFAST:
 		case REB_INTEGRATOR_JANUS:
 		case REB_INTEGRATOR_EOS:
             r->integrator_selected->step(r->integrator_selected, r);
-			break;
-		case REB_INTEGRATOR_MERCURIUS:
-			reb_integrator_mercurius_step(r);
 			break;
 		default:
 			break;
@@ -71,15 +68,13 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 		case REB_INTEGRATOR_LEAPFROG:
 		case REB_INTEGRATOR_SEI:
 		case REB_INTEGRATOR_WHFAST:
+		case REB_INTEGRATOR_MERCURIUS:
 		case REB_INTEGRATOR_SABA:
 		case REB_INTEGRATOR_JANUS:
 		case REB_INTEGRATOR_EOS:
             if (r->integrator_selected->synchronize){
                 r->integrator_selected->synchronize(r->integrator_selected, r);
             }
-			break;
-		case REB_INTEGRATOR_MERCURIUS:
-			reb_integrator_mercurius_synchronize(r);
 			break;
 		default:
 			break;
@@ -90,7 +85,7 @@ void reb_integrator_reset(struct reb_simulation* r){
 	r->integrator = REB_INTEGRATOR_IAS15;
 	r->gravity_ignore_terms = 0;
 	reb_integrator_ias15_reset(r);
-	reb_integrator_mercurius_reset(r);
+	//reb_integrator_mercurius_reset(r);
 	//reb_integrator_sei_config_free(r->sei_config);   // TODO!
 	//r->sei_config = reb_integrator_sei_config_alloc();
 	//reb_integrator_janus_reset(r);
@@ -118,32 +113,8 @@ void reb_update_acceleration(struct reb_simulation* r){
 		reb_calculate_acceleration_var(r);
 	}
 
-	if (r->additional_forces  && (r->integrator != REB_INTEGRATOR_MERCURIUS || r->ri_mercurius.mode==0)){
-        // For Mercurius:
-        // Additional forces are only calculated in the kick step, not during close encounter
-        if (r->integrator==REB_INTEGRATOR_MERCURIUS){
-            // shift pos and velocity so that external forces are calculated in inertial frame
-            // Note: Copying avoids degrading floating point performance
-            if(r->N>r->ri_mercurius.allocatedN_additionalforces){
-                r->ri_mercurius.particles_backup_additionalforces = realloc(r->ri_mercurius.particles_backup_additionalforces, r->N*sizeof(struct reb_particle));
-                r->ri_mercurius.allocatedN_additionalforces = r->N;
-            }
-            memcpy(r->ri_mercurius.particles_backup_additionalforces,r->particles,r->N*sizeof(struct reb_particle)); 
-            reb_integrator_mercurius_dh_to_inertial(r);
-        }
+	if (r->additional_forces){
         r->additional_forces(r);
-        if (r->integrator==REB_INTEGRATOR_MERCURIUS){
-            struct reb_particle* restrict const particles = r->particles;
-            struct reb_particle* restrict const backup = r->ri_mercurius.particles_backup_additionalforces;
-            for (int i=0;i<r->N;i++){
-                particles[i].x = backup[i].x;
-                particles[i].y = backup[i].y;
-                particles[i].z = backup[i].z;
-                particles[i].vx = backup[i].vx;
-                particles[i].vy = backup[i].vy;
-                particles[i].vz = backup[i].vz;
-            }
-        }
     }
 }
 

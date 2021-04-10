@@ -119,7 +119,7 @@ void reb_step(struct reb_simulation* const r){
         reb_integrator_synchronize(r);
         r->pre_timestep_modifications(r);
         //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
-        r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
+        //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
    
     reb_integrator_step(r);
@@ -128,7 +128,7 @@ void reb_step(struct reb_simulation* const r){
         reb_integrator_synchronize(r);
         r->post_timestep_modifications(r);
         //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
-        r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
+        //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
 
     // Do collisions here. We need both the positions and velocities at the same time.
@@ -278,7 +278,7 @@ void reb_free_pointers(struct reb_simulation* const r){
     free(r->collisions  );
     // reb_integrator_whfast_reset(r); TODO! call free, then alloc
     reb_integrator_ias15_reset(r);
-    reb_integrator_mercurius_reset(r);
+    //reb_integrator_mercurius_reset(r);
     if(r->free_particle_ap){
         for(int i=0; i<r->N; i++){
             r->free_particle_ap(&r->particles[i]);
@@ -328,14 +328,6 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_ias15.at          = NULL;
     r->ri_ias15.map_allocated_N      = 0;
     r->ri_ias15.map         = NULL;
-    // ********** MERCURIUS
-    r->ri_mercurius.allocatedN = 0;
-    r->ri_mercurius.allocatedN_additionalforces = 0;
-    r->ri_mercurius.dcrit_allocatedN = 0;
-    r->ri_mercurius.dcrit = NULL;
-    r->ri_mercurius.particles_backup = NULL;
-    r->ri_mercurius.particles_backup_additionalforces = NULL;
-    r->ri_mercurius.encounter_map = NULL;
 }
 
 int reb_reset_function_pointers(struct reb_simulation* const r){
@@ -502,6 +494,7 @@ void reb_init_simulation(struct reb_simulation* r){
     reb_integrator_sei_register(r);
     reb_integrator_janus_register(r);
     reb_integrator_whfast_register(r);
+    reb_integrator_mercurius_register(r);
     reb_integrator_eos_register(r);
     reb_integrator_saba_register(r);
 
@@ -518,15 +511,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_ias15.min_dt      = 0;
     r->ri_ias15.epsilon_global  = 1;
     r->ri_ias15.iterations_max_exceeded = 0;    
-    
-    // ********** MERCURIUS
-    r->ri_mercurius.mode = 0;
-    r->ri_mercurius.safe_mode = 1;
-    r->ri_mercurius.recalculate_coordinates_this_timestep = 0;
-    r->ri_mercurius.recalculate_dcrit_this_timestep = 0;
-    r->ri_mercurius.is_synchronized = 1;
-    r->ri_mercurius.encounterN = 0;
-    r->ri_mercurius.hillfac = 3;
     
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;

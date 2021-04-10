@@ -229,11 +229,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global);
         CASE(IAS15_ITERATIONSMAX,&r->ri_ias15.iterations_max_exceeded);
         CASE(IAS15_ALLOCATEDN,   &r->ri_ias15.allocatedN);
-        CASE(MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac);
-        CASE(MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode);
-        CASE(MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized);
-        CASE(MERCURIUS_COMPOS,   &r->ri_mercurius.com_pos);
-        CASE(MERCURIUS_COMVEL,   &r->ri_mercurius.com_vel);
         CASE(PYTHON_UNIT_L,      &r->python_unit_l);
         CASE(PYTHON_UNIT_M,      &r->python_unit_m);
         CASE(PYTHON_UNIT_T,      &r->python_unit_t);
@@ -274,16 +269,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
                 for (int l=0;l<r->var_config_N;l++){
                     r->var_config[l].sim = r;
                 }
-            }
-            break;
-        case REB_BINARY_FIELD_TYPE_MERCURIUS_DCRIT:
-            if(r->ri_mercurius.dcrit){
-                free(r->ri_mercurius.dcrit);
-            }
-            r->ri_mercurius.dcrit_allocatedN = (int)(field.size/sizeof(double));
-            if (field.size){
-                r->ri_mercurius.dcrit = malloc(field.size);
-                reb_input_stream_fread(stream, r->ri_mercurius.dcrit, field.size,1);
             }
             break;
         CASE_MALLOC(IAS15_AT,     r->ri_ias15.at);

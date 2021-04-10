@@ -220,12 +220,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global,        sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_ITERATIONSMAX,&r->ri_ias15.iterations_max_exceeded,sizeof(unsigned long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_ALLOCATEDN,   &r->ri_ias15.allocatedN,            sizeof(int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac,           sizeof(double));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode,         sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized, sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_DCRIT,    r->ri_mercurius.dcrit,              sizeof(double)*r->ri_mercurius.dcrit_allocatedN);
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_COMPOS,   &(r->ri_mercurius.com_pos),         sizeof(struct reb_vec3d));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MERCURIUS_COMVEL,   &(r->ri_mercurius.com_vel),         sizeof(struct reb_vec3d));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_PYTHON_UNIT_L,      &r->python_unit_l,                  sizeof(uint32_t));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_PYTHON_UNIT_M,      &r->python_unit_m,                  sizeof(uint32_t));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_PYTHON_UNIT_T,      &r->python_unit_t,                  sizeof(uint32_t));

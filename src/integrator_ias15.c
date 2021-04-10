@@ -157,11 +157,13 @@ static inline void add_cs(double* p, double* csp, double inp){
 
 void reb_integrator_ias15_alloc(struct reb_simulation* r){
     int N3;
-    if (r->integrator==REB_INTEGRATOR_MERCURIUS){
-        N3 = 3*r->ri_mercurius.encounterN;// mercurius close encounter
-    }else{ 
-        N3 = 3*r->N;
-    }
+    printf("this needs fixing\n");
+    exit(EXIT_FAILURE);
+///////////////    if (r->integrator==REB_INTEGRATOR_MERCURIUS){
+///////////////        N3 = 3*r->ri_mercurius.encounterN;// mercurius close encounter
+///////////////    }else{ 
+///////////////        N3 = 3*r->N;
+///////////////    }
     if (N3 > r->ri_ias15.allocatedN) {
         realloc_dp7(&(r->ri_ias15.g),N3);
         realloc_dp7(&(r->ri_ias15.b),N3);
@@ -202,17 +204,19 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
     struct reb_particle* const particles = r->particles;
     int N;
     int* map; // this map allow for integrating only a selection of particles 
-    if (r->integrator==REB_INTEGRATOR_MERCURIUS){// mercurius close encounter
-        N = r->ri_mercurius.encounterN;
-        map = r->ri_mercurius.encounter_map;
-        if (map==NULL){
-            reb_error(r, "Cannot access MERCURIUS map from IAS15.");
-            return 0;
-        }
-    }else{ 
-        N = r->N;
-        map = r->ri_ias15.map; // identity map
-    }
+    printf("this needs fixing\n");
+    exit(EXIT_FAILURE);
+///////////////    if (r->integrator==REB_INTEGRATOR_MERCURIUS){// mercurius close encounter
+///////////////        N = r->ri_mercurius.encounterN;
+///////////////        map = r->ri_mercurius.encounter_map;
+///////////////        if (map==NULL){
+///////////////            reb_error(r, "Cannot access MERCURIUS map from IAS15.");
+///////////////            return 0;
+///////////////        }
+///////////////    }else{ 
+///////////////        N = r->N;
+///////////////        map = r->ri_ias15.map; // identity map
+///////////////    }
     const int N3 = 3*N;
     
     reb_update_acceleration(r); 
