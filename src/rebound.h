@@ -26,28 +26,6 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
-#ifdef __cplusplus
-
-// At least GCC and clang support the restrict keyword as an extension.
-#if defined(__GNUC__) || defined(__clang__)
-
-#define REBOUND_RESTRICT __restrict__
-
-#else
-
-// For other compilers, we disable it.
-#define REBOUND_RESTRICT
-
-#endif
-
-extern "C" {
-
-#else
-
-#define REBOUND_RESTRICT restrict
-
-#endif
-
 #include <inttypes.h>
 #include <stdint.h>
 #include <sys/time.h>
@@ -129,13 +107,13 @@ struct reb_vec3d {
  * @brief Generic 7d pointer, for internal use only (IAS15).
  */
 struct reb_dp7 {
-    double* REBOUND_RESTRICT p0; ///< 0 substep
-    double* REBOUND_RESTRICT p1; ///< 1 substep
-    double* REBOUND_RESTRICT p2; ///< 2 substep
-    double* REBOUND_RESTRICT p3; ///< 3 substep
-    double* REBOUND_RESTRICT p4; ///< 4 substep
-    double* REBOUND_RESTRICT p5; ///< 5 substep
-    double* REBOUND_RESTRICT p6; ///< 6 substep
+    double* p0; ///< 0 substep
+    double* p1; ///< 1 substep
+    double* p2; ///< 2 substep
+    double* p3; ///< 3 substep
+    double* p4; ///< 4 substep
+    double* p5; ///< 5 substep
+    double* p6; ///< 6 substep
 };
 
 /**
@@ -194,13 +172,13 @@ struct reb_simulation_integrator_ias15 {
 
     int allocatedN;             ///< Size of allocated arrays.
 
-    double* REBOUND_RESTRICT at;            ///< Temporary buffer for acceleration
-    double* REBOUND_RESTRICT x0;            ///<                      position (used for initial values at h=0)
-    double* REBOUND_RESTRICT v0;            ///<                      velocity
-    double* REBOUND_RESTRICT a0;            ///<                      acceleration
-    double* REBOUND_RESTRICT csx;           ///<                      compensated summation for x
-    double* REBOUND_RESTRICT csv;           ///<                      compensated summation for v
-    double* REBOUND_RESTRICT csa0;          ///<                      compensated summation for a
+    double* at;            ///< Temporary buffer for acceleration
+    double* x0;            ///<                      position (used for initial values at h=0)
+    double* v0;            ///<                      velocity
+    double* a0;            ///<                      acceleration
+    double* csx;           ///<                      compensated summation for x
+    double* csv;           ///<                      compensated summation for v
+    double* csa0;          ///<                      compensated summation for a
 
     struct reb_dp7 g;
     struct reb_dp7 b;
@@ -279,8 +257,8 @@ struct reb_simulation_integrator_mercurius {
     unsigned int allocatedN_additionalforces;        ///< Current size of allocated internal particles_backup_additionalforces array
     unsigned int dcrit_allocatedN;  ///< Current size of dcrit arrays
     double* dcrit;                  ///< Switching radii for particles
-    struct reb_particle* REBOUND_RESTRICT particles_backup;     ///< Internal array, contains coordinates before Kepler step for encounter prediction
-    struct reb_particle* REBOUND_RESTRICT particles_backup_additionalforces;     ///< Internal array, contains coordinates before Kepler step for encounter prediction
+    struct reb_particle* particles_backup;     ///< Internal array, contains coordinates before Kepler step for encounter prediction
+    struct reb_particle* particles_backup_additionalforces;     ///< Internal array, contains coordinates before Kepler step for encounter prediction
     int* encounter_map;             ///< Map to represent which particles are integrated with ias15
     struct reb_vec3d com_pos;       ///< Used internally to keep track of the centre of mass during the timestep
     struct reb_vec3d com_vel;       ///< Used internally to keep track of the centre of mass during the timestep
@@ -1822,15 +1800,7 @@ int reb_get_next_message(struct reb_simulation* const r, char* const buf);
  * Internal functions for calling various integrator steps. Nothing to be changed by the user.
  */
 
-void reb_integrator_whfast_from_inertial(struct reb_simulation* const r);   ///< Internal function to the appropriate WHFast coordinates from inertial
-void reb_integrator_whfast_to_inertial(struct reb_simulation* const r); ///< Internal function to move back from particular WHFast coordinates to inertial
-void reb_integrator_whfast_reset(struct reb_simulation* r);		///< Internal function used to call a specific integrator
-void reb_whfast_interaction_step(struct reb_simulation* const r, const double _dt);///< Internal function
-void reb_whfast_jump_step(const struct reb_simulation* const r, const double _dt); ///< Internal function
-void reb_whfast_kepler_step(const struct reb_simulation* const r, const double _dt); ///< Internal function
-void reb_whfast_com_step(const struct reb_simulation* const r, const double _dt); ///< Internal function
 void reb_integrator_ias15_reset(struct reb_simulation* r);              ///< Internal function used to call a specific integrator
-int reb_integrator_whfast_init(struct reb_simulation* const r);    ///< Internal function to check errors and allocate memory if needed
 
 /** 
  * @brief This function updates the acceleration on all particles. 
@@ -1916,10 +1886,5 @@ struct reb_display_data {
  * @endcond
  */
 
-#ifdef __cplusplus
-}
-#endif
-
-#undef REBOUND_RESTRICT
 
 #endif

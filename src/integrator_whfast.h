@@ -26,6 +26,17 @@
 #define _INTEGRATOR_WHFAST_H
 
 #include "rebound.h"
+enum REB_WHFAST_COORDINATES {
+    REB_WHFAST_COORDINATES_JACOBI = 0,                      ///< Jacobi coordinates (default)
+    REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC = 1,      ///< Democratic Heliocentric coordinates
+    REB_WHFAST_COORDINATES_WHDS = 2,                        ///< WHDS coordinates (Hernandez and Dehnen, 2017)
+};
+enum REB_WHFAST_KERNEL {
+    REB_WHFAST_KERNEL_DEFAULT = 0,
+    REB_WHFAST_KERNEL_MODIFIEDKICK = 1,
+    REB_WHFAST_KERNEL_COMPOSITION = 2,
+    REB_WHFAST_KERNEL_LAZY = 3,
+}dwkernel;
 
 /**
  * @brief This structure contains variables used by the WHFast integrator.
@@ -59,22 +70,13 @@ struct reb_integrator_whfast_config {
      * - 2: uses the composition kernel  
      * - 3: uses the lazy implementer's modified kick   
      */
-    enum {
-        REB_WHFAST_KERNEL_DEFAULT = 0,
-        REB_WHFAST_KERNEL_MODIFIEDKICK = 1,
-        REB_WHFAST_KERNEL_COMPOSITION = 2,
-        REB_WHFAST_KERNEL_LAZY = 3,
-    }kernel;
+    enum REB_WHFAST_KERNEL kernel;
     
     
     /**
      * @brief Chooses the coordinate system for the WHFast algorithm. Default is Jacobi Coordinates.
      */
-    enum {
-        REB_WHFAST_COORDINATES_JACOBI = 0,                      ///< Jacobi coordinates (default)
-        REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC = 1,      ///< Democratic Heliocentric coordinates
-        REB_WHFAST_COORDINATES_WHDS = 2,                        ///< WHDS coordinates (Hernandez and Dehnen, 2017)
-        } coordinates;
+    enum REB_WHFAST_COORDINATES coordinates;
 
     /** 
      * @brief Setting this flag to one will recalculate Jacobi/heliocentric coordinates from the particle structure in the next timestep. 
@@ -105,12 +107,12 @@ struct reb_integrator_whfast_config {
      * It is automatically filled and updated by WHfast.
      * Access this array with caution.
      */
-    struct reb_particle* REBOUND_RESTRICT p_jh;
+    struct reb_particle* p_jh;
     
     /**
      * @brief Internal temporary array used for lazy implementer's kernel method
      */
-    struct reb_particle* REBOUND_RESTRICT p_temp;
+    struct reb_particle* p_temp;
     
     /**
      * @brief Generate inertial coordinates at the end of the integration, but do not change the Jacobi/heliocentric coordinates
@@ -137,9 +139,16 @@ struct reb_integrator_whfast_config {
 
 
 
-void reb_integrator_whfast_step(struct reb_simulation* r);		///< Internal function used to call a specific integrator
-void reb_integrator_whfast_synchronize(struct reb_simulation* r);	///< Internal function used to call a specific integrator
+void reb_integrator_whfast_register(struct reb_simulation* r);		///< Internal function used to call a specific integrator
 void reb_whfast_kepler_solver(const struct reb_simulation* const r, struct reb_particle* const restrict p_j, const double M, unsigned int i, double _dt);   ///< Internal function (Main WHFast Kepler Solver)
-void reb_whfast_calculate_jerk(struct reb_simulation* r);       ///< Calculates "jerk" term
+void reb_whfast_calculate_jerk(struct reb_simulation* r, struct reb_particle* const jerk);  ///< Calculates "jerk" term
+
+void reb_integrator_whfast_from_inertial(struct reb_simulation* const r, enum REB_WHFAST_COORDINATES coordinates, struct reb_particle* const p_j);   ///< Internal function to the appropriate WHFast coordinates from inertial
+void reb_integrator_whfast_to_inertial(struct reb_simulation* const r, enum REB_WHFAST_COORDINATES coordinates, struct reb_particle* const p_j); ///< Internal function to move back from particular WHFast coordinates to inertial
+void reb_integrator_whfast_reset(struct reb_simulation* r);		///< Internal function used to call a specific integrator
+void reb_whfast_interaction_step(struct reb_simulation* const r, const double _dt, enum REB_WHFAST_COORDINATES coordinates, struct reb_particle* p_j);///< Internal function
+void reb_whfast_jump_step(const struct reb_simulation* const r, const double _dt, enum REB_WHFAST_COORDINATES coordinates, struct reb_particle* p_j); ///< Internal function
+void reb_whfast_kepler_step(const struct reb_simulation* const r, const double _dt, enum REB_WHFAST_COORDINATES coordinates, struct reb_particle* p_j); ///< Internal function
+void reb_whfast_com_step(const struct reb_simulation* const r, const double _dt, struct reb_particle* p_j); ///< Internal function
 
 #endif

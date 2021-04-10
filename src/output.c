@@ -215,14 +215,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_INTEGRATOR,         &r->integrator,                     sizeof(int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_BOUNDARY,           &r->boundary,                       sizeof(int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_GRAVITY,            &r->gravity,                        sizeof(int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR,   &r->ri_whfast.corrector,            sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_RECALCJAC,   &r->ri_whfast.recalculate_coordinates_this_timestep, sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_SAFEMODE,    &r->ri_whfast.safe_mode,            sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_KEEPUNSYNC,  &r->ri_whfast.keep_unsynchronized,  sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_ISSYNCHRON,  &r->ri_whfast.is_synchronized,      sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_TIMESTEPWARN,&r->ri_whfast.timestep_warning,     sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_PJ,          r->ri_whfast.p_jh,                  sizeof(struct reb_particle)*r->ri_whfast.allocated_N);
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_COORDINATES, &r->ri_whfast.coordinates,          sizeof(int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_EPSILON,      &r->ri_ias15.epsilon,               sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_MINDT,        &r->ri_ias15.min_dt,                sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global,        sizeof(unsigned int));
@@ -240,8 +232,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_STEPSDONE,          &r->steps_done,                     sizeof(unsigned long long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAAUTOSTEP,         &r->simulationarchive_auto_step,    sizeof(unsigned long long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SANEXTSTEP,         &r->simulationarchive_next_step,    sizeof(unsigned long long));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR2,  &r->ri_whfast.corrector2,           sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_KERNEL,      &r->ri_whfast.kernel,               sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_RAND_SEED,          &r->rand_seed,                      sizeof(unsigned int));
     int functionpointersused = 0;
     if (r->coefficient_of_restitution ||

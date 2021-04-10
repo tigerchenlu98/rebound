@@ -224,13 +224,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(INTEGRATOR,         &r->integrator);
         CASE(BOUNDARY,           &r->boundary);
         CASE(GRAVITY,            &r->gravity);
-        CASE(WHFAST_CORRECTOR,   &r->ri_whfast.corrector);
-        CASE(WHFAST_RECALCJAC,   &r->ri_whfast.recalculate_coordinates_this_timestep);
-        CASE(WHFAST_SAFEMODE,    &r->ri_whfast.safe_mode);
-        CASE(WHFAST_KEEPUNSYNC,  &r->ri_whfast.keep_unsynchronized);
-        CASE(WHFAST_ISSYNCHRON,  &r->ri_whfast.is_synchronized);
-        CASE(WHFAST_TIMESTEPWARN,&r->ri_whfast.timestep_warning);
-        CASE(WHFAST_COORDINATES, &r->ri_whfast.coordinates);
         CASE(IAS15_EPSILON,      &r->ri_ias15.epsilon);
         CASE(IAS15_MINDT,        &r->ri_ias15.min_dt);
         CASE(IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global);
@@ -248,8 +241,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(SAAUTOSTEP,         &r->simulationarchive_auto_step);
         CASE(SANEXTSTEP,         &r->simulationarchive_next_step);
         CASE(RAND_SEED,          &r->rand_seed);
-        CASE(WHFAST_CORRECTOR2,  &r->ri_whfast.corrector2);
-        CASE(WHFAST_KERNEL,      &r->ri_whfast.kernel);
         case REB_BINARY_FIELD_TYPE_PARTICLES:
             if(r->particles){
                 free(r->particles);
@@ -271,16 +262,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
                 for (int l=0;l<r->allocatedN;l++){
                     reb_tree_add_particle_to_tree(r, l);
                 }
-            }
-            break;
-        case REB_BINARY_FIELD_TYPE_WHFAST_PJ:
-            if(r->ri_whfast.p_jh){
-                free(r->ri_whfast.p_jh);
-            }
-            r->ri_whfast.allocated_N = (int)(field.size/sizeof(struct reb_particle));
-            if (field.size){
-                r->ri_whfast.p_jh = malloc(field.size);
-                reb_input_stream_fread(stream, r->ri_whfast.p_jh, field.size,1);
             }
             break;
         case REB_BINARY_FIELD_TYPE_VARCONFIG:

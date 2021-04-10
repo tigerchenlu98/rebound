@@ -74,7 +74,7 @@ static void reb_add_local(struct reb_simulation* const r, struct reb_particle pt
             rim->recalculate_dcrit_this_timestep       = 1;
             rim->recalculate_coordinates_this_timestep = 1;
         }else{  // IAS15 part
-            reb_integrator_ias15_reset(r);
+            reb_integrator_ias15_reset(r); 
             if (rim->dcrit_allocatedN<r->N){
                 rim->dcrit              = realloc(rim->dcrit, sizeof(double)*r->N);
                 rim->dcrit_allocatedN = r->N;
