@@ -28,6 +28,7 @@
  */
 
 #include "rebound.h"
+#include "integrator_leapfrog.h"
 
 // Leapfrog integrator (Drift-Kick-Drift)
 // for non-rotating frame.

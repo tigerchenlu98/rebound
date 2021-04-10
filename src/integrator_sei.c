@@ -29,15 +29,9 @@
  * along with rebound.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <math.h>
-#include <time.h>
+#include <stdlib.h>
 #include "rebound.h"
-#include "particle.h"
-#include "gravity.h"
-#include "boundary.h"
 #include "integrator_sei.h"
 #include "output.h"
 
