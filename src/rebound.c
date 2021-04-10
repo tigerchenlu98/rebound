@@ -40,6 +40,7 @@
 #include "integrator_whfast.h"
 #include "integrator_ias15.h"
 #include "integrator_sei.h"
+#include "integrator_leapfrog.h"
 #include "integrator_mercurius.h"
 #include "boundary.h"
 #include "gravity.h"
@@ -67,6 +68,28 @@ const char* reb_githash_str = STRINGIFY(GITHASH);             // This line gets 
     
 
 static int reb_error_message_waiting(struct reb_simulation* const r);
+
+struct reb_integrator* reb_simulation_register_integrator(struct reb_simulation* r, const char* name, int id){
+    for (int i=0; i<r->integrators_available_N; i++){
+        if (r->integrators_available[i].id == id){
+            printf("Error: Integrator ID already registered.");
+            exit(EXIT_FAILURE);
+        }
+        if (strcmp(r->integrators_available[i].name,name)==0){
+            printf("Error: Integrator name already registered.");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    struct reb_integrator integrator = {0};
+    integrator.name = name;
+    integrator.id   = id;
+
+    r->integrators_available_N++;
+    r->integrators_available = realloc(r->integrators_available, sizeof(struct reb_integrator) * r->integrators_available_N);
+    r->integrators_available[r->integrators_available_N-1] = integrator;
+    return &(r->integrators_available[r->integrators_available_N-1]);
+}
 
 void reb_steps(struct reb_simulation* const r, unsigned int N_steps){
     for (unsigned int i=0;i<N_steps;i++){
@@ -478,6 +501,7 @@ void reb_init_simulation(struct reb_simulation* r){
     r->collision    = REB_COLLISION_NONE;
 
     reb_integrator_sei_register(r);
+    reb_integrator_leapfrog_register(r);
 
     r->integrator_selected = r->integrators_available; // first integrator is the selected one
 

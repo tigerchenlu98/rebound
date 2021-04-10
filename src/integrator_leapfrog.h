@@ -24,7 +24,5 @@
  */
 #ifndef _INTEGRATOR_LEAPFROG_H
 #define _INTEGRATOR_LEAPFROG_H
-void reb_integrator_leapfrog_step(struct reb_simulation* r);           ///< Internal function used to call a specific integrator
-void reb_integrator_leapfrog_synchronize(struct reb_simulation* r);    ///< Internal function used to call a specific integrator
-void reb_integrator_leapfrog_reset(struct reb_simulation* r);          ///< Internal function used to call a specific integrator
+void reb_integrator_leapfrog_register(struct reb_simulation* r);
 #endif

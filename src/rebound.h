@@ -77,6 +77,20 @@ struct reb_treecell;
 struct reb_binary_field;
 struct reb_integrator;
 
+// Describes an available integrator
+struct reb_integrator {
+    const char* name;
+    int id;
+    void* config;
+    void (*step)(struct reb_integrator*, struct reb_simulation*);
+    void (*synchronize)(struct reb_integrator*, struct reb_simulation*);
+    void* (*alloc)(struct reb_integrator*, struct reb_simulation*);
+    void (*free)(struct reb_integrator*, struct reb_simulation*);
+    size_t (*load)(struct reb_integrator*, struct reb_simulation*, struct reb_input_stream*, struct reb_binary_field);
+    void (*save)(struct reb_integrator*, struct reb_simulation*, struct reb_output_stream*);
+};
+
+struct reb_integrator* reb_simulation_register_integrator(struct reb_simulation* r, const char* name, int id);
 /**
  * @brief Structure representing one REBOUND particle.
  * @details This structure is used to represent one particle. 

@@ -36,7 +36,7 @@
 
 // Leapfrog integrator (Drift-Kick-Drift)
 // for non-rotating frame.
-void reb_integrator_leapfrog_step(struct reb_simulation* r){
+void reb_integrator_leapfrog_step(struct reb_integrator* integrator, struct reb_simulation* r){
     r->gravity_ignore_terms = 0;
 	const int N = r->N;
 	struct reb_particle* restrict const particles = r->particles;
@@ -65,10 +65,12 @@ void reb_integrator_leapfrog_step(struct reb_simulation* r){
 	r->dt_last_done = r->dt;
 }
 	
-void reb_integrator_leapfrog_synchronize(struct reb_simulation* r){
-	// Do nothing.
-}
-
-void reb_integrator_leapfrog_reset(struct reb_simulation* r){
-	// Do nothing.
+void reb_integrator_leapfrog_register(struct reb_simulation* r){
+    struct reb_integrator* integrator = reb_simulation_register_integrator(r, "leapfrog", 4);
+    integrator->step        = reb_integrator_leapfrog_step;
+    integrator->synchronize = NULL; // already NULL, not really needed
+    integrator->alloc       = NULL;
+    integrator->free        = NULL;
+    integrator->load        = NULL;
+    integrator->save        = NULL;
 }

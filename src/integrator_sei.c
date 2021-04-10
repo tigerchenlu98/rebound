@@ -38,10 +38,8 @@
 #include "particle.h"
 #include "gravity.h"
 #include "boundary.h"
-#include "integrator.h"
 #include "integrator_sei.h"
 #include "output.h"
-#include "input.h"
 
 
 struct reb_integrator_sei_config {
@@ -197,7 +195,7 @@ void reb_integrator_sei_step(struct reb_integrator* integrator, struct reb_simul
 }
 
 void reb_integrator_sei_register(struct reb_simulation* r){
-    struct reb_integrator* integrator = reb_integrator_register(r, "sei", 2);
+    struct reb_integrator* integrator = reb_simulation_register_integrator(r, "sei", 2);
     integrator->step        = reb_integrator_sei_step;
     integrator->synchronize = NULL;
     integrator->alloc       = reb_integrator_sei_alloc;
