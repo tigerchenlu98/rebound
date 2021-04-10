@@ -510,6 +510,7 @@ void reb_init_simulation(struct reb_simulation* r){
     reb_integrator_sei_register(r);
     reb_integrator_janus_register(r);
     reb_integrator_eos_register(r);
+    reb_integrator_saba_register(r);
 
     for (int i=0; i<r->integrators_available_N; i++){
         if (r->integrators_available[i].alloc){
@@ -532,11 +533,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_whfast.is_synchronized = 1;
     r->ri_whfast.timestep_warning = 0;
     r->ri_whfast.recalculate_coordinates_but_not_synchronized_warning = 0;
-    
-    // ********** SABA
-    r->ri_saba.type = REB_SABA_10_6_4;
-    r->ri_saba.safe_mode = 1;
-    r->ri_saba.is_synchronized = 1;
     
     // ********** IAS15
     r->ri_ias15.epsilon         = 1e-9;

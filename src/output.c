@@ -34,7 +34,6 @@
 #include "tools.h"
 #include "output.h"
 #include "integrator.h"
-#include "integrator_sei.h"
 #include "input.h"
 
 void reb_output_stream_write(struct reb_output_stream* stream, void* restrict data, size_t size){
@@ -243,10 +242,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_STEPSDONE,          &r->steps_done,                     sizeof(unsigned long long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAAUTOSTEP,         &r->simulationarchive_auto_step,    sizeof(unsigned long long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SANEXTSTEP,         &r->simulationarchive_next_step,    sizeof(unsigned long long));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SABA_TYPE,          &r->ri_saba.type,                   sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SABA_SAFEMODE,      &r->ri_saba.safe_mode,              sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SABA_ISSYNCHRON,    &r->ri_saba.is_synchronized,        sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SABA_KEEPUNSYNC,    &r->ri_saba.keep_unsynchronized,    sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR2,  &r->ri_whfast.corrector2,           sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_WHFAST_KERNEL,      &r->ri_whfast.kernel,               sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_RAND_SEED,          &r->rand_seed,                      sizeof(unsigned int));

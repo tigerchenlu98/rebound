@@ -40,7 +40,6 @@
 #include "output.h"
 #include "integrator.h"
 #include "integrator_whfast.h"
-#include "integrator_saba.h"
 #include "integrator_ias15.h"
 #include "integrator_mercurius.h"
    
@@ -51,15 +50,13 @@ void reb_integrator_step(struct reb_simulation* r){
 			break;
 		case REB_INTEGRATOR_LEAPFROG:
 		case REB_INTEGRATOR_SEI:
+		case REB_INTEGRATOR_SABA:
 		case REB_INTEGRATOR_JANUS:
 		case REB_INTEGRATOR_EOS:
             r->integrator_selected->step(r->integrator_selected, r);
 			break;
 		case REB_INTEGRATOR_WHFAST:
 			reb_integrator_whfast_step(r);
-			break;
-		case REB_INTEGRATOR_SABA:
-			reb_integrator_saba_step(r);
 			break;
 		case REB_INTEGRATOR_MERCURIUS:
 			reb_integrator_mercurius_step(r);
@@ -76,6 +73,7 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 			break;
 		case REB_INTEGRATOR_LEAPFROG:
 		case REB_INTEGRATOR_SEI:
+		case REB_INTEGRATOR_SABA:
 		case REB_INTEGRATOR_JANUS:
 		case REB_INTEGRATOR_EOS:
             if (r->integrator_selected->synchronize){
@@ -84,9 +82,6 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 			break;
 		case REB_INTEGRATOR_WHFAST:
 			reb_integrator_whfast_synchronize(r);
-			break;
-		case REB_INTEGRATOR_SABA:
-			reb_integrator_saba_synchronize(r);
 			break;
 		case REB_INTEGRATOR_MERCURIUS:
 			reb_integrator_mercurius_synchronize(r);
@@ -104,7 +99,6 @@ void reb_integrator_reset(struct reb_simulation* r){
 	//reb_integrator_sei_config_free(r->sei_config);   // TODO!
 	//r->sei_config = reb_integrator_sei_config_alloc();
 	reb_integrator_whfast_reset(r);
-	reb_integrator_saba_reset(r);
 	//reb_integrator_janus_reset(r);
 	//reb_integrator_eos_reset(r);
 }

@@ -29,7 +29,5 @@
 
 #include "rebound.h"
 
-void reb_integrator_saba_step(struct reb_simulation* r);		///< Internal function used to call a specific integrator
-void reb_integrator_saba_synchronize(struct reb_simulation* r);	///< Internal function used to call a specific integrator
-void reb_integrator_saba_reset(struct reb_simulation* r);	///< Internal function used to call a specific integrator
+void reb_integrator_saba_register(struct reb_simulation* r);
 #endif

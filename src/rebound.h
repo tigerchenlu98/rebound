@@ -298,47 +298,6 @@ struct reb_simulation_integrator_mercurius {
 };
 
 
-/**
- * @brief This structure contains variables used by the SABA integrator.
- */
-struct reb_simulation_integrator_saba {
-    /**
-     * @brief SABA type.
-     * @details Available types include: SABA1, SABA2, SABA3, SABA4, SABACM1, 
-     * SABACM2, SABACM3, SABACM4, SABACL1, SABACL2, SABACL3, SABACL4, 
-     * SABA(10,4), SABA(8,6,4), SABA(10,6,4), SABAH(8,4,4), SABAH(8,6,4), 
-     * and SABAH(10,6,4).
-     */
-    enum {
-        REB_SABA_1 = 0x0, // WH
-        REB_SABA_2 = 0x1, // SABA2
-        REB_SABA_3 = 0x2, // SABA3
-        REB_SABA_4 = 0x3, // SABA4
-        REB_SABA_CM_1 = 0x100, // SABACM1 (Modified kick corrector)
-        REB_SABA_CM_2 = 0x101, // SABACM2 (Modified kick corrector)
-        REB_SABA_CM_3 = 0x102, // SABACM3 (Modified kick corrector)
-        REB_SABA_CM_4 = 0x103, // SABACM4 (Modified kick corrector)
-        REB_SABA_CL_1 = 0x200, // SABACL1 (lazy corrector)
-        REB_SABA_CL_2 = 0x201, // SABACL2 (lazy corrector)
-        REB_SABA_CL_3 = 0x202, // SABACL3 (lazy corrector)
-        REB_SABA_CL_4 = 0x203, // SABACL4 (lazy corrector)
-        REB_SABA_10_4 = 0x4,   // SABA(10,4), 7 stages
-        REB_SABA_8_6_4 = 0x5,  // SABA(8,6,4), 7 stages
-        REB_SABA_10_6_4 = 0x6, // SABA(10,6,4), 8 stages, default
-        REB_SABA_H_8_4_4 = 0x7,// SABAH(8,4,4), 6 stages
-        REB_SABA_H_8_6_4 = 0x8,// SABAH(8,6,4), 8 stages
-        REB_SABA_H_10_6_4 = 0x9,// SABAH(10,6,4), 9 stages
-    } type;
-    unsigned int safe_mode;       ///< Safe_mode has the same functionality as in WHFast.
-    unsigned int is_synchronized; ///< Flag to determine if current particle structure is synchronized
-    /**
-     * @brief Flaf that determines if the inertial coordinates generated are discarded in subsequent timesteps (Jacobi coordinates are used instead).
-     * @details Danger zone! Only use this flag if you are absolutely sure
-     * what you are doing. This is intended for
-     * simulation which have to be reproducible on a bit by bit basis.
-     */
-    unsigned int keep_unsynchronized;
-};
 
 /**
  * @brief This structure contains variables used by the WHFast integrator.
@@ -637,13 +596,9 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_SAAUTOSTEP = 135,
     REB_BINARY_FIELD_TYPE_SANEXTSTEP = 136,
     REB_BINARY_FIELD_TYPE_STEPSDONE = 137,
-    REB_BINARY_FIELD_TYPE_SABA_SAFEMODE = 140,
-    REB_BINARY_FIELD_TYPE_SABA_ISSYNCHRON = 141,
     REB_BINARY_FIELD_TYPE_WHFAST_CORRECTOR2 = 143,
     REB_BINARY_FIELD_TYPE_WHFAST_KERNEL = 144,
     REB_BINARY_FIELD_TYPE_DTLASTDONE = 145,
-    REB_BINARY_FIELD_TYPE_SABA_TYPE = 146,
-    REB_BINARY_FIELD_TYPE_SABA_KEEPUNSYNC = 147,
     REB_BINARY_FIELD_TYPE_IAS15_NEWORDER = 153,
     REB_BINARY_FIELD_TYPE_RAND_SEED = 154,
     REB_BINARY_FIELD_TYPE_TESTPARTICLEHIDEWARNINGS = 155,
@@ -926,7 +881,6 @@ struct reb_simulation {
      * @{
      */
     struct reb_simulation_integrator_whfast ri_whfast;  ///< The WHFast struct 
-    struct reb_simulation_integrator_saba ri_saba;      ///< The SABA struct 
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_mercurius ri_mercurius;      ///< The MERCURIUS struct
     /** @} */
