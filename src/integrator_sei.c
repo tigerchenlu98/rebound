@@ -62,7 +62,7 @@ enum SEI_CONFIG {
 };
 
 
-size_t reb_integrator_sei_config_load(struct reb_integrator* integrator, struct reb_input_stream* stream, struct reb_binary_field field){
+size_t reb_integrator_sei_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
     struct reb_integrator_sei_config* config = (struct reb_integrator_sei_config*)integrator->config;
     switch (field.type){
         case REB_BF(SEI, LASTDT):
@@ -80,7 +80,7 @@ size_t reb_integrator_sei_config_load(struct reb_integrator* integrator, struct 
     }
 }
 
-void reb_integrator_sei_config_save(struct reb_integrator* integrator, struct reb_output_stream* stream){
+void reb_integrator_sei_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_sei_config* config = (struct reb_integrator_sei_config*)integrator->config;
     reb_output_stream_write_field(stream, REB_BF(SEI, LASTDT),   &(config->lastdt),   sizeof(double));
     reb_output_stream_write_field(stream, REB_BF(SEI, SINDT),    &(config->sindt),    sizeof(double));
@@ -89,28 +89,17 @@ void reb_integrator_sei_config_save(struct reb_integrator* integrator, struct re
     reb_output_stream_write_field(stream, REB_BF(SEI, TANDTZ),   &(config->tandtz),   sizeof(double));
 }
 
-struct reb_integrator_sei_config* reb_integrator_sei_config_alloc(){
+void* reb_integrator_sei_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_sei_config* config = calloc(1, sizeof(struct reb_integrator_sei_config)); // sets all variables to zero
     return config;
 }
-void reb_integrator_sei_config_free(struct reb_integrator_sei_config* config){
+void reb_integrator_sei_free(struct reb_integrator* integrator, struct reb_simulation* r){
+    struct reb_integrator_sei_config* config = (struct reb_integrator_sei_config*)integrator->config;
     free(config);
+    integrator->config = NULL;
 }
 
-void reb_integrator_sei_register(struct reb_simulation* r){
-    struct reb_integrator integrator = {
-            .name = "sei",
-               .id = 2,
-               .config_load = reb_integrator_sei_config_load 
-    };
-    
-    integrator.config = reb_integrator_sei_config_alloc();
 
-    r->integrators_available = realloc(r->integrators_available, sizeof(struct reb_integrator) * r->integrators_available_N+1);
-    r->integrators_available[r->integrators_available_N] = integrator;
-    r->integrators_available_N++;
-
-}
 
 /**
  * @brief This function evolves a particle under the unperturbed
@@ -167,7 +156,7 @@ static void operator_phi1(double dt, struct reb_particle* p){
 }
 
 
-void reb_integrator_sei_step(struct reb_simulation* const r, struct reb_integrator* integrator){
+void reb_integrator_sei_step(struct reb_integrator* integrator, struct reb_simulation* const r){
     struct reb_integrator_sei_config* config = (struct reb_integrator_sei_config*)integrator->config;
     r->gravity_ignore_terms = 0;
 	const int N = r->N;
@@ -207,8 +196,12 @@ void reb_integrator_sei_step(struct reb_simulation* const r, struct reb_integrat
 	r->dt_last_done = r->dt;
 }
 
-void reb_integrator_sei_synchronize(struct reb_simulation* r){
-	// Do nothing.
+void reb_integrator_sei_register(struct reb_simulation* r){
+    struct reb_integrator* integrator = reb_integrator_register(r, "sei", 2);
+    integrator->step        = reb_integrator_sei_step;
+    integrator->synchronize = NULL;
+    integrator->alloc       = reb_integrator_sei_alloc;
+    integrator->free        = reb_integrator_sei_free;
+    integrator->load        = reb_integrator_sei_load;
+    integrator->save        = reb_integrator_sei_save;
 }
-
-

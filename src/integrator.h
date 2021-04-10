@@ -25,10 +25,25 @@
 #ifndef _INTEGRATOR_H
 #define _INTEGRATOR_H
 struct reb_simulation;
+struct reb_input_stream;
+struct reb_output_stream;
+struct reb_binary_field;
 
-/**
- * @brief Take one full timestep.
- */
+// Describes an available integrator
+struct reb_integrator {
+    const char* name;
+    int id;
+    void* config;
+    void (*step)(struct reb_integrator*, struct reb_simulation*);
+    void (*synchronize)(struct reb_integrator*, struct reb_simulation*);
+    void* (*alloc)(struct reb_integrator*, struct reb_simulation*);
+    void (*free)(struct reb_integrator*, struct reb_simulation*);
+    size_t (*load)(struct reb_integrator*, struct reb_simulation*, struct reb_input_stream*, struct reb_binary_field);
+    void (*save)(struct reb_integrator*, struct reb_simulation*, struct reb_output_stream*);
+};
+
+struct reb_integrator* reb_integrator_register(struct reb_simulation* r, const char* name, int id);
+
 void reb_integrator_step(struct reb_simulation* r);
 
 #endif

@@ -44,9 +44,30 @@
 #include "integrator_ias15.h"
 #include "integrator_mercurius.h"
 #include "integrator_leapfrog.h"
-#include "integrator_sei.h"
 #include "integrator_janus.h"
 #include "integrator_eos.h"
+   
+struct reb_integrator* reb_integrator_register(struct reb_simulation* r, const char* name, int id){
+    for (int i=0; i<r->integrators_available_N; i++){
+        if (r->integrators_available[i].id == id){
+            printf("Error: Integrator ID already registered.");
+            exit(EXIT_FAILURE);
+        }
+        if (strcmp(r->integrators_available[i].name,name)==0){
+            printf("Error: Integrator name already registered.");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    struct reb_integrator integrator = {0};
+    integrator.name = name;
+    integrator.id   = id;
+
+    r->integrators_available_N++;
+    r->integrators_available = realloc(r->integrators_available, sizeof(struct reb_integrator) * r->integrators_available_N);
+    r->integrators_available[r->integrators_available_N-1] = integrator;
+    return &(r->integrators_available[r->integrators_available_N-1]);
+}
 
 void reb_integrator_step(struct reb_simulation* r){
 	switch(r->integrator){
@@ -57,7 +78,7 @@ void reb_integrator_step(struct reb_simulation* r){
 			reb_integrator_leapfrog_step(r);
 			break;
 		case REB_INTEGRATOR_SEI:
-			reb_integrator_sei_step(r, r->integrator_selected);
+            r->integrator_selected->step(r->integrator_selected, r);
 			break;
 		case REB_INTEGRATOR_WHFAST:
 			reb_integrator_whfast_step(r);
@@ -88,7 +109,7 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 			reb_integrator_leapfrog_synchronize(r);
 			break;
 		case REB_INTEGRATOR_SEI:
-			reb_integrator_sei_synchronize(r);
+            r->integrator_selected->synchronize(r->integrator_selected, r);
 			break;
 		case REB_INTEGRATOR_WHFAST:
 			reb_integrator_whfast_synchronize(r);

@@ -331,7 +331,7 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     }
     for (int i=0; i<r->integrators_available_N; i++){
         struct reb_integrator* integrator = &(r->integrators_available[i]);
-        integrator->config_save(integrator, stream);
+        integrator->save(integrator, r, stream);
     }
     // To output size of binary file, need to calculate it first. 
     r->simulationarchive_size_first = (stream->size)+sizeof(struct reb_binary_field)*2+sizeof(long)+sizeof(struct reb_simulationarchive_blob);

@@ -35,6 +35,7 @@
 #include "input.h"
 #include "tree.h"
 #include "integrator_sei.h"
+#include "integrator.h"
 #include "simulationarchive.h"
 
 double reb_read_double(int argc, char** argv, const char* argument, double _default){
@@ -404,7 +405,7 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
                 size_t found = 0;
                 for (int i=0;i<r->integrators_available_N;i++){
                     struct reb_integrator* integrator = &(r->integrators_available[i]);
-                    found |= integrator->config_load(integrator, stream, field);
+                    found |= integrator->load(integrator, r, stream, field);
                     if (found){
                         break;
                     }
