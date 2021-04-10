@@ -206,7 +206,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MEGNOMEANY,         &r->megno_mean_Y,                   sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MEGNON,             &r->megno_n,                        sizeof(long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAVERSION,          &r->simulationarchive_version,      sizeof(int));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SASIZESNAPSHOT,     &r->simulationarchive_size_snapshot,sizeof(long));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAAUTOINTERVAL,     &r->simulationarchive_auto_interval, sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAAUTOWALLTIME,     &r->simulationarchive_auto_walltime, sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SANEXT,             &r->simulationarchive_next,         sizeof(double));
@@ -317,9 +316,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
         struct reb_integrator* integrator = &(r->integrators_available[i]);
         integrator->save(integrator, r, stream);
     }
-    // To output size of binary file, need to calculate it first. 
-    r->simulationarchive_size_first = (stream->size)+sizeof(struct reb_binary_field)*2+sizeof(long)+sizeof(struct reb_simulationarchive_blob);
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SASIZEFIRST,        &r->simulationarchive_size_first,   sizeof(long));
     int end_null = 0;
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_END, &end_null, 0);
     struct reb_simulationarchive_blob blob = {0};

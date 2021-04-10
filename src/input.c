@@ -215,8 +215,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(MEGNOMEANY,         &r->megno_mean_Y);
         CASE(MEGNON,             &r->megno_n);
         CASE(SAVERSION,          &r->simulationarchive_version);
-        CASE(SASIZEFIRST,        &r->simulationarchive_size_first);
-        CASE(SASIZESNAPSHOT,     &r->simulationarchive_size_snapshot);
         CASE(SAAUTOINTERVAL,     &r->simulationarchive_auto_interval);
         CASE(SAAUTOWALLTIME,     &r->simulationarchive_auto_walltime);
         CASE(SANEXT,             &r->simulationarchive_next);

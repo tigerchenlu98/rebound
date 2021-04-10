@@ -541,8 +541,6 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_MEGNOMEANT = 42, 
     REB_BINARY_FIELD_TYPE_MEGNOMEANY = 43, 
     REB_BINARY_FIELD_TYPE_MEGNON = 44,
-    REB_BINARY_FIELD_TYPE_SASIZEFIRST = 45,
-    REB_BINARY_FIELD_TYPE_SASIZESNAPSHOT = 46,
     REB_BINARY_FIELD_TYPE_SAAUTOINTERVAL = 47,
     REB_BINARY_FIELD_TYPE_SAAUTOWALLTIME = 102,
     REB_BINARY_FIELD_TYPE_SANEXT = 48,
@@ -637,8 +635,6 @@ struct reb_simulationarchive{
     FILE* inf;              ///< File pointer (will be kept open)
     char* filename;         ///< Filename of open file
     int version;            ///< SimulationArchive version
-    long size_first;        ///< Size of first snapshot (only used for version 1)
-    long size_snapshot;     ///< Size of snapshot (only used for version 1)
     double auto_interval;   ///< Interval setting used to create SA (if used)
     double auto_walltime;   ///< Walltime setting used to create SA (if used)
     unsigned long long auto_step;  ///< Steps in-between SA snapshots (if used)
@@ -799,8 +795,6 @@ struct reb_simulation {
      * @{
      */
     int    simulationarchive_version;           ///< Version of the SA binary format (1=original/, 2=incremental)
-    long   simulationarchive_size_first;        ///< (Deprecated SAV1) Size of the initial binary file in a SA
-    long   simulationarchive_size_snapshot;     ///< (Deprecated SAV1) Size of a snapshot in a SA (other than 1st), in bytes
     double simulationarchive_auto_interval;     ///< Current sampling cadence, in code units
     double simulationarchive_auto_walltime;     ///< Current sampling cadence, in wall time
     unsigned long long simulationarchive_auto_step;  ///< Current sampling cadence, in time steps

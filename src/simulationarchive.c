@@ -137,12 +137,6 @@ void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, 
             case REB_BINARY_FIELD_TYPE_SAVERSION:
                 fread(&(sa->version), sizeof(int),1,sa->inf);
                 break;
-            case REB_BINARY_FIELD_TYPE_SASIZESNAPSHOT:
-                fread(&(sa->size_snapshot), sizeof(long),1,sa->inf);
-                break;
-            case REB_BINARY_FIELD_TYPE_SASIZEFIRST:
-                fread(&(sa->size_first), sizeof(long),1,sa->inf);
-                break;
             case REB_BINARY_FIELD_TYPE_SAAUTOWALLTIME:
                 fread(&(sa->auto_walltime), sizeof(double),1,sa->inf);
                 break;
@@ -161,24 +155,8 @@ void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, 
     // Make index
     if (sa->version<2){
         // Old version
-        if (sa->size_first==-1 || sa->size_snapshot==-1){
-            free(sa->filename);
-            fclose(sa->inf);
-            *warnings |= REB_INPUT_BINARY_ERROR_OUTOFRANGE;
-            return;
-        }
-        fseek(sa->inf, 0, SEEK_END);  
-        sa->nblobs = (ftell(sa->inf)-sa->size_first)/sa->size_snapshot+1; // +1 accounts for first binary 
-        sa->t = malloc(sizeof(double)*sa->nblobs);
-        sa->offset = malloc(sizeof(uint32_t)*sa->nblobs);
-        sa->t[0] = t0;
-        sa->offset[0] = 0;
-        for(long i=1;i<sa->nblobs;i++){
-            double offset = sa->size_first+(i-1)*sa->size_snapshot;
-            fseek(sa->inf, offset, SEEK_SET);  
-            fread(&(sa->t[i]),sizeof(double), 1, sa->inf);
-            sa->offset[i] = offset;
-        }
+        printf("Error: Version 1 of SimulationArchive no longer supported\n");
+        exit(EXIT_FAILURE);
     }else{
         // New version
         if (sa_index == NULL){ // Need to construct offset index from file.
@@ -304,32 +282,6 @@ void reb_free_simulationarchive_pointers(struct reb_simulationarchive* sa){
     free(sa->offset);
 }
     
-static int reb_simulationarchive_snapshotsize(struct reb_simulation* const r){
-    int size_snapshot = 0;
-    switch (r->integrator){
-        case REB_INTEGRATOR_JANUS:
-            size_snapshot = sizeof(double)*2+sizeof(struct reb_particle_int)*r->N;
-            break;
-        case REB_INTEGRATOR_WHFAST:
-        case REB_INTEGRATOR_SABA:
-            size_snapshot = sizeof(double)*2+sizeof(double)*7*r->N;
-            break;
-        case REB_INTEGRATOR_MERCURIUS:
-            size_snapshot = sizeof(double)*2+sizeof(double)*8*r->N;
-            break;
-        case REB_INTEGRATOR_IAS15:
-            size_snapshot =  sizeof(double)*4  // time, walltime, dt, dt_last_done
-                             +sizeof(double)*3*r->N*5*7  // dp7 arrays
-                             +sizeof(double)*7*r->N      // particle m, pos, vel
-                             +sizeof(double)*3*r->N*2;   // csx, csv
-            break;
-        default:
-            reb_error(r,"Simulation archive not implemented for this integrator.");
-            break;
-    }
-    return size_snapshot;
-}
-
 void reb_simulationarchive_heartbeat(struct reb_simulation* const r){
     if (r->simulationarchive_filename!=NULL){
         int modes = 0;
@@ -368,11 +320,6 @@ void reb_simulationarchive_snapshot(struct reb_simulation* const r, const char* 
     if (filename==NULL) filename = r->simulationarchive_filename;
     struct stat buffer;
     if (stat(filename, &buffer) < 0){
-        // File does not exist. Output binary.
-        if (r->simulationarchive_version<2){
-            // Old version
-            r->simulationarchive_size_snapshot = reb_simulationarchive_snapshotsize(r);
-        }
         reb_output_binary(r,filename);
     }else{
         // File exists, append snapshot.

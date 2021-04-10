@@ -2112,8 +2112,6 @@ Simulation._fields_ = [
                 ("_megno_n", c_long),
                 ("_rand_seed",c_uint),
                 ("simulationarchive_version", c_int),
-                ("simulationarchive_size_first", c_long),
-                ("simulationarchive_size_snapshot", c_long),
                 ("simulationarchive_auto_interval", c_double),
                 ("simulationarchive_auto_walltime", c_double),
                 ("simulationarchive_auto_step", c_ulonglong),

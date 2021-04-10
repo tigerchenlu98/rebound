@@ -485,8 +485,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->collisions_Nlog  = 0;    
     r->collision_resolve_keep_sorted   = 0;    
     
-    r->simulationarchive_size_first    = 0;    
-    r->simulationarchive_size_snapshot = 0;    
     r->simulationarchive_version       = 2;    
     r->simulationarchive_auto_interval = 0.;    
     r->simulationarchive_auto_walltime = 0.;    

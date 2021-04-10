@@ -48,8 +48,6 @@ class SimulationArchive(Structure):
     _fields_ = [("_inf", c_void_p),
                 ("_filename", c_char_p),
                 ("version", c_int), 
-                ("size_first", c_long), 
-                ("size_snapshot", c_long), 
                 ("auto_interval", c_double), 
                 ("auto_walltime", c_double), 
                 ("auto_step", c_ulonglong), 
