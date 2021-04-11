@@ -1,6 +1,6 @@
 /**
  * @file 	simulation.h
- * 
+ *
  * @section 	LICENSE
  * Copyright (c) 2021 Hanno Rein
  *
