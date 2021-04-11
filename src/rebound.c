@@ -132,55 +132,6 @@ struct reb_integrator* reb_simulation_register_integrator(struct reb_simulation*
     return &(r->integrators_available[r->integrators_available_N-1]);
 }
 
-void reb_steps(struct reb_simulation* const r, unsigned int N_steps){
-    for (unsigned int i=0;i<N_steps;i++){
-        reb_step(r);
-    }
-}
-void reb_step(struct reb_simulation* const r){
-    // Update walltime
-    struct timeval time_beginning;
-    gettimeofday(&time_beginning,NULL);
-
-    if (r->pre_timestep_modifications){
-        if (r->integrator_selected->synchronize){
-            r->integrator_selected->synchronize(r->integrator_selected, r);
-        }
-        r->pre_timestep_modifications(r);
-        //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
-        //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
-    }
-   
-    r->integrator_selected->step(r->integrator_selected, r);
-    
-    if (r->post_timestep_modifications){
-        if (r->integrator_selected->synchronize){
-            r->integrator_selected->synchronize(r->integrator_selected, r);
-        }
-        r->post_timestep_modifications(r);
-        //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
-        //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
-    }
-
-    // Do collisions here. We need both the positions and velocities at the same time.
-    // Check for root crossings.
-    reb_boundary_check(r);     
-    if (r->tree_needs_update){
-        // Update tree (this will remove particles which left the box)
-        reb_tree_update(r);          
-    }
-
-    // Search for collisions using local and essential tree.
-    reb_collision_search(r);
-    
-    // Update walltime
-    struct timeval time_end;
-    gettimeofday(&time_end,NULL);
-    r->walltime += time_end.tv_sec-time_beginning.tv_sec+(time_end.tv_usec-time_beginning.tv_usec)/1e6;
-    // Update step counter
-    r->steps_done++; // This also counts failed IAS15 steps
-}
-
 void reb_exit(const char* const msg){
     // This function should also kill all children. 
     // Not implemented as pid is not easy to get to.
@@ -441,7 +392,7 @@ static void* reb_integrate_raw(void* args){
         }
 #endif // OPENGL
         if (r->simulationarchive_filename){ reb_simulationarchive_heartbeat(r);}
-        reb_step(r); 
+        reb_simulation_step(r); 
         reb_run_heartbeat(r);
         if (reb_sigint== 1){
             r->status = REB_EXIT_SIGINT;

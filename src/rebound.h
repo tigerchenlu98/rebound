@@ -609,7 +609,7 @@ void reb_simulation_init(struct reb_simulation* r);
  * Use reb_integrate instead.
  * @param r The rebound simulation to be integrated by one step.
  */
-void reb_step(struct reb_simulation* const r);
+void reb_simulation_step(struct reb_simulation* const r);
 
 /**
  * @brief Perform a fixed number of integration steps
@@ -618,7 +618,7 @@ void reb_step(struct reb_simulation* const r);
  * @param r The rebound simulation to be integrated.
  * @param N_steps The number of steps to be taken. 
  */
-void reb_steps(struct reb_simulation* const r, unsigned int N_steps);
+void reb_simulation_steps(struct reb_simulation* const r, unsigned int N_steps);
 
 /**
  * @brief Performs the actual integration

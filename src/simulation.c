@@ -30,6 +30,8 @@
 #include "output.h"
 #include "input.h"
 #include "tree.h"
+#include "boundary.h"
+#include "collision.h"
 
 #include "integrator_saba.h"
 #include "integrator_whfast.h"
@@ -40,6 +42,20 @@
 #include "integrator_leapfrog.h"
 #include "integrator_mercurius.h"
    
+/////////////////////////////////////////
+// Memory management 
+
+struct reb_simulation* reb_simulation_new(){
+    struct reb_simulation* r = malloc(sizeof(struct reb_simulation));
+    reb_simulation_init(r); // includes memset(0)
+    return r;
+}
+
+void reb_simulation_free(struct reb_simulation* const r){
+    reb_simulation_destroy(r);
+    free(r);
+}
+
 void reb_simulation_init(struct reb_simulation* r){
     // Set variables to their default value.
     // Only non-zero ones need to be set explicitly. 
@@ -91,12 +107,6 @@ void reb_simulation_init(struct reb_simulation* r){
 #endif // OPENMP
 }
 
-struct reb_simulation* reb_simulation_new(){
-    struct reb_simulation* r = malloc(sizeof(struct reb_simulation));
-    reb_simulation_init(r); // includes memset(0)
-    return r;
-}
-
 void reb_simulation_destroy(struct reb_simulation* const r){
     free(r->simulationarchive_filename);
     reb_tree_delete(r);
@@ -137,12 +147,6 @@ void reb_simulation_destroy(struct reb_simulation* const r){
     free(r->var_config);
 }
 
-void reb_simulation_free(struct reb_simulation* const r){
-    reb_simulation_destroy(r);
-    free(r);
-}
-
-
 struct reb_simulation* reb_simulation_copy(struct reb_simulation* r){
     struct reb_simulation* r_copy = reb_simulation_new();
     enum reb_input_binary_messages warnings = REB_INPUT_BINARY_WARNING_NONE;
@@ -163,3 +167,56 @@ struct reb_simulation* reb_simulation_copy(struct reb_simulation* r){
     r = reb_input_process_warnings(r, warnings);
     return r_copy;
 }
+
+/////////////////////////////////////////
+// Time stepping
+
+void reb_simulation_steps(struct reb_simulation* const r, unsigned int N_steps){
+    for (unsigned int i=0;i<N_steps;i++){
+        reb_simulation_step(r);
+    }
+}
+void reb_simulation_step(struct reb_simulation* const r){
+    // Update walltime
+    struct timeval time_beginning;
+    gettimeofday(&time_beginning,NULL);
+
+    if (r->pre_timestep_modifications){
+        if (r->integrator_selected->synchronize){
+            r->integrator_selected->synchronize(r->integrator_selected, r);
+        }
+        r->pre_timestep_modifications(r);
+        //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
+        //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
+    }
+   
+    r->integrator_selected->step(r->integrator_selected, r);
+    
+    if (r->post_timestep_modifications){
+        if (r->integrator_selected->synchronize){
+            r->integrator_selected->synchronize(r->integrator_selected, r);
+        }
+        r->post_timestep_modifications(r);
+        //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
+        //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
+    }
+
+    // Do collisions here. We need both the positions and velocities at the same time.
+    // Check for root crossings.
+    reb_boundary_check(r);     
+    if (r->tree_needs_update){
+        // Update tree (this will remove particles which left the box)
+        reb_tree_update(r);          
+    }
+
+    // Search for collisions using local and essential tree.
+    reb_collision_search(r);
+    
+    // Update walltime
+    struct timeval time_end;
+    gettimeofday(&time_end,NULL);
+    r->walltime += time_end.tv_sec-time_beginning.tv_sec+(time_end.tv_usec-time_beginning.tv_usec)/1e6;
+    // Update step counter
+    r->steps_done++; // This also counts failed IAS15 steps
+}
+
