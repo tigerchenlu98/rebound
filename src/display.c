@@ -612,7 +612,7 @@ void reb_display_init(struct reb_simulation * const r){
     data->spheres       = 0; 
     data->pause         = 0; 
     data->multisample = 1; 
-    if (data->r->integrator==REB_INTEGRATOR_WHFAST){
+    if (strcmp(data->r->integrator_selected->name,"whfast")==0){
         data->wire          = 1; 
     }else{
         data->wire          = 0; 
