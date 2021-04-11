@@ -21,4 +21,5 @@ Other naming rules
 - `_free()` deallocates structures.
 - `_init()` initializes a structure but does not allocate memory for the structure itself.
 - `_destroy()`  uninitializes a sturcture, but does not free memory for the structure itself.
+- `_copy()` allocates memory and performs a deep copy.
 

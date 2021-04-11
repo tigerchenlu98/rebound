@@ -54,8 +54,8 @@ void reb_create_simulation_from_simulationarchive_with_messages(struct reb_simul
     }
     
     // load original binary file
-    reb_free_pointers(r);
-    reb_simulation_init(r);
+    reb_simulation_destroy(r);  // This might not be necessary
+    reb_simulation_init(r);     // This neither
     r->simulationarchive_filename = NULL;
 
     fseek(inf, 0, SEEK_SET);
@@ -69,7 +69,7 @@ void reb_create_simulation_from_simulationarchive_with_messages(struct reb_simul
     // Read SA snapshot
     if(fseek(inf, sa->offset[snapshot], SEEK_SET)){
         *warnings |= REB_INPUT_BINARY_ERROR_SEEK;
-        reb_free_simulation(r);
+        reb_simulation_free(r);
         return;
     }
     

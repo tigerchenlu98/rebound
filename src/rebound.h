@@ -40,6 +40,8 @@
 #define GITHASH notavailable0000000000000000000000000001 
 #endif // GITHASH
 
+extern const int reb_max_messages_length;
+extern const int reb_max_messages_N;
 extern const char* reb_build_str;   ///< Date and time build string.
 extern const char* reb_version_str; ///< Version string.
 extern const char* reb_githash_str; ///< Current git hash.
@@ -581,11 +583,9 @@ void* reb_simulation_get_integrator_config(struct reb_simulation* r, const char*
 void reb_simulation_set_integrator(struct reb_simulation* r, const char* name);
 /**
  * @brief Creates a deep copy of a REBOUND simulation
- * @details All simulation data, including all particle data will be copied. Function pointers
- * need to be set manually afterwards. 
- * Working on the copy will not affect the original simulation.
+ * @details All simulation data, including all particle data will be copied.
  */
-struct reb_simulation* reb_copy_simulation(struct reb_simulation* r);
+struct reb_simulation* reb_simulation_copy(struct reb_simulation* r);
 
 /**
  * @brief Compares to REBOUND simulations bit by bit.
@@ -641,24 +641,8 @@ enum REB_STATUS reb_integrate(struct reb_simulation* const r, double tmax);
  */
 void reb_configure_box(struct reb_simulation* const r, const double boxsize, const int root_nx, const int root_ny, const int root_nz);
 
-/**
- * @brief Frees up all space used by a REBOUND simulation and the reb_simulation structure itself.
- * @details The REBOUND simulation is not usable anymore after being passed to this function.
- * @param r The rebound simulation to be freed
- */
-void reb_free_simulation(struct reb_simulation* const r);
-
-/**
- * @cond PRIVATE
- */
-
-/**
- * @brief Frees up all space used by a REBOUND simulation, but not the reb_simulation structure itself.
- * @details The REBOUND simulation is not usable anymore after being passed to this function.
- * @param r The rebound simulation to be freed
- */
-void reb_free_pointers(struct reb_simulation* const r);
-/** @endcond */
+void reb_simulation_free(struct reb_simulation* const r);
+void reb_simulation_destroy(struct reb_simulation* const r);
 
 #ifdef OPENMP
 /**
@@ -666,21 +650,6 @@ void reb_free_pointers(struct reb_simulation* const r);
  */
 void reb_omp_set_num_threads(int num_threads);
 #endif // OPENMP
-
-/**
- * @cond PRIVATE
- */
-
-/**
- * @brief Function used to allow binary input.
- */
-void reb_reset_temporary_pointers(struct reb_simulation* const r);
-/**
- * @brief Function used to allow binary input.
- * @return Returns 1 if one ore more function pointers were not NULL before.
- */
-int reb_reset_function_pointers(struct reb_simulation* const r);
-/** @endcond */
 
 /** 
  * @brief Adds a particle to the simulation. 

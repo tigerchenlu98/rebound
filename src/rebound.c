@@ -278,106 +278,6 @@ void reb_configure_box(struct reb_simulation* const r, const double root_size, c
     }
 }
 
-void reb_free_simulation(struct reb_simulation* const r){
-    reb_free_pointers(r);
-    free(r);
-}
-
-void reb_free_pointers(struct reb_simulation* const r){
-    free(r->simulationarchive_filename);
-    reb_tree_delete(r);
-    if(r->display_data){
-        pthread_mutex_destroy(&(r->display_data->mutex));
-        free(r->display_data->r_copy);
-        free(r->display_data->particles_copy);
-        free(r->display_data->p_jh_copy);
-        free(r->display_data->particle_data);
-        free(r->display_data->orbit_data);
-        free(r->display_data); // TODO: Free other pointers in display_data
-    }
-    free(r->gravity_cs  );
-    free(r->collisions  );
-    // reb_integrator_whfast_reset(r); TODO! call free, then alloc
-    //reb_integrator_ias15_reset(r);
-    //reb_integrator_mercurius_reset(r);
-    if(r->free_particle_ap){
-        for(int i=0; i<r->N; i++){
-            r->free_particle_ap(&r->particles[i]);
-        }
-    }
-    free(r->particles   );
-    free(r->particle_lookup_table);
-    if (r->messages){
-        for (int i=0;i<reb_max_messages_N;i++){
-            free(r->messages[i]);
-        }
-    }
-    free(r->messages);
-    if (r->extras_cleanup){
-        r->extras_cleanup(r);
-    }
-    free(r->var_config);
-}
-
-void reb_reset_temporary_pointers(struct reb_simulation* const r){
-    // Note: this will not clear the particle array.
-    r->gravity_cs_allocatedN    = 0;
-    r->gravity_cs           = NULL;
-    r->collisions_allocatedN    = 0;
-    r->collisions           = NULL;
-    r->extras               = NULL;
-    r->messages             = NULL;
-    // ********** Lookup Table
-    r->particle_lookup_table = NULL;
-    r->N_lookup = 0;
-    r->allocatedN_lookup = 0;
-}
-
-int reb_reset_function_pointers(struct reb_simulation* const r){
-    int wasnotnull = 0;
-    if (r->coefficient_of_restitution ||
-        r->collision_resolve ||
-        r->additional_forces ||
-        r->heartbeat ||
-        r->display_heartbeat ||
-        r->pre_timestep_modifications ||
-        r->post_timestep_modifications ||
-        r->free_particle_ap ||
-        r->extras_cleanup){
-      wasnotnull = 1;
-    }
-    r->coefficient_of_restitution   = NULL;
-    r->collision_resolve        = NULL;
-    r->additional_forces        = NULL;
-    r->heartbeat            = NULL;
-    r->display_heartbeat    = NULL;
-    r->pre_timestep_modifications  = NULL;
-    r->post_timestep_modifications  = NULL;
-    r->free_particle_ap = NULL;
-    r->extras_cleanup = NULL;
-    return wasnotnull;
-}
-
-void _reb_copy_simulation_with_messages(struct reb_simulation* r_copy,  struct reb_simulation* r, enum reb_input_binary_messages* warnings){
-    printf("need to copy new integrator structs\n");
-    exit(EXIT_FAILURE);
-    struct reb_output_stream stream;
-    stream.buf = NULL;
-    stream.size = 0;
-    stream.allocated = 0;
-    
-    reb_output_stream_write_binary(&stream, r);
-    
-    reb_reset_temporary_pointers(r_copy);
-    reb_reset_function_pointers(r_copy);
-    r_copy->simulationarchive_filename = NULL;
-    
-    struct reb_input_stream istream = {0};
-    istream.mem_stream = stream.buf;
-    while(reb_input_field(r_copy, &istream, warnings)){ }
-    free(stream.buf);
-    
-}
 
 int reb_diff_simulations(struct reb_simulation* r1, struct reb_simulation* r2, int output_option){
     if (output_option!=1 && output_option!=2){
@@ -400,20 +300,7 @@ int reb_diff_simulations(struct reb_simulation* r1, struct reb_simulation* r2, i
     return ret;
 }
 
-struct reb_simulation* reb_copy_simulation(struct reb_simulation* r){
-    struct reb_simulation* r_copy = reb_simulation_new();
-    enum reb_input_binary_messages warnings = REB_INPUT_BINARY_WARNING_NONE;
-    _reb_copy_simulation_with_messages(r_copy,r,&warnings);
-    r = reb_input_process_warnings(r, warnings);
-    return r_copy;
-}
-
-void reb_clear_pre_post_pointers(struct reb_simulation* const r){
-    // Temporary fix for REBOUNDx. 
-    r->pre_timestep_modifications  = NULL;
-    r->post_timestep_modifications  = NULL;
-}
-
+    
 int reb_check_exit(struct reb_simulation* const r, const double tmax, double* last_full_dt){
     while(r->status == REB_RUNNING_PAUSED){
         // Wait for user to disable paused simulation

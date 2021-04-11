@@ -27,6 +27,9 @@
 #include "rebound.h"
 #include "simulation.h"
 #include "tools.h"
+#include "output.h"
+#include "input.h"
+#include "tree.h"
 
 #include "integrator_saba.h"
 #include "integrator_whfast.h"
@@ -94,3 +97,69 @@ struct reb_simulation* reb_simulation_new(){
     return r;
 }
 
+void reb_simulation_destroy(struct reb_simulation* const r){
+    free(r->simulationarchive_filename);
+    reb_tree_delete(r);
+    if(r->display_data){
+        pthread_mutex_destroy(&(r->display_data->mutex));
+        free(r->display_data->r_copy);
+        free(r->display_data->particles_copy);
+        free(r->display_data->p_jh_copy);
+        free(r->display_data->particle_data);
+        free(r->display_data->orbit_data);
+        free(r->display_data); // TODO: Free other pointers in display_data
+    }
+    free(r->gravity_cs);
+    free(r->collisions);
+    
+    for (int i=0; i<r->integrators_available_N; i++){
+        if (r->integrators_available[i].free){
+            r->integrators_available[i].free(&(r->integrators_available[i]), r);
+        }
+    }
+
+    if(r->free_particle_ap){
+        for(int i=0; i<r->N; i++){
+            r->free_particle_ap(&r->particles[i]);
+        }
+    }
+    free(r->particles);
+    free(r->particle_lookup_table);
+    if (r->messages){
+        for (int i=0;i<reb_max_messages_N;i++){
+            free(r->messages[i]);
+        }
+    }
+    free(r->messages);
+    if (r->extras_cleanup){
+        r->extras_cleanup(r);
+    }
+    free(r->var_config);
+}
+
+void reb_simulation_free(struct reb_simulation* const r){
+    reb_simulation_destroy(r);
+    free(r);
+}
+
+
+struct reb_simulation* reb_simulation_copy(struct reb_simulation* r){
+    struct reb_simulation* r_copy = reb_simulation_new();
+    enum reb_input_binary_messages warnings = REB_INPUT_BINARY_WARNING_NONE;
+    
+    struct reb_output_stream stream;
+    stream.buf = NULL;
+    stream.size = 0;
+    stream.allocated = 0;
+    
+    reb_output_stream_write_binary(&stream, r);
+    
+    r_copy->simulationarchive_filename = NULL; // Not sure about this one.
+    
+    struct reb_input_stream istream = {0};
+    istream.mem_stream = stream.buf;
+    while(reb_input_field(r_copy, &istream, &warnings)){ }
+    free(stream.buf);
+    r = reb_input_process_warnings(r, warnings);
+    return r_copy;
+}
