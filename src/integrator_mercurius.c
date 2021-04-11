@@ -30,7 +30,6 @@
 #include <math.h>
 #include <string.h>
 #include "rebound.h"
-#include "integrator.h"
 #include "gravity.h"
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"

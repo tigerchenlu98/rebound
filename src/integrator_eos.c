@@ -27,7 +27,6 @@
 #include <math.h>
 #include "rebound.h"
 #include "gravity.h"
-#include "integrator.h"
 #include "integrator_eos.h"
 #include "tools.h"
 #include "input.h"

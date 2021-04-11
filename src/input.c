@@ -35,7 +35,6 @@
 #include "input.h"
 #include "tree.h"
 #include "integrator_sei.h"
-#include "integrator.h"
 #include "simulationarchive.h"
 
 double reb_read_double(int argc, char** argv, const char* argument, double _default){

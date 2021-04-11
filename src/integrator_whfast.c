@@ -35,7 +35,6 @@
 #include "tools.h"
 #include "gravity.h"
 #include "boundary.h"
-#include "integrator.h"
 #include "integrator_whfast.h"
 #include "output.h"
 #include "input.h"

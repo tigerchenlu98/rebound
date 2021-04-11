@@ -35,7 +35,6 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include "rebound.h"
-#include "integrator.h"
 #include "integrator_saba.h"
 #include "integrator_whfast.h"
 #include "integrator_ias15.h"
@@ -81,6 +80,34 @@ void reb_simulation_set_integrator(struct reb_simulation* r, const char* name){
     printf("Error: Integrator not found."); // TODO
     exit(EXIT_FAILURE);
 }
+
+
+void reb_update_acceleration(struct reb_simulation* r){
+    // Update and simplify tree. 
+    // This function also creates the tree if called for the first time.
+    if (r->tree_needs_update || r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE || r->collision==REB_COLLISION_LINETREE){
+        // Check for root crossings.
+        reb_boundary_check(r);     
+
+        // Update tree (this will remove particles which left the box)
+        reb_tree_update(r);          
+    }
+    if (r->tree_root!=NULL && r->gravity==REB_GRAVITY_TREE){
+        // Update center of mass and quadrupole moments in tree in preparation of force calculation.
+        reb_tree_update_gravity_data(r); 
+    }
+
+    // Main force calculation:
+	reb_calculate_acceleration(r);
+	if (r->N_var){
+		reb_calculate_acceleration_var(r);
+	}
+
+	if (r->additional_forces){
+        r->additional_forces(r);
+    }
+}
+
 void* reb_simulation_get_integrator_config(struct reb_simulation* r, const char* name){
     for (int i=0; i<r->integrators_available_N; i++){
         if (strcmp(r->integrators_available[i].name,name)==0){
@@ -347,6 +374,8 @@ struct reb_simulation* reb_create_simulation(){
 
 
 void _reb_copy_simulation_with_messages(struct reb_simulation* r_copy,  struct reb_simulation* r, enum reb_input_binary_messages* warnings){
+    printf("need to copy new integrator structs\n");
+    exit(EXIT_FAILURE);
     struct reb_output_stream stream;
     stream.buf = NULL;
     stream.size = 0;
@@ -401,106 +430,6 @@ void reb_clear_pre_post_pointers(struct reb_simulation* const r){
     // Temporary fix for REBOUNDx. 
     r->pre_timestep_modifications  = NULL;
     r->post_timestep_modifications  = NULL;
-}
-
-void reb_init_simulation(struct reb_simulation* r){
-    reb_tools_init_srand(r);
-    reb_reset_temporary_pointers(r);
-    reb_reset_function_pointers(r);
-    r->t        = 0; 
-    r->G        = 1;
-    r->Omega    = 1;
-    r->Omega_z  = nan(""); // Will default to Omega
-    r->softening    = 0;
-    r->dt       = 0.001;
-    r->dt_last_done = 0.;
-    r->steps_done = 0;
-    r->root_size    = -1;
-    r->root_nx  = 1;
-    r->root_ny  = 1;
-    r->root_nz  = 1;
-    r->root_n   = 1;
-    r->nghostx  = 0;
-    r->nghosty  = 0;
-    r->nghostz  = 0;
-    r->N        = 0;    
-    r->allocatedN   = 0;    
-    r->N_active     = -1;   
-    r->particle_lookup_table = NULL;
-    r->hash_ctr = 0;
-    r->N_lookup = 0;
-    r->allocatedN_lookup = 0;
-    r->testparticle_type = 0;   
-    r->testparticle_hidewarnings = 0;
-    r->N_var    = 0;    
-    r->var_config_N = 0;    
-    r->var_config   = NULL;     
-    r->exit_min_distance    = 0;    
-    r->exit_max_distance    = 0;    
-    r->max_radius[0]    = 0.;   
-    r->max_radius[1]    = 0.;   
-    r->status       = REB_RUNNING;
-    r->exact_finish_time    = 1;
-    r->force_is_velocity_dependent = 0;
-    r->gravity_ignore_terms    = 0;
-    r->calculate_megno  = 0;
-    r->output_timing_last   = -1;
-    r->save_messages = 0;
-    r->track_energy_offset = 0;
-    r->display_data = NULL;
-    r->walltime = 0;
-
-    r->minimum_collision_velocity = 0;
-    r->collisions_plog  = 0;
-    r->collisions_Nlog  = 0;    
-    r->collision_resolve_keep_sorted   = 0;    
-    
-    r->simulationarchive_version       = 2;    
-    r->simulationarchive_auto_interval = 0.;    
-    r->simulationarchive_auto_walltime = 0.;    
-    r->simulationarchive_auto_step     = 0;    
-    r->simulationarchive_next          = 0.;    
-    r->simulationarchive_next_step     = 0;    
-    r->simulationarchive_filename      = NULL;    
-    
-    // Default modules
-#ifdef OPENGL
-    r->visualization= REB_VISUALIZATION_OPENGL;
-#else // OPENGL
-    r->visualization= REB_VISUALIZATION_NONE;
-#endif // OPENGL
-    r->boundary     = REB_BOUNDARY_NONE;
-    r->gravity      = REB_GRAVITY_BASIC;
-    r->collision    = REB_COLLISION_NONE;
-
-    reb_integrator_leapfrog_register(r);
-    reb_integrator_sei_register(r);
-    reb_integrator_janus_register(r);
-    reb_integrator_whfast_register(r);
-    reb_integrator_mercurius_register(r);
-    reb_integrator_ias15_register(r);
-    reb_integrator_eos_register(r);
-    reb_integrator_saba_register(r);
-
-    for (int i=0; i<r->integrators_available_N; i++){
-        if (r->integrators_available[i].init){
-            r->integrators_available[i].config = r->integrators_available[i].init(&(r->integrators_available[i]), r);
-        }
-    }
-
-    r->integrator_selected = r->integrators_available; // first integrator is the selected one
-
-    // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
-    r->tree_needs_update= 0;
-    r->tree_root        = NULL;
-    r->opening_angle2   = 0.25;
-
-#ifndef LIBREBOUND
-    printf("Process id: %d.\n", getpid());
-#endif // LIBREBOUND
-#ifdef OPENMP
-    printf("Using OpenMP with %d threads per node.\n",omp_get_max_threads());
-#endif // OPENMP
 }
 
 int reb_check_exit(struct reb_simulation* const r, const double tmax, double* last_full_dt){

@@ -33,7 +33,6 @@
 #include "rebound.h"
 #include "tools.h"
 #include "output.h"
-#include "integrator.h"
 #include "input.h"
 
 void reb_output_stream_write(struct reb_output_stream* stream, void* restrict data, size_t size){

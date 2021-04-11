@@ -30,7 +30,6 @@
 #include <math.h>
 #include "rebound.h"
 #include "particle.h"
-#include "integrator.h"
 #include "integrator_whfast.h"
 #include "integrator_saba.h"
 #include "input.h"

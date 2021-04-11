@@ -36,7 +36,7 @@ libreboundmodule = Extension('librebound',
                                 'src/integrator_leapfrog.c',
                                 'src/integrator_janus.c',
                                 'src/integrator_sei.c',
-                                'src/integrator.c',
+                                'src/simulation.c',
                                 'src/gravity.c',
                                 'src/boundary.c',
                                 'src/display.c',
@@ -52,9 +52,9 @@ libreboundmodule = Extension('librebound',
                                 'src/transformations.c',
                                 ],
                     include_dirs = ['src'],
-                    define_macros=[ ('LIBREBOUND', None) ],
+                    # define_macros=[ ('LIBREBOUND', None) ], # No longer needed
                     # Removed '-march=native' for now.
-                    extra_compile_args=['-fstrict-aliasing', '-O3','-std=c99','-Wno-unknown-pragmas', ghash_arg, '-DLIBREBOUND', '-D_GNU_SOURCE', '-fPIC'],
+                    extra_compile_args=['-fstrict-aliasing', '-O3','-std=c99','-Wno-unknown-pragmas', ghash_arg, '-D_GNU_SOURCE', '-fPIC'],
                     extra_link_args=extra_link_args,
                     )
 

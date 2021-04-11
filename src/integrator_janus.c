@@ -32,7 +32,6 @@
 #include "tools.h"
 #include "gravity.h"
 #include "boundary.h"
-#include "integrator.h"
 #include "integrator_janus.h"
 #include "input.h"
 #include "output.h"

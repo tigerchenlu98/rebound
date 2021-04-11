@@ -1,10 +1,8 @@
 /**
- * @file 	integrator.h
- * @brief 	Interface for numerical particle integrators
- * @author 	Hanno Rein <hanno@hanno-rein.de>
+ * @file 	simulation.h
  * 
  * @section 	LICENSE
- * Copyright (c) 2011 Hanno Rein, Shangfei Liu
+ * Copyright (c) 2021 Hanno Rein
  *
  * This file is part of rebound.
  *
@@ -22,6 +20,6 @@
  * along with rebound.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#ifndef _INTEGRATOR_H
-#define _INTEGRATOR_H
+#ifndef _SIMULATION_H
+#define _SIMULATION_H
 #endif

@@ -44,7 +44,7 @@ extern const char* reb_build_str;   ///< Date and time build string.
 extern const char* reb_version_str; ///< Version string.
 extern const char* reb_githash_str; ///< Current git hash.
 extern const char* reb_logo[26];    ///< Logo of rebound. 
-extern volatile sig_atomic_t reb_sigint;  ///< Graceful global interrupt handler 
+extern volatile sig_atomic_t reb_sigint;  ///< Graceful (evil?) global interrupt handler 
 
 // Forward declarations
 struct reb_simulation;
@@ -133,10 +133,6 @@ struct reb_collision{
     int p1;         ///< One of the colliding particles
     int p2;         ///< One of the colliding particles
     struct reb_ghostbox gb; ///< Ghostbox (of particle p1, used for periodic and shearing sheet boundary conditions)
-#if defined(COLLISIONS_SWEEP) || defined(COLLISIONS_SWEEPPHI)
-    double time;        ///< Time of collision.
-    int crossing;       ///< Collision occurs at the interface of two sweep boxes.
-#endif // COLLISIONS_SWEEP
 };
 
 /**
@@ -456,7 +452,6 @@ struct reb_simulation {
      * \name Variables related to SimulationArchive 
      * @{
      */
-    int    simulationarchive_version;           ///< Version of the SA binary format (1=original/, 2=incremental)
     double simulationarchive_auto_interval;     ///< Current sampling cadence, in code units
     double simulationarchive_auto_walltime;     ///< Current sampling cadence, in wall time
     unsigned long long simulationarchive_auto_step;  ///< Current sampling cadence, in time steps
