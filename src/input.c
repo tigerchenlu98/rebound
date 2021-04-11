@@ -193,6 +193,21 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(SAAUTOSTEP,         &r->simulationarchive_auto_step);
         CASE(SANEXTSTEP,         &r->simulationarchive_next_step);
         CASE(RAND_SEED,          &r->rand_seed);
+        case REB_BINARY_FIELD_TYPE_INTEGRATOR_SELECTED:
+        {
+            unsigned int id = 0;
+            int found = 0;
+            reb_input_stream_fread(stream, &id, field.size,1);
+            for (int i=0; i<r->integrators_available_N; i++){
+                if (r->integrators_available[i].id==id){
+                    found = 1;
+                    r->integrator_selected = &(r->integrators_available[i]);
+                }
+            }
+            if (found==0){
+                *warnings |= REB_INPUT_BINARY_WARNING_FIELD_UNKOWN;
+            }
+        }
         case REB_BINARY_FIELD_TYPE_PARTICLES:
             if(r->particles){
                 free(r->particles);

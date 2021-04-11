@@ -146,6 +146,7 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     snprintf(header+cwritten+1,64-cwritten-1,"%s",reb_githash_str);
     reb_output_stream_write(stream, header, sizeof(char)*64);
    
+    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_INTEGRATOR_SELECTED,     &r->integrator_selected->id,        sizeof(unsigned int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_T,                  &r->t,                              sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_G,                  &r->G,                              sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_OMEGA,              &r->Omega,                          sizeof(double));
