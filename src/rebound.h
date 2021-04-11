@@ -260,7 +260,14 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_END = 9999,
 };
 
-#define REB_BF(integrator, variable) (REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG | (REB_INTEGRATOR_##integrator<<16) | variable)
+#define REB_BINARY_FIELD_TYPE_GENERATOR(name) (REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG | (integrator->id<<16) | name)
+#define REB_IF_FIELD(name) if (field.type==REB_BINARY_FIELD_TYPE_GENERATOR(name))
+#define REB_READ_FIELD(name, ptr) REB_IF_FIELD(name) {\
+        return reb_input_stream_fread(stream, &(config->ptr), field.size, 1);\
+    }
+#define REB_WRITE_FIELD_WITH_SIZE(name, ptr, size) reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_GENERATOR(name), ptr, size)
+#define REB_WRITE_FIELD(name, ptr) REB_WRITE_FIELD_WITH_SIZE(name, &(config->ptr), sizeof(config->ptr))
+        
 
 /**
  * @brief This structure is used to save and load binary files.
@@ -480,21 +487,6 @@ struct reb_simulation {
         REB_COLLISION_LINE = 4,     ///< Direct collision search O(N^2), looks for collisions by assuming a linear path over the last timestep
         REB_COLLISION_LINETREE = 5, ///< Tree-based collision search O(N log(N)), looks for collisions by assuming a linear path over the last timestep
         } collision;
-    /**
-     * @brief Available integrators
-     */
-    enum {
-        REB_INTEGRATOR_IAS15 = 0,    ///< IAS15 integrator, 15th order, non-symplectic (default)
-        REB_INTEGRATOR_WHFAST = 1,   ///< WHFast integrator, symplectic, 2nd order, up to 11th order correctors
-        REB_INTEGRATOR_SEI = 2,      ///< SEI integrator for shearing sheet simulations, symplectic, needs OMEGA variable
-        REB_INTEGRATOR_LEAPFROG = 4, ///< LEAPFROG integrator, simple, 2nd order, symplectic
-        // REB_INTEGRATOR_HERMES = 5,   ///< HERMES Integrator, not available anymore. Use MERCURIUS instead.
-        REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
-        REB_INTEGRATOR_JANUS = 8,    ///< Bit-wise reversible JANUS integrator.
-        REB_INTEGRATOR_MERCURIUS = 9,///< MERCURIUS integrator 
-        REB_INTEGRATOR_SABA = 10,    ///< SABA integrator family (Laskar and Robutel 2001)
-        REB_INTEGRATOR_EOS = 11,     ///< Embedded Operator Splitting (EOS) integrator family (Rein 2019)
-        } integrator;
 
     struct reb_integrator* integrators_available;
     unsigned int integrators_available_N;

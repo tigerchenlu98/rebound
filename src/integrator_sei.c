@@ -56,29 +56,21 @@ enum SEI_CONFIG {
 
 size_t reb_integrator_sei_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
     struct reb_integrator_sei_config* config = (struct reb_integrator_sei_config*)integrator->config;
-    switch (field.type){
-        case REB_BF(SEI, LASTDT):
-            return reb_input_stream_fread(stream, &config->lastdt, field.size, 1);
-        case REB_BF(SEI, SINDT):
-            return reb_input_stream_fread(stream, &config->sindt, field.size, 1);
-        case REB_BF(SEI, TANDT):
-            return reb_input_stream_fread(stream, &config->tandt, field.size, 1);
-        case REB_BF(SEI, SINDTZ):
-            return reb_input_stream_fread(stream, &config->sindtz, field.size, 1);
-        case REB_BF(SEI, TANDTZ):
-            return reb_input_stream_fread(stream, &config->tandtz, field.size, 1);
-        default:
-            return 0;
-    }
+    REB_READ_FIELD(LASTDT,   lastdt);
+    REB_READ_FIELD(SINDT,    sindt);
+    REB_READ_FIELD(TANDT,    tandt);
+    REB_READ_FIELD(SINDTZ,   sindt);
+    REB_READ_FIELD(TANDTZ,   tandtz);
+    return 0;
 }
 
 void reb_integrator_sei_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_sei_config* config = (struct reb_integrator_sei_config*)integrator->config;
-    reb_output_stream_write_field(stream, REB_BF(SEI, LASTDT),   &(config->lastdt),   sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(SEI, SINDT),    &(config->sindt),    sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(SEI, TANDT),    &(config->tandt),    sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(SEI, SINDTZ),   &(config->sindtz),   sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(SEI, TANDTZ),   &(config->tandtz),   sizeof(double));
+    REB_WRITE_FIELD(LASTDT,   lastdt);
+    REB_WRITE_FIELD(SINDT,    sindt);
+    REB_WRITE_FIELD(TANDT,    tandt);
+    REB_WRITE_FIELD(SINDTZ,   sindt);
+    REB_WRITE_FIELD(TANDTZ,   tandtz);
 }
 
 void* reb_integrator_sei_alloc(struct reb_integrator* integrator, struct reb_simulation* r){

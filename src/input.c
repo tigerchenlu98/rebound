@@ -184,7 +184,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(WALLTIME,           &r->walltime);
         CASE(COLLISION,          &r->collision);
         CASE(VISUALIZATION,      &r->visualization);
-        CASE(INTEGRATOR,         &r->integrator);
         CASE(BOUNDARY,           &r->boundary);
         CASE(GRAVITY,            &r->gravity);
         CASE(PYTHON_UNIT_L,      &r->python_unit_l);

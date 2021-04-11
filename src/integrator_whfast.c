@@ -1171,55 +1171,41 @@ enum WHFAST_CONFIG {
 
 size_t reb_integrator_whfast_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
     struct reb_integrator_whfast_config* config = (struct reb_integrator_whfast_config*)integrator->config;
-    switch (field.type){
-        case REB_BF(WHFAST, CORRECTOR):
-            return reb_input_stream_fread(stream, &config->corrector, field.size, 1);
-        case REB_BF(WHFAST, CORRECTOR2):
-            return reb_input_stream_fread(stream, &config->corrector2, field.size, 1);
-        case REB_BF(WHFAST, KERNEL):
-            return reb_input_stream_fread(stream, &config->kernel, field.size, 1);
-        case REB_BF(WHFAST, COORDINATES):
-            return reb_input_stream_fread(stream, &config->coordinates, field.size, 1);
-        case REB_BF(WHFAST, TIMESTEPWARN):
-            return reb_input_stream_fread(stream, &config->timestep_warning, field.size, 1);
-        case REB_BF(WHFAST, ISSYNCHRON):
-            return reb_input_stream_fread(stream, &config->is_synchronized, field.size, 1);
-        case REB_BF(WHFAST, KEEPUNSYNC):
-            return reb_input_stream_fread(stream, &config->keep_unsynchronized, field.size, 1);
-        case REB_BF(WHFAST, RECALCJAC):
-            return reb_input_stream_fread(stream, &config->recalculate_coordinates_this_timestep, field.size, 1);
-        case REB_BF(WHFAST, SAFEMODE):
-            return reb_input_stream_fread(stream, &config->safe_mode, field.size, 1);
-        case REB_BF(WHFAST, PJ):
-            if(config->p_jh){
-                free(config->p_jh);
-            }
-            config->allocated_N = (int)(field.size/sizeof(struct reb_particle));
-            if (field.size){
-                config->p_jh = malloc(field.size);
-                return reb_input_stream_fread(stream, config->p_jh, field.size,1);
-            }
-            return 0;
-            break;
-        default:
-            return 0;
+    REB_READ_FIELD(CORRECTOR, corrector);
+    REB_READ_FIELD(CORRECTOR2, corrector2);
+    REB_READ_FIELD(KERNEL, kernel);
+    REB_READ_FIELD(COORDINATES, coordinates);
+    REB_READ_FIELD(TIMESTEPWARN, timestep_warning);
+    REB_READ_FIELD(ISSYNCHRON, is_synchronized);
+    REB_READ_FIELD(KEEPUNSYNC, keep_unsynchronized);
+    REB_READ_FIELD(RECALCJAC, recalculate_coordinates_this_timestep);
+    REB_READ_FIELD(SAFEMODE, safe_mode);
+    REB_IF_FIELD(PJ){
+        if(config->p_jh){
+            free(config->p_jh);
+        }
+        config->allocated_N = (int)(field.size/sizeof(struct reb_particle));
+        if (field.size){
+            config->p_jh = malloc(field.size);
+            return reb_input_stream_fread(stream, config->p_jh, field.size,1);
+        }
     }
+    return 0;
 }
 
 void reb_integrator_whfast_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_whfast_config* config = (struct reb_integrator_whfast_config*)integrator->config;
-    
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, CORRECTOR2),  &config->corrector2,           sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, KERNEL),      &config->kernel,               sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, CORRECTOR),   &config->corrector,            sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, RECALCJAC),   &config->recalculate_coordinates_this_timestep, sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, SAFEMODE),    &config->safe_mode,            sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, KEEPUNSYNC),  &config->keep_unsynchronized,  sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, ISSYNCHRON),  &config->is_synchronized,      sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, TIMESTEPWARN),&config->timestep_warning,     sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, COORDINATES), &config->coordinates,          sizeof(int));
-    reb_output_stream_write_field(stream, REB_BF(WHFAST, PJ),          config->p_jh,                  sizeof(struct reb_particle)*config->allocated_N);
-
+   
+    REB_WRITE_FIELD(CORRECTOR, corrector);
+    REB_WRITE_FIELD(CORRECTOR2, corrector2);
+    REB_WRITE_FIELD(KERNEL, kernel);
+    REB_WRITE_FIELD(COORDINATES, coordinates);
+    REB_WRITE_FIELD(TIMESTEPWARN, timestep_warning);
+    REB_WRITE_FIELD(ISSYNCHRON, is_synchronized);
+    REB_WRITE_FIELD(KEEPUNSYNC, keep_unsynchronized);
+    REB_WRITE_FIELD(RECALCJAC, recalculate_coordinates_this_timestep);
+    REB_WRITE_FIELD(SAFEMODE, safe_mode);
+    REB_WRITE_FIELD_WITH_SIZE(PJ, config->p_jh, sizeof(struct reb_particle)*config->allocated_N);
 }
 
 void* reb_integrator_whfast_alloc(struct reb_integrator* integrator, struct reb_simulation* r){

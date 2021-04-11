@@ -387,18 +387,12 @@ enum SABA_FIELD_TYPES {
 
 size_t reb_integrator_saba_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
     struct reb_integrator_saba_config* config = (struct reb_integrator_saba_config*)integrator->config;
-    switch (field.type){
-        case REB_BF(SABA, COORDINATES):
-            return reb_input_stream_fread(stream, &config->coordinates, field.size, 1);
-        case REB_BF(SABA, SAFEMODE):
-            return reb_input_stream_fread(stream, &config->safe_mode, field.size, 1);
-        case REB_BF(SABA, ISSYNCHRON):
-            return reb_input_stream_fread(stream, &config->is_synchronized, field.size, 1);
-        case REB_BF(SABA, TYPE):
-            return reb_input_stream_fread(stream, &config->type, field.size, 1);
-        case REB_BF(SABA, KEEPUNSYNC):
-            return reb_input_stream_fread(stream, &config->keep_unsynchronized, field.size, 1);
-        case REB_BF(SABA, PJ):
+    REB_READ_FIELD(COORDINATES,  coordinates);
+    REB_READ_FIELD(SAFEMODE,     safe_mode);
+    REB_READ_FIELD(ISSYNCHRON,   is_synchronized);
+    REB_READ_FIELD(TYPE,         type);
+    REB_READ_FIELD(KEEPUNSYNC,   keep_unsynchronized);
+    REB_IF_FIELD(PJ) {
             if(config->p_jh){
                 free(config->p_jh);
             }
@@ -407,22 +401,18 @@ size_t reb_integrator_saba_load(struct reb_integrator* integrator, struct reb_si
                 config->p_jh = malloc(field.size);
                 return reb_input_stream_fread(stream, config->p_jh, field.size,1);
             }
-            return 0;
-            break;
-        default:
-            return 0;
     }
+    return 0;
 }
 
 void reb_integrator_saba_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_saba_config* config = (struct reb_integrator_saba_config*)integrator->config;
-    reb_output_stream_write_field(stream, REB_BF(SABA, COORDINATES),  &(config->coordinates),         sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(SABA, SAFEMODE),     &(config->safe_mode),           sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(SABA, ISSYNCHRON),   &(config->is_synchronized),     sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(SABA, TYPE),         &(config->type),                sizeof(enum REB_SABA_TYPE));
-    reb_output_stream_write_field(stream, REB_BF(SABA, KEEPUNSYNC),   &(config->keep_unsynchronized), sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(SABA, PJ),           config->p_jh,                   sizeof(struct reb_particle)*config->allocated_N);
-
+    REB_WRITE_FIELD(COORDINATES,  coordinates);
+    REB_WRITE_FIELD(SAFEMODE,     safe_mode);
+    REB_WRITE_FIELD(ISSYNCHRON,   is_synchronized);
+    REB_WRITE_FIELD(TYPE,         type);
+    REB_WRITE_FIELD(KEEPUNSYNC,   keep_unsynchronized);
+    REB_WRITE_FIELD_WITH_SIZE(PJ, config->p_jh, sizeof(struct reb_particle)*config->allocated_N);
 }
 
 void* reb_integrator_saba_alloc(struct reb_integrator* integrator, struct reb_simulation* r){

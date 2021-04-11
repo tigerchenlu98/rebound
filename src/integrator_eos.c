@@ -727,29 +727,21 @@ enum EOS_CONFIG {
 
 size_t reb_integrator_eos_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
     struct reb_integrator_eos_config* config = (struct reb_integrator_eos_config*)integrator->config;
-    switch (field.type){
-        case REB_BF(EOS, PHI0):
-            return reb_input_stream_fread(stream, &config->phi0, field.size, 1);
-        case REB_BF(EOS, PHI1):
-            return reb_input_stream_fread(stream, &config->phi1, field.size, 1);
-        case REB_BF(EOS, N):
-            return reb_input_stream_fread(stream, &config->n, field.size, 1);
-        case REB_BF(EOS, SAFEMODE):
-            return reb_input_stream_fread(stream, &config->safe_mode, field.size, 1);
-        case REB_BF(EOS, ISSYNCHRON):
-            return reb_input_stream_fread(stream, &config->is_synchronized, field.size, 1);
-        default:
-            return 0;
-    }
+    REB_READ_FIELD(PHI0,        phi0);
+    REB_READ_FIELD(PHI1,        phi1);
+    REB_READ_FIELD(N,           n);
+    REB_READ_FIELD(SAFEMODE,    safe_mode);
+    REB_READ_FIELD(ISSYNCHRON,  is_synchronized);
+    return 0;
 }
 
 void reb_integrator_eos_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_eos_config* config = (struct reb_integrator_eos_config*)integrator->config;
-    reb_output_stream_write_field(stream, REB_BF(EOS, PHI0),        &(config->phi0),        sizeof(enum REB_EOS_TYPE));
-    reb_output_stream_write_field(stream, REB_BF(EOS, PHI1),        &(config->phi1),        sizeof(enum REB_EOS_TYPE));
-    reb_output_stream_write_field(stream, REB_BF(EOS, N),           &(config->n),           sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(EOS, SAFEMODE),    &(config->safe_mode),    sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(EOS, ISSYNCHRON),  &(config->is_synchronized), sizeof(unsigned int));
+    REB_WRITE_FIELD(PHI0,        phi0);
+    REB_WRITE_FIELD(PHI1,        phi1);
+    REB_WRITE_FIELD(N,           n);
+    REB_WRITE_FIELD(SAFEMODE,    safe_mode);
+    REB_WRITE_FIELD(ISSYNCHRON,  is_synchronized);
 }
 
 void* reb_integrator_eos_alloc(struct reb_integrator* integrator, struct reb_simulation* r){

@@ -541,28 +541,20 @@ enum MERCURIUS_CONFIG {
 
 size_t reb_integrator_mercurius_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
     struct reb_integrator_mercurius_config* config = (struct reb_integrator_mercurius_config*)integrator->config;
-    switch (field.type){
-        case REB_BF(MERCURIUS, HILLFAC):
-            return reb_input_stream_fread(stream, &config->hillfac, field.size, 1);
-        case REB_BF(MERCURIUS, SAFEMODE):
-            return reb_input_stream_fread(stream, &config->safe_mode, field.size, 1);
-        case REB_BF(MERCURIUS, ISSYNCHRON):
-            return reb_input_stream_fread(stream, &config->is_synchronized, field.size, 1);
-        case REB_BF(MERCURIUS, COMVEL):
-            return reb_input_stream_fread(stream, &config->com_vel, field.size, 1);
-        case REB_BF(MERCURIUS, COMPOS):
-            return reb_input_stream_fread(stream, &config->com_pos, field.size, 1);
-        case REB_BF(MERCURIUS, DCRIT):
+    REB_READ_FIELD(HILLFAC,    hillfac);
+    REB_READ_FIELD(SAFEMODE,   safe_mode);
+    REB_READ_FIELD(ISSYNCHRON, is_synchronized);
+    REB_READ_FIELD(COMPOS,     com_pos);
+    REB_READ_FIELD(COMVEL,     com_vel);
+    REB_IF_FIELD(DCRIT) {
             if(config->dcrit){
                 free(config->dcrit);
             }
             config->dcrit_allocatedN = (int)(field.size/sizeof(double));
             if (field.size){
                 config->dcrit = malloc(field.size);
-                reb_input_stream_fread(stream, config->dcrit, field.size,1);
+                return reb_input_stream_fread(stream, config->dcrit, field.size,1);
             }
-            break;
-        default:
             return 0;
     }
     return 0;
@@ -570,12 +562,12 @@ size_t reb_integrator_mercurius_load(struct reb_integrator* integrator, struct r
 
 void reb_integrator_mercurius_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_mercurius_config* config = (struct reb_integrator_mercurius_config*)integrator->config;
-    reb_output_stream_write_field(stream, REB_BF(MERCURIUS, HILLFAC),    &config->hillfac,           sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(MERCURIUS, SAFEMODE),   &config->safe_mode,         sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(MERCURIUS, ISSYNCHRON), &config->is_synchronized,   sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(MERCURIUS, DCRIT),      config->dcrit,              sizeof(double)*config->dcrit_allocatedN);
-    reb_output_stream_write_field(stream, REB_BF(MERCURIUS, COMPOS),     &(config->com_pos),         sizeof(struct reb_vec3d));
-    reb_output_stream_write_field(stream, REB_BF(MERCURIUS, COMVEL),     &(config->com_vel),         sizeof(struct reb_vec3d));
+    REB_WRITE_FIELD(HILLFAC,    hillfac);
+    REB_WRITE_FIELD(SAFEMODE,   safe_mode);
+    REB_WRITE_FIELD(ISSYNCHRON, is_synchronized);
+    REB_WRITE_FIELD(COMPOS,     com_pos);
+    REB_WRITE_FIELD(COMVEL,     com_vel);
+    REB_WRITE_FIELD_WITH_SIZE(DCRIT,  config->dcrit, sizeof(double)*config->dcrit_allocatedN);
 
 }
 

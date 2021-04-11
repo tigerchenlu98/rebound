@@ -886,120 +886,114 @@ enum IAS15_CONFIG {
 };
 
 size_t reb_integrator_ias15_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
+    //TODO REIMPLEMENT:
+    //CASE_MALLOC_DP7(IAS15_G,  r->ri_ias15.g);
+    //CASE_MALLOC_DP7(IAS15_B,  r->ri_ias15.b);
+    //CASE_MALLOC_DP7(IAS15_CSB,r->ri_ias15.csb);
+    //CASE_MALLOC_DP7(IAS15_E,  r->ri_ias15.e);
+    //CASE_MALLOC_DP7(IAS15_BR, r->ri_ias15.br);
+    //CASE_MALLOC_DP7(IAS15_ER, r->ri_ias15.er);
     struct reb_integrator_ias15_config* config = (struct reb_integrator_ias15_config*)integrator->config;
-    switch (field.type){
-        case REB_BF(IAS15, EPSILON):
-            return reb_input_stream_fread(stream, &config->epsilon, field.size, 1);
-        case REB_BF(IAS15, MINDT):
-            return reb_input_stream_fread(stream, &config->min_dt, field.size, 1);
-        case REB_BF(IAS15, EPSILONGLOBAL):
-            return reb_input_stream_fread(stream, &config->epsilon_global, field.size, 1);
-        case REB_BF(IAS15, ITERATIONSMAX):
-            return reb_input_stream_fread(stream, &config->iterations_max_exceeded, field.size, 1);
-            //TODO REIMPLEMENT:
-        //CASE_MALLOC_DP7(IAS15_G,  r->ri_ias15.g);
-        //CASE_MALLOC_DP7(IAS15_B,  r->ri_ias15.b);
-        //CASE_MALLOC_DP7(IAS15_CSB,r->ri_ias15.csb);
-        //CASE_MALLOC_DP7(IAS15_E,  r->ri_ias15.e);
-        //CASE_MALLOC_DP7(IAS15_BR, r->ri_ias15.br);
-        //CASE_MALLOC_DP7(IAS15_ER, r->ri_ias15.er);
-        case REB_BF(IAS15, AT):
-            if(config->at){
-                free(config->at);
-            }
-            config->allocated_N = (int)(field.size/sizeof(double));
-            if (field.size){
-                config->at = malloc(field.size);
-                return reb_input_stream_fread(stream, config->at, field.size,1);
-            }
-            return 0;
-            break;
-        case REB_BF(IAS15, X0):
-            if(config->x0){
-                free(config->x0);
-            }
-            config->allocated_N = (int)(field.size/sizeof(double));
-            if (field.size){
-                config->x0 = malloc(field.size);
-                return reb_input_stream_fread(stream, config->x0, field.size,1);
-            }
-            return 0;
-            break;
-        case REB_BF(IAS15, V0):
-            if(config->v0){
-                free(config->v0);
-            }
-            config->allocated_N = (int)(field.size/sizeof(double));
-            if (field.size){
-                config->v0 = malloc(field.size);
-                return reb_input_stream_fread(stream, config->v0, field.size,1);
-            }
-            return 0;
-            break;
-        case REB_BF(IAS15, A0):
-            if(config->a0){
-                free(config->a0);
-            }
-            config->allocated_N = (int)(field.size/sizeof(double));
-            if (field.size){
-                config->a0 = malloc(field.size);
-                return reb_input_stream_fread(stream, config->a0, field.size,1);
-            }
-            return 0;
-            break;
-        case REB_BF(IAS15, CSX):
-            if(config->csx){
-                free(config->csx);
-            }
-            config->allocated_N = (int)(field.size/sizeof(double));
-            if (field.size){
-                config->csx = malloc(field.size);
-                return reb_input_stream_fread(stream, config->csx, field.size,1);
-            }
-            return 0;
-            break;
-        case REB_BF(IAS15, CSV):
-            if(config->csv){
-                free(config->csv);
-            }
-            config->allocated_N = (int)(field.size/sizeof(double));
-            if (field.size){
-                config->csv = malloc(field.size);
-                return reb_input_stream_fread(stream, config->csv, field.size,1);
-            }
-            return 0;
-            break;
-        case REB_BF(IAS15, CSA0):
-            if(config->csa0){
-                free(config->csa0);
-            }
-            config->allocated_N = (int)(field.size/sizeof(double));
-            if (field.size){
-                config->csa0 = malloc(field.size);
-                return reb_input_stream_fread(stream, config->csa0, field.size,1);
-            }
-            return 0;
-            break;
-        default:
-            return 0;
+    REB_READ_FIELD(EPSILON,      epsilon);
+    REB_READ_FIELD(MINDT,        min_dt);
+    REB_READ_FIELD(EPSILONGLOBAL,epsilon_global);
+    REB_READ_FIELD(ITERATIONSMAX,iterations_max_exceeded);
+    REB_READ_FIELD(ALLOCATEDN,   allocated_N);
+    REB_IF_FIELD(AT) {
+        if(config->at){
+            free(config->at);
+        }
+        config->allocated_N = (int)(field.size/sizeof(double));
+        if (field.size){
+            config->at = malloc(field.size);
+            return reb_input_stream_fread(stream, config->at, field.size,1);
+        }
+        return 0;
     }
+    REB_IF_FIELD(X0) {
+        if(config->x0){
+            free(config->x0);
+        }
+        config->allocated_N = (int)(field.size/sizeof(double));
+        if (field.size){
+            config->x0 = malloc(field.size);
+            return reb_input_stream_fread(stream, config->x0, field.size,1);
+        }
+        return 0;
+    }
+    REB_IF_FIELD(V0) {
+        if(config->v0){
+            free(config->v0);
+        }
+        config->allocated_N = (int)(field.size/sizeof(double));
+        if (field.size){
+            config->v0 = malloc(field.size);
+            return reb_input_stream_fread(stream, config->v0, field.size,1);
+        }
+        return 0;
+    }
+    REB_IF_FIELD(A0) {
+        if(config->a0){
+            free(config->a0);
+        }
+        config->allocated_N = (int)(field.size/sizeof(double));
+        if (field.size){
+            config->a0 = malloc(field.size);
+            return reb_input_stream_fread(stream, config->a0, field.size,1);
+        }
+        return 0;
+    }
+    REB_IF_FIELD(CSX) {
+        if(config->csx){
+            free(config->csx);
+        }
+        config->allocated_N = (int)(field.size/sizeof(double));
+        if (field.size){
+            config->csx = malloc(field.size);
+            return reb_input_stream_fread(stream, config->csx, field.size,1);
+        }
+        return 0;
+    }
+    REB_IF_FIELD(CSV) {
+        if(config->csv){
+            free(config->csv);
+        }
+        config->allocated_N = (int)(field.size/sizeof(double));
+        if (field.size){
+            config->csv = malloc(field.size);
+            return reb_input_stream_fread(stream, config->csv, field.size,1);
+        }
+        return 0;
+    }
+    REB_IF_FIELD(CSA0) {
+        if(config->csa0){
+            free(config->csa0);
+        }
+        config->allocated_N = (int)(field.size/sizeof(double));
+        if (field.size){
+            config->csa0 = malloc(field.size);
+            return reb_input_stream_fread(stream, config->csa0, field.size,1);
+        }
+        return 0;
+    }
+    return 0;
 }
 
 void reb_integrator_ias15_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_ias15_config* config = (struct reb_integrator_ias15_config*)integrator->config;
     int N3 = config->allocated_N;
-    reb_output_stream_write_field(stream, REB_BF(IAS15, EPSILON),      &(config->epsilon),               sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(IAS15, MINDT),        &(config->min_dt),                sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(IAS15, EPSILONGLOBAL),&(config->epsilon_global),        sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(IAS15, ITERATIONSMAX),&(config->iterations_max_exceeded),sizeof(unsigned long));
-    reb_output_stream_write_field(stream, REB_BF(IAS15, ALLOCATEDN),   &(config->allocated_N),            sizeof(int));
-    reb_output_stream_write_field(stream, REB_BF(IAS15, AT),           config->at,     sizeof(double)*N3);
-    reb_output_stream_write_field(stream, REB_BF(IAS15, X0),           config->x0,     sizeof(double)*N3);
-    reb_output_stream_write_field(stream, REB_BF(IAS15, V0),           config->v0,     sizeof(double)*N3);
-    reb_output_stream_write_field(stream, REB_BF(IAS15, A0),           config->a0,     sizeof(double)*N3);
-    reb_output_stream_write_field(stream, REB_BF(IAS15, CSX),          config->csx,    sizeof(double)*N3);
-    reb_output_stream_write_field(stream, REB_BF(IAS15, CSV),          config->csv,    sizeof(double)*N3);
-    reb_output_stream_write_field(stream, REB_BF(IAS15, CSA0),         config->csa0,   sizeof(double)*N3);
+    REB_WRITE_FIELD(EPSILON,      epsilon);
+    REB_WRITE_FIELD(MINDT,        min_dt);
+    REB_WRITE_FIELD(EPSILONGLOBAL,epsilon_global);
+    REB_WRITE_FIELD(ITERATIONSMAX,iterations_max_exceeded);
+    REB_WRITE_FIELD(ALLOCATEDN,   allocated_N);
+    REB_WRITE_FIELD_WITH_SIZE(AT,           config->at,     sizeof(double)*N3);
+    REB_WRITE_FIELD_WITH_SIZE(X0,           config->x0,     sizeof(double)*N3);
+    REB_WRITE_FIELD_WITH_SIZE(V0,           config->v0,     sizeof(double)*N3);
+    REB_WRITE_FIELD_WITH_SIZE(A0,           config->a0,     sizeof(double)*N3);
+    REB_WRITE_FIELD_WITH_SIZE(CSX,          config->csx,    sizeof(double)*N3);
+    REB_WRITE_FIELD_WITH_SIZE(CSV,          config->csv,    sizeof(double)*N3);
+    REB_WRITE_FIELD_WITH_SIZE(CSA0,         config->csa0,   sizeof(double)*N3);
 }
 
 void* reb_integrator_ias15_alloc(struct reb_integrator* integrator, struct reb_simulation* r){

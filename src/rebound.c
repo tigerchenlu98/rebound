@@ -457,7 +457,6 @@ void reb_init_simulation(struct reb_simulation* r){
 #else // OPENGL
     r->visualization= REB_VISUALIZATION_NONE;
 #endif // OPENGL
-    r->integrator   = REB_INTEGRATOR_IAS15;
     r->boundary     = REB_BOUNDARY_NONE;
     r->gravity      = REB_GRAVITY_BASIC;
     r->collision    = REB_COLLISION_NONE;

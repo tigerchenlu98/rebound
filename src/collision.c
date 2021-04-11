@@ -335,7 +335,7 @@ void reb_collision_search(struct reb_simulation* const r){
         resolve = reb_collision_resolve_halt;
     }
     unsigned int collision_resolve_keep_sorted = r->collision_resolve_keep_sorted;
-    if (r->integrator == REB_INTEGRATOR_MERCURIUS){
+    if (strcmp(r->integrator_selected->name,"mercurius")==0){
         collision_resolve_keep_sorted = 1; // Force keep_sorted for hybrid integrator
     }
 

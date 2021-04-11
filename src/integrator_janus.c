@@ -305,38 +305,31 @@ enum JANUS_CONFIG {
 
 size_t reb_integrator_janus_load(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_input_stream* stream, struct reb_binary_field field){
     struct reb_integrator_janus_config* config = (struct reb_integrator_janus_config*)integrator->config;
-    switch (field.type){
-        case REB_BF(JANUS, SCALEPOS):
-            return reb_input_stream_fread(stream, &config->scale_pos, field.size, 1);
-        case REB_BF(JANUS, SCALEVEL):
-            return reb_input_stream_fread(stream, &config->scale_vel, field.size, 1);
-        case REB_BF(JANUS, ORDER):
-            return reb_input_stream_fread(stream, &config->order, field.size, 1);
-        case REB_BF(JANUS, RECALC):
-            return reb_input_stream_fread(stream, &config->recalculate_integer_coordinates_this_timestep, field.size, 1);
-        case REB_BF(JANUS, PINT):
-            if(config->p_int){
-                free(config->p_int);
-            }
-            config->allocated_N = (int)(field.size/sizeof(struct reb_particle_int));
-            if (field.size){
-                config->p_int = malloc(field.size);
-                return reb_input_stream_fread(stream, config->p_int, field.size,1);
-            }
-            return 0;
-            break;
-        default:
-            return 0;
+    REB_READ_FIELD(SCALEPOS,    scale_pos);
+    REB_READ_FIELD(SCALEVEL,    scale_vel);
+    REB_READ_FIELD(ORDER,       order);
+    REB_READ_FIELD(RECALC,      recalculate_integer_coordinates_this_timestep);
+    REB_IF_FIELD(PINT) {
+        if(config->p_int){
+            free(config->p_int);
+        }
+        config->allocated_N = (int)(field.size/sizeof(struct reb_particle_int));
+        if (field.size){
+            config->p_int = malloc(field.size);
+            return reb_input_stream_fread(stream, config->p_int, field.size,1);
+        }
+        return 0;
     }
+    return 0;
 }
 
 void reb_integrator_janus_save(struct reb_integrator* integrator, struct reb_simulation* r, struct reb_output_stream* stream){
     struct reb_integrator_janus_config* config = (struct reb_integrator_janus_config*)integrator->config;
-    reb_output_stream_write_field(stream, REB_BF(JANUS, SCALEPOS),    &(config->scale_pos),            sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(JANUS, SCALEVEL),    &(config->scale_vel),            sizeof(double));
-    reb_output_stream_write_field(stream, REB_BF(JANUS, ORDER),       &(config->order),                sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(JANUS, RECALC),      &(config->recalculate_integer_coordinates_this_timestep), sizeof(unsigned int));
-    reb_output_stream_write_field(stream, REB_BF(JANUS, PINT),        config->p_int,                   sizeof(struct reb_particle_int)*config->allocated_N);
+    REB_WRITE_FIELD(SCALEPOS,    scale_pos);
+    REB_WRITE_FIELD(SCALEVEL,    scale_vel);
+    REB_WRITE_FIELD(ORDER,       order);
+    REB_WRITE_FIELD(RECALC,      recalculate_integer_coordinates_this_timestep);
+    REB_WRITE_FIELD_WITH_SIZE(PINT, config->p_int, sizeof(struct reb_particle_int)*config->allocated_N);
 
 }
 
