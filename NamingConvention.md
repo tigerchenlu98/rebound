@@ -17,5 +17,8 @@ Other naming rules
 ------------------
 
 - If a function operates on a struct, the struct's name appears first: e.g. `reb_simulation_move_to_com()`, **not** `reb_move_simulation_to_com().
-- `_init()` allocated and initializes a struct. All allocated memory will be release with `_free()`
+- Following GLib/GTK: `_new()` allocated and initializes a structure.
+- `_free()` deallocates structures.
+- `_init()` initializes a structure but does not allocate memory for the structure itself.
+- `_destroy()`  uninitializes a sturcture, but does not free memory for the structure itself.
 

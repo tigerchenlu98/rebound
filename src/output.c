@@ -195,7 +195,6 @@ void reb_output_stream_write_binary(struct reb_output_stream* stream, struct reb
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MEGNOMEANT,         &r->megno_mean_t,                   sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MEGNOMEANY,         &r->megno_mean_Y,                   sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_MEGNON,             &r->megno_n,                        sizeof(long));
-    reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAVERSION,          &r->simulationarchive_version,      sizeof(int));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAAUTOINTERVAL,     &r->simulationarchive_auto_interval, sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SAAUTOWALLTIME,     &r->simulationarchive_auto_walltime, sizeof(double));
     reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_SANEXT,             &r->simulationarchive_next,         sizeof(double));

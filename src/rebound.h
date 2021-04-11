@@ -62,7 +62,7 @@ struct reb_integrator {
     void* config;
     void (*step)(struct reb_integrator*, struct reb_simulation*);
     void (*synchronize)(struct reb_integrator*, struct reb_simulation*);
-    void* (*init)(struct reb_integrator*, struct reb_simulation*);
+    void* (*new)(struct reb_integrator*, struct reb_simulation*);
     void (*free)(struct reb_integrator*, struct reb_simulation*);
     size_t (*load)(struct reb_integrator*, struct reb_simulation*, struct reb_input_stream*, struct reb_binary_field);
     void (*save)(struct reb_integrator*, struct reb_simulation*, struct reb_output_stream*);
@@ -239,7 +239,6 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_VARCONFIG = 86,
     REB_BINARY_FIELD_TYPE_FUNCTIONPOINTERS = 87,
     REB_BINARY_FIELD_TYPE_VISUALIZATION = 107,
-    REB_BINARY_FIELD_TYPE_SAVERSION = 125,
     REB_BINARY_FIELD_TYPE_WALLTIME = 126,
     REB_BINARY_FIELD_TYPE_PYTHON_UNIT_L = 130,
     REB_BINARY_FIELD_TYPE_PYTHON_UNIT_M = 131,
@@ -292,7 +291,6 @@ struct reb_simulationarchive_blob {
 struct reb_simulationarchive{
     FILE* inf;              ///< File pointer (will be kept open)
     char* filename;         ///< Filename of open file
-    int version;            ///< SimulationArchive version
     double auto_interval;   ///< Interval setting used to create SA (if used)
     double auto_walltime;   ///< Walltime setting used to create SA (if used)
     unsigned long long auto_step;  ///< Steps in-between SA snapshots (if used)
@@ -577,13 +575,6 @@ struct reb_simulation {
  * @details These are the functions that typically need to be called by the user.
  * @{
  */
-/**
- * @brief Creates and initialises a REBOUND simulation
- * @details Allocate memory for one reb_simulation structure, initialise all variables 
- * and return the pointer to the reb_simulation structure. This function must be called 
- * before any particles are added.
- */
-struct reb_simulation* reb_create_simulation(void);
 
 
 void* reb_simulation_get_integrator_config(struct reb_simulation* r, const char* name);
@@ -607,12 +598,10 @@ struct reb_simulation* reb_copy_simulation(struct reb_simulation* r);
 int reb_diff_simulations(struct reb_simulation* r1, struct reb_simulation* r2, int output_option);
 
 /**
- * @brief Initialize reb_simulation structure.
- *
- * @details Same as reb_create_simulation() but does not allocate memory for structure itself.
- * @param r Structure to be initialized (needs to be allocated externally).
+ * @brief Allocate and initialize reb_simulation structure.
  */
-void reb_init_simulation(struct reb_simulation* r);
+struct reb_simulation* reb_simulation_new();
+void reb_simulation_init(struct reb_simulation* r);
 
 /**
  * @brief Perform one integration step

@@ -1199,7 +1199,7 @@ void reb_integrator_whfast_save(struct reb_integrator* integrator, struct reb_si
     REB_WRITE_FIELD_WITH_SIZE(PJ, config->p_jh, sizeof(struct reb_particle)*config->allocated_N);
 }
 
-void* reb_integrator_whfast_init(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_whfast_new(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_whfast_config* config = calloc(1, sizeof(struct reb_integrator_whfast_config));
     config->is_synchronized = 1;
     config->safe_mode = 1;
@@ -1220,7 +1220,7 @@ void reb_integrator_whfast_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "whfast", 1);
     integrator->step        = reb_integrator_whfast_step;
     integrator->synchronize = reb_integrator_whfast_synchronize;
-    integrator->init        = reb_integrator_whfast_init;
+    integrator->new         = reb_integrator_whfast_new;
     integrator->free        = reb_integrator_whfast_free;
     integrator->load        = reb_integrator_whfast_load;
     integrator->save        = reb_integrator_whfast_save;

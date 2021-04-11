@@ -17,8 +17,7 @@ class SimulationArchive(Structure):
     This makes it possible to reproduce a simulation exactly 
     (down to the last bit). The SimulationArchive allows you to add
     an arbitrary number of snapshots. Simulations can be reconstructed
-    from these snapshots. Since version 2 of the SimulationArchive
-    (Spring 2018), you can change anything in-between snapshots,
+    from these snapshots. You can change anything in-between snapshots,
     including settings like the integrator, the timestep, the number of
     particles. The file format is efficient in that only data
     that changed is stored in the SimulationArchive file. This is all
@@ -47,7 +46,6 @@ class SimulationArchive(Structure):
     """
     _fields_ = [("_inf", c_void_p),
                 ("_filename", c_char_p),
-                ("version", c_int), 
                 ("auto_interval", c_double), 
                 ("auto_walltime", c_double), 
                 ("auto_step", c_ulonglong), 

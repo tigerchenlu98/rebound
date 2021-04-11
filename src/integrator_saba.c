@@ -414,7 +414,7 @@ void reb_integrator_saba_save(struct reb_integrator* integrator, struct reb_simu
     REB_WRITE_FIELD_WITH_SIZE(PJ, config->p_jh, sizeof(struct reb_particle)*config->allocated_N);
 }
 
-void* reb_integrator_saba_init(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_saba_new(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_saba_config* config = calloc(1, sizeof(struct reb_integrator_saba_config));
     config->type = REB_SABA_10_6_4;
     config->safe_mode = 1;
@@ -437,7 +437,7 @@ void reb_integrator_saba_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "saba", 10);
     integrator->step        = reb_integrator_saba_step;
     integrator->synchronize = reb_integrator_saba_synchronize;
-    integrator->init        = reb_integrator_saba_init;
+    integrator->new         = reb_integrator_saba_new;
     integrator->free        = reb_integrator_saba_free;
     integrator->load        = reb_integrator_saba_load;
     integrator->save        = reb_integrator_saba_save;

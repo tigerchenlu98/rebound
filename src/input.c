@@ -176,7 +176,6 @@ int reb_input_field(struct reb_simulation* r, struct reb_input_stream* stream, e
         CASE(MEGNOMEANT,         &r->megno_mean_t);
         CASE(MEGNOMEANY,         &r->megno_mean_Y);
         CASE(MEGNON,             &r->megno_n);
-        CASE(SAVERSION,          &r->simulationarchive_version);
         CASE(SAAUTOINTERVAL,     &r->simulationarchive_auto_interval);
         CASE(SAAUTOWALLTIME,     &r->simulationarchive_auto_walltime);
         CASE(SANEXT,             &r->simulationarchive_next);
@@ -339,7 +338,7 @@ struct reb_simulation* reb_input_process_warnings(struct reb_simulation* r, enum
 
 struct reb_simulation* reb_create_simulation_from_binary(char* filename){
     enum reb_input_binary_messages warnings = REB_INPUT_BINARY_WARNING_NONE;
-    struct reb_simulation* r = reb_create_simulation();
+    struct reb_simulation* r = reb_simulation_new();
     
     struct reb_simulationarchive* sa = malloc(sizeof(struct reb_simulationarchive)); 
     reb_read_simulationarchive_with_messages(sa, filename, NULL, &warnings);

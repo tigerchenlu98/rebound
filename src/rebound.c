@@ -35,14 +35,6 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include "rebound.h"
-#include "integrator_saba.h"
-#include "integrator_whfast.h"
-#include "integrator_ias15.h"
-#include "integrator_sei.h"
-#include "integrator_janus.h"
-#include "integrator_eos.h"
-#include "integrator_leapfrog.h"
-#include "integrator_mercurius.h"
 #include "boundary.h"
 #include "gravity.h"
 #include "collision.h"
@@ -366,13 +358,6 @@ int reb_reset_function_pointers(struct reb_simulation* const r){
     return wasnotnull;
 }
 
-struct reb_simulation* reb_create_simulation(){
-    struct reb_simulation* r = calloc(1,sizeof(struct reb_simulation));
-    reb_init_simulation(r);
-    return r;
-}
-
-
 void _reb_copy_simulation_with_messages(struct reb_simulation* r_copy,  struct reb_simulation* r, enum reb_input_binary_messages* warnings){
     printf("need to copy new integrator structs\n");
     exit(EXIT_FAILURE);
@@ -387,9 +372,6 @@ void _reb_copy_simulation_with_messages(struct reb_simulation* r_copy,  struct r
     reb_reset_function_pointers(r_copy);
     r_copy->simulationarchive_filename = NULL;
     
-    // Set to old version by default. Will be overwritten if new version was used.
-    r_copy->simulationarchive_version = 0;
-
     struct reb_input_stream istream = {0};
     istream.mem_stream = stream.buf;
     while(reb_input_field(r_copy, &istream, warnings)){ }
@@ -419,7 +401,7 @@ int reb_diff_simulations(struct reb_simulation* r1, struct reb_simulation* r2, i
 }
 
 struct reb_simulation* reb_copy_simulation(struct reb_simulation* r){
-    struct reb_simulation* r_copy = reb_create_simulation();
+    struct reb_simulation* r_copy = reb_simulation_new();
     enum reb_input_binary_messages warnings = REB_INPUT_BINARY_WARNING_NONE;
     _reb_copy_simulation_with_messages(r_copy,r,&warnings);
     r = reb_input_process_warnings(r, warnings);

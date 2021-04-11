@@ -23,15 +23,25 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "rebound.h"
 #include "simulation.h"
+#include "tools.h"
+
+#include "integrator_saba.h"
+#include "integrator_whfast.h"
+#include "integrator_ias15.h"
+#include "integrator_sei.h"
+#include "integrator_janus.h"
+#include "integrator_eos.h"
+#include "integrator_leapfrog.h"
+#include "integrator_mercurius.h"
    
-   
-struct reb_simulation* reb_simulation_init(){
-    struct reb_simulation* r = calloc(1,sizeof(struct reb_simulation));
-    reb_tools_init_srand(r);
+void reb_simulation_init(struct reb_simulation* r){
     // Set variables to their default value.
     // Only non-zero ones need to be set explicitly. 
+    memset(r,0,sizeof(struct reb_simulation));
+    reb_tools_init_srand(r);
     r->G        = 1;
     r->Omega    = 1;
     r->Omega_z  = nan(""); // Will default to Omega
@@ -48,11 +58,6 @@ struct reb_simulation* reb_simulation_init(){
     r->exact_finish_time    = 1;
     r->output_timing_last   = -1;
     
-#ifdef OPENGL
-    r->visualization= REB_VISUALIZATION_OPENGL;
-#else // OPENGL
-    r->visualization= REB_VISUALIZATION_NONE;
-#endif // OPENGL
     r->boundary     = REB_BOUNDARY_NONE;
     r->gravity      = REB_GRAVITY_BASIC;
     r->collision    = REB_COLLISION_NONE;
@@ -67,19 +72,25 @@ struct reb_simulation* reb_simulation_init(){
     reb_integrator_saba_register(r);
 
     for (int i=0; i<r->integrators_available_N; i++){
-        if (r->integrators_available[i].init){
-            r->integrators_available[i].config = r->integrators_available[i].init(&(r->integrators_available[i]), r);
+        if (r->integrators_available[i].new){
+            r->integrators_available[i].config = r->integrators_available[i].new(&(r->integrators_available[i]), r);
         }
     }
-
     r->integrator_selected = r->integrators_available; // first integrator is the default (IAS15)
 
-
-#ifndef LIBREBOUND
-    printf("Process id: %d.\n", getpid());
-#endif // LIBREBOUND
+#ifdef OPENGL
+    r->visualization= REB_VISUALIZATION_OPENGL;
+#else // OPENGL
+    r->visualization= REB_VISUALIZATION_NONE;
+#endif // OPENGL
 #ifdef OPENMP
     printf("Using OpenMP with %d threads per node.\n",omp_get_max_threads());
 #endif // OPENMP
+}
+
+struct reb_simulation* reb_simulation_new(){
+    struct reb_simulation* r = malloc(sizeof(struct reb_simulation));
+    reb_simulation_init(r); // includes memset(0)
+    return r;
 }
 

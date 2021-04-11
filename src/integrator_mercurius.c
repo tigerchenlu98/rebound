@@ -570,7 +570,7 @@ void reb_integrator_mercurius_save(struct reb_integrator* integrator, struct reb
 
 }
 
-void* reb_integrator_mercurius_init(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_mercurius_new(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_mercurius_config* config = calloc(1, sizeof(struct reb_integrator_mercurius_config));
     config->hillfac = 3;
     return config;
@@ -662,7 +662,7 @@ void reb_integrator_mercurius_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "mercurius", 9);
     integrator->step        = reb_integrator_mercurius_step;
     integrator->synchronize = reb_integrator_mercurius_synchronize;
-    integrator->init        = reb_integrator_mercurius_init;
+    integrator->new         = reb_integrator_mercurius_new;
     integrator->free        = reb_integrator_mercurius_free;
     integrator->load        = reb_integrator_mercurius_load;
     integrator->save        = reb_integrator_mercurius_save;

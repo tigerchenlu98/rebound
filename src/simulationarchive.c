@@ -40,7 +40,7 @@
 #include "output.h"
 #include "integrator_ias15.h"
 
-
+// TODO: Naming very inconsistent!
 void reb_create_simulation_from_simulationarchive_with_messages(struct reb_simulation* r, struct reb_simulationarchive* sa, long snapshot, enum reb_input_binary_messages* warnings){
     FILE* inf = sa->inf;
     if (inf == NULL){
@@ -55,13 +55,8 @@ void reb_create_simulation_from_simulationarchive_with_messages(struct reb_simul
     
     // load original binary file
     reb_free_pointers(r);
-    memset(r,0,sizeof(struct reb_simulation));
-    reb_init_simulation(r);
+    reb_simulation_init(r);
     r->simulationarchive_filename = NULL;
-    // reb_create_simulation sets simulationarchive_version to 2 by default.
-    // This will break reading in old version.
-    // Set to old version by default. Will be overwritten if new version was used.
-    r->simulationarchive_version = 0;
 
     fseek(inf, 0, SEEK_SET);
     struct reb_input_stream stream = {0};
@@ -77,13 +72,10 @@ void reb_create_simulation_from_simulationarchive_with_messages(struct reb_simul
         reb_free_simulation(r);
         return;
     }
-    if (r->simulationarchive_version<2){ 
-        printf("Error: Version 1 of SimulationArchive no longer supported\n");
-        exit(EXIT_FAILURE);
-    }else{
-        // Version 2
-        while(reb_input_field(r, &stream, warnings)){ }
-    }
+    
+    // Read in all fields
+    while(reb_input_field(r, &stream, warnings)){ }
+
     return;
 }
 
@@ -91,7 +83,7 @@ void reb_create_simulation_from_simulationarchive_with_messages(struct reb_simul
 struct reb_simulation* reb_create_simulation_from_simulationarchive(struct reb_simulationarchive* sa, long snapshot){
     if (sa==NULL) return NULL;
     enum reb_input_binary_messages warnings = REB_INPUT_BINARY_WARNING_NONE;
-    struct reb_simulation* r = reb_create_simulation();
+    struct reb_simulation* r = reb_simulation_new();
     reb_create_simulation_from_simulationarchive_with_messages(r, sa, snapshot, &warnings);
     r = reb_input_process_warnings(r, warnings);
     return r; // might be null if error occured
@@ -109,7 +101,6 @@ void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, 
     // Get version
     fseek(sa->inf, 0, SEEK_SET);  
     struct reb_binary_field field = {0};
-    sa->version = 0;
     double t0 = 0;
     do{
         fread(&field,sizeof(struct reb_binary_field),1,sa->inf);
@@ -134,9 +125,6 @@ void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, 
             case REB_BINARY_FIELD_TYPE_T:
                 fread(&t0, sizeof(double),1,sa->inf);
                 break;
-            case REB_BINARY_FIELD_TYPE_SAVERSION:
-                fread(&(sa->version), sizeof(int),1,sa->inf);
-                break;
             case REB_BINARY_FIELD_TYPE_SAAUTOWALLTIME:
                 fread(&(sa->auto_walltime), sizeof(double),1,sa->inf);
                 break;
@@ -153,103 +141,96 @@ void reb_read_simulationarchive_with_messages(struct reb_simulationarchive* sa, 
     }while(field.type!=REB_BINARY_FIELD_TYPE_END);
 
     // Make index
-    if (sa->version<2){
-        // Old version
-        printf("Error: Version 1 of SimulationArchive no longer supported\n");
-        exit(EXIT_FAILURE);
-    }else{
-        // New version
-        if (sa_index == NULL){ // Need to construct offset index from file.
-            long nblobsmax = 1024;
-            sa->t = malloc(sizeof(double)*nblobsmax);
-            sa->offset = malloc(sizeof(uint32_t)*nblobsmax);
-            fseek(sa->inf, 0, SEEK_SET);  
-            int failed = 0;
-            int endoffile = 0;
-            sa->nblobs = 0;
-            for(long i=0;i<nblobsmax;i++){
-                struct reb_binary_field field = {0};
-                sa->offset[i] = ftell(sa->inf);
-                do{
-                    size_t r1 = fread(&field,sizeof(struct reb_binary_field),1,sa->inf);
-                    if (r1==1){
-                        switch (field.type){
-                            case REB_BINARY_FIELD_TYPE_HEADER:
-                                {
-                                    int s1 = fseek(sa->inf,64 - sizeof(struct reb_binary_field),SEEK_CUR);
-                                    if (s1){
-                                        failed = 1;
-                                    }
+    if (sa_index == NULL){ // Need to construct offset index from file.
+        long nblobsmax = 1024;
+        sa->t = malloc(sizeof(double)*nblobsmax);
+        sa->offset = malloc(sizeof(uint32_t)*nblobsmax);
+        fseek(sa->inf, 0, SEEK_SET);  
+        int failed = 0;
+        int endoffile = 0;
+        sa->nblobs = 0;
+        for(long i=0;i<nblobsmax;i++){
+            struct reb_binary_field field = {0};
+            sa->offset[i] = ftell(sa->inf);
+            do{
+                size_t r1 = fread(&field,sizeof(struct reb_binary_field),1,sa->inf);
+                if (r1==1){
+                    switch (field.type){
+                        case REB_BINARY_FIELD_TYPE_HEADER:
+                            {
+                                int s1 = fseek(sa->inf,64 - sizeof(struct reb_binary_field),SEEK_CUR);
+                                if (s1){
+                                    failed = 1;
                                 }
-                                break;
-                            case REB_BINARY_FIELD_TYPE_T:
-                                {
-                                    size_t r2 = fread(&(sa->t[i]), sizeof(double),1,sa->inf);
-                                    if (r2!=1){
-                                        failed = 1;
-                                    }
+                            }
+                            break;
+                        case REB_BINARY_FIELD_TYPE_T:
+                            {
+                                size_t r2 = fread(&(sa->t[i]), sizeof(double),1,sa->inf);
+                                if (r2!=1){
+                                    failed = 1;
                                 }
-                                break;
-                            default:
-                                {
-                                    int s2 = fseek(sa->inf,field.size,SEEK_CUR);
-                                    if (s2){
-                                        failed = 1;
-                                    }
+                            }
+                            break;
+                        default:
+                            {
+                                int s2 = fseek(sa->inf,field.size,SEEK_CUR);
+                                if (s2){
+                                    failed = 1;
                                 }
-                                break;
-                        }
-                    }else{
-                        endoffile = 1;
+                            }
+                            break;
                     }
-                }while(endoffile==0 && failed==0 && field.type!=REB_BINARY_FIELD_TYPE_END);
-                if (endoffile==0 && failed==0){
-                    struct reb_simulationarchive_blob blob = {0};
-                    size_t r3 = fread(&blob, sizeof(struct reb_simulationarchive_blob), 1, sa->inf);
-                    if (r3!=1){
-                        failed = 1;
-                    }
+                }else{
+                    endoffile = 1;
                 }
-                if (failed){
-                    break;
+            }while(endoffile==0 && failed==0 && field.type!=REB_BINARY_FIELD_TYPE_END);
+            if (endoffile==0 && failed==0){
+                struct reb_simulationarchive_blob blob = {0};
+                size_t r3 = fread(&blob, sizeof(struct reb_simulationarchive_blob), 1, sa->inf);
+                if (r3!=1){
+                    failed = 1;
                 }
-                sa->nblobs = i;
-                if (endoffile==1){
-                    break;  // Normal exit
-                }
-                if (i==nblobsmax-1){
-                    nblobsmax += 1024;
-                    sa->t = realloc(sa->t,sizeof(double)*nblobsmax);
-                    sa->offset = realloc(sa->offset,sizeof(uint32_t)*nblobsmax);
-                }
-
             }
             if (failed){
-                if (sa->nblobs>0){
-                    *warnings |= REB_INPUT_BINARY_WARNING_CORRUPTFILE;
-                }else{
-                    fclose(sa->inf);
-                    free(sa->filename);
-                    free(sa->t);
-                    free(sa->offset);
-                    free(sa);
-                    *warnings |= REB_INPUT_BINARY_ERROR_SEEK;
-                    return;
-                }
+                break;
+            }
+            sa->nblobs = i;
+            if (endoffile==1){
+                break;  // Normal exit
+            }
+            if (i==nblobsmax-1){
+                nblobsmax += 1024;
+                sa->t = realloc(sa->t,sizeof(double)*nblobsmax);
+                sa->offset = realloc(sa->offset,sizeof(uint32_t)*nblobsmax);
             }
 
-        }else{ // reuse index from other SA
-            // This is an optimzation for loading many large SAs.
-            // It assumes the structure of this SA is *exactly* the same as in sa_index.
-            // Unexpected behaviour if the shape is not the same.
-            sa->nblobs = sa_index->nblobs;
-            sa->t = malloc(sizeof(double)*sa->nblobs);
-            sa->offset = malloc(sizeof(uint32_t)*sa->nblobs);
-            fseek(sa->inf, 0, SEEK_SET);
-            // No need to read the large file, just copying the index.
-            memcpy(sa->offset, sa_index->offset, sizeof(uint32_t)*sa->nblobs);
-            memcpy(sa->t, sa_index->t, sizeof(double)*sa->nblobs);
         }
+        if (failed){
+            if (sa->nblobs>0){
+                *warnings |= REB_INPUT_BINARY_WARNING_CORRUPTFILE;
+            }else{
+                fclose(sa->inf);
+                free(sa->filename);
+                free(sa->t);
+                free(sa->offset);
+                free(sa);
+                *warnings |= REB_INPUT_BINARY_ERROR_SEEK;
+                return;
+            }
+        }
+
+    }else{ // reuse index from other SA
+        // This is an optimzation for loading many large SAs.
+        // It assumes the structure of this SA is *exactly* the same as in sa_index.
+        // Unexpected behaviour if the shape is not the same.
+        sa->nblobs = sa_index->nblobs;
+        sa->t = malloc(sizeof(double)*sa->nblobs);
+        sa->offset = malloc(sizeof(uint32_t)*sa->nblobs);
+        fseek(sa->inf, 0, SEEK_SET);
+        // No need to read the large file, just copying the index.
+        memcpy(sa->offset, sa_index->offset, sizeof(uint32_t)*sa->nblobs);
+        memcpy(sa->t, sa_index->t, sizeof(double)*sa->nblobs);
     }
 }
 
@@ -323,61 +304,54 @@ void reb_simulationarchive_snapshot(struct reb_simulation* const r, const char* 
         reb_output_binary(r,filename);
     }else{
         // File exists, append snapshot.
-        if (r->simulationarchive_version<2){
-            printf("Error: Version 1 of SimulationArchive no longer supported\n");
-            exit(EXIT_FAILURE);
-        }else{
-            // New version with incremental outputs
+        // Create buffer containing original binary file
+        FILE* of = fopen(filename,"r+b");
+        fseek(of, 64, SEEK_SET); // Header
+        struct reb_binary_field field;
+        int bytesread;
+        do{
+            bytesread = fread(&field,sizeof(struct reb_binary_field),1,of);
+            fseek(of, field.size, SEEK_CUR);
+        }while(field.type!=REB_BINARY_FIELD_TYPE_END && bytesread);
+        long size_old = ftell(of);
+        char* buf_old = malloc(size_old);
+        fseek(of, 0, SEEK_SET);  
+        fread(buf_old, size_old,1,of);
 
-            // Create buffer containing original binary file
-            FILE* of = fopen(filename,"r+b");
-            fseek(of, 64, SEEK_SET); // Header
-            struct reb_binary_field field;
-            int bytesread;
-            do{
-                bytesread = fread(&field,sizeof(struct reb_binary_field),1,of);
-                fseek(of, field.size, SEEK_CUR);
-            }while(field.type!=REB_BINARY_FIELD_TYPE_END && bytesread);
-            long size_old = ftell(of);
-            char* buf_old = malloc(size_old);
-            fseek(of, 0, SEEK_SET);  
-            fread(buf_old, size_old,1,of);
+        // Create buffer containing current binary file
+        struct reb_output_stream new_stream;
+        new_stream.buf = NULL;
+        new_stream.size = 0;
+        new_stream.allocated = 0;
 
-            // Create buffer containing current binary file
-            struct reb_output_stream new_stream;
-            new_stream.buf = NULL;
-            new_stream.size = 0;
-            new_stream.allocated = 0;
-            
-            reb_output_stream_write_binary(&new_stream, r);
-            
-            // Create buffer containing diff
-            struct reb_input_stream new_istream = {.mem_stream = new_stream.buf, .size = new_stream.size, .file_stream = NULL};
-            struct reb_input_stream old_istream = {.mem_stream = buf_old, .size = size_old, .file_stream = NULL};
-            struct reb_output_stream ostream = {0};
-            reb_binary_diff(&old_istream, &new_istream, &ostream, 0);
-            
-            // Update blob info and Write diff to binary file
-            struct reb_simulationarchive_blob blob = {0};
-            fseek(of, -sizeof(struct reb_simulationarchive_blob), SEEK_END);  
-            fread(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
-            blob.offset_next = ostream.size+sizeof(struct reb_binary_field);
-            fseek(of, -sizeof(struct reb_simulationarchive_blob), SEEK_END);  
-            fwrite(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
-            fwrite(ostream.buf, ostream.size, 1, of); 
-            field.type = REB_BINARY_FIELD_TYPE_END;
-            field.size = 0;
-            fwrite(&field,sizeof(struct reb_binary_field), 1, of);
-            blob.index++;
-            blob.offset_prev = blob.offset_next;
-            blob.offset_next = 0;
-            fwrite(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
+        reb_output_stream_write_binary(&new_stream, r);
 
-            fclose(of);
-            free(new_stream.buf);
-            free(buf_old);
-            free(ostream.buf);
-        }
+        // Create buffer containing diff
+        struct reb_input_stream new_istream = {.mem_stream = new_stream.buf, .size = new_stream.size, .file_stream = NULL};
+        struct reb_input_stream old_istream = {.mem_stream = buf_old, .size = size_old, .file_stream = NULL};
+        struct reb_output_stream ostream = {0};
+        reb_binary_diff(&old_istream, &new_istream, &ostream, 0);
+
+        // Update blob info and Write diff to binary file
+        struct reb_simulationarchive_blob blob = {0};
+        fseek(of, -sizeof(struct reb_simulationarchive_blob), SEEK_END);  
+        fread(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
+        blob.offset_next = ostream.size+sizeof(struct reb_binary_field);
+        fseek(of, -sizeof(struct reb_simulationarchive_blob), SEEK_END);  
+        fwrite(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
+        fwrite(ostream.buf, ostream.size, 1, of); 
+        field.type = REB_BINARY_FIELD_TYPE_END;
+        field.size = 0;
+        fwrite(&field,sizeof(struct reb_binary_field), 1, of);
+        blob.index++;
+        blob.offset_prev = blob.offset_next;
+        blob.offset_next = 0;
+        fwrite(&blob, sizeof(struct reb_simulationarchive_blob), 1, of);
+
+        fclose(of);
+        free(new_stream.buf);
+        free(buf_old);
+        free(ostream.buf);
     }
 }
 
