@@ -78,7 +78,16 @@ void reb_simulation_set_integrator(struct reb_simulation* r, const char* name){
             return;
         }
     }
-    printf("Error: Integrator not found.");
+    printf("Error: Integrator not found."); // TODO
+    exit(EXIT_FAILURE);
+}
+void* reb_simulation_get_integrator_config(struct reb_simulation* r, const char* name){
+    for (int i=0; i<r->integrators_available_N; i++){
+        if (strcmp(r->integrators_available[i].name,name)==0){
+            return r->integrator_selected->config;
+        }
+    }
+    printf("Error: Integrator not found."); // TODO
     exit(EXIT_FAILURE);
 }
 

@@ -591,6 +591,7 @@ struct reb_simulation {
 struct reb_simulation* reb_create_simulation(void);
 
 
+void* reb_simulation_get_integrator_config(struct reb_simulation* r, const char* name);
 void reb_simulation_set_integrator(struct reb_simulation* r, const char* name);
 /**
  * @brief Creates a deep copy of a REBOUND simulation

@@ -36,7 +36,7 @@ enum REB_WHFAST_KERNEL {
     REB_WHFAST_KERNEL_MODIFIEDKICK = 1,
     REB_WHFAST_KERNEL_COMPOSITION = 2,
     REB_WHFAST_KERNEL_LAZY = 3,
-}dwkernel;
+};
 
 /**
  * @brief This structure contains variables used by the WHFast integrator.

@@ -737,7 +737,7 @@ int reb_integrator_whfast_init(struct reb_integrator* integrator, struct reb_sim
             return 1; // Error
         }
     }
-    struct reb_integrator_whfast_config* const config = (struct reb_integrator_whfast_config*) &(integrator->config);
+    struct reb_integrator_whfast_config* const config = (struct reb_integrator_whfast_config*) integrator->config;
 #if defined(_OPENMP)
     if (config->coordinates!=REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC
         && config->coordinates!=REB_WHFAST_COORDINATES_WHDS){
@@ -848,7 +848,7 @@ void reb_integrator_whfast_to_inertial(struct reb_simulation* const r, enum REB_
 }
 
 void reb_integrator_whfast_synchronize(struct reb_integrator* integrator, struct reb_simulation* const r){
-    struct reb_integrator_whfast_config* const config = (struct reb_integrator_whfast_config*) &(integrator->config);
+    struct reb_integrator_whfast_config* const config = (struct reb_integrator_whfast_config*) integrator->config;
     if (config->is_synchronized == 0){
         const int N_real = r->N-r->N_var;
         const int N_active = (r->N_active==-1 || r->testparticle_type==1)?N_real:r->N_active;
@@ -903,7 +903,7 @@ void reb_integrator_whfast_synchronize(struct reb_integrator* integrator, struct
 }
 
 void reb_integrator_whfast_step(struct reb_integrator* integrator, struct reb_simulation* const r){
-    struct reb_integrator_whfast_config* const config = (struct reb_integrator_whfast_config*) &(integrator->config);
+    struct reb_integrator_whfast_config* const config = (struct reb_integrator_whfast_config*) integrator->config;
     struct reb_particle* restrict const particles = r->particles;
     const int N = r->N;
     const int N_real = N-r->N_var;
@@ -1210,17 +1210,8 @@ void reb_integrator_whfast_save(struct reb_integrator* integrator, struct reb_si
 
 void* reb_integrator_whfast_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_whfast_config* config = calloc(1, sizeof(struct reb_integrator_whfast_config));
-    config->corrector = 0;
-    config->corrector2 = 0;
-    config->kernel = 0;
-    config->coordinates = REB_WHFAST_COORDINATES_JACOBI;
     config->is_synchronized = 1;
-    config->keep_unsynchronized = 0;
     config->safe_mode = 1;
-    config->recalculate_coordinates_this_timestep = 0;
-    config->allocated_Ntemp = 0;
-    config->timestep_warning = 0;
-    config->recalculate_coordinates_but_not_synchronized_warning = 0;
     return config;
 }
 

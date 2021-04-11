@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <math.h>
 #include "rebound.h"
+#include "integrator_whfast.h"
 
 double ss_pos[6][3] =
     {
@@ -47,7 +48,7 @@ double ss_mass[6] =
      1. / 3501.6,   // Saturn
      1. / 22869.,   // Uranus
      1. / 19314.,   // Neptune
-     7.4074074e-09  // Pluto
+     0.  // Pluto
 };
 
 double tmax = 7.3e7;
@@ -60,14 +61,15 @@ int main(int argc, char* argv[]) {
     const double k = 0.01720209895; // Gaussian constant
     r->dt = 40;            // in days
     r->G = k * k;            // These are the same units as used by the mercury6 code.
-    r->ri_whfast.safe_mode = 0;     // Turn of safe mode. Need to call integrator_synchronize() before outputs.
-    r->ri_whfast.corrector = 11;    // Turn on symplectic correctors (11th order).
+    reb_simulation_set_integrator(r, "whfast");
+
+    struct reb_integrator_whfast_config* config = reb_simulation_get_integrator_config(r,"whfast");
+    config->safe_mode = 0;     // Turn of safe mode. Need to call integrator_synchronize() before outputs.
+// TODO    config->corrector = 11;    // Turn on symplectic correctors (11th order).
 
     // Setup callbacks:
     r->heartbeat = heartbeat;
     r->force_is_velocity_dependent = 0; // Force only depends on positions.
-    r->integrator = REB_INTEGRATOR_WHFAST;
-    //r->integrator    = REB_INTEGRATOR_IAS15;
 
     // Initial conditions
     for (int i = 0; i < 6; i++) {
