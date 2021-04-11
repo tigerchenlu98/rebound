@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
     struct reb_integrator_whfast_config* config = reb_simulation_get_integrator_config(r,"whfast");
     config->safe_mode = 0;     // Turn of safe mode. Need to call integrator_synchronize() before outputs.
-// TODO    config->corrector = 11;    // Turn on symplectic correctors (11th order).
+    config->corrector = 11;    // Turn on symplectic correctors (11th order).
 
     // Setup callbacks:
     r->heartbeat = heartbeat;
