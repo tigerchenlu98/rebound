@@ -1091,20 +1091,19 @@ int reb_display_copy_data(struct reb_simulation* const r){
     memcpy(data->r_copy, r, sizeof(struct reb_simulation));
     memcpy(data->particles_copy, r->particles, sizeof(struct reb_particle)*r->N);
     data->r_copy->particles = data->particles_copy;
-    // TODO REIMPLEMENT:
-    //if (
-    //        (r->integrator==REB_INTEGRATOR_WHFAST && r->ri_whfast.is_synchronized==0)
-    //   )
-    //   {
-    //    if (r->ri_whfast.allocated_N > data->allocated_N_whfast){
-    //        size_changed = 1;
-    //        data->allocated_N_whfast = r->ri_whfast.allocated_N;
-    //        data->p_jh_copy = realloc(data->p_jh_copy,data->allocated_N_whfast*sizeof(struct reb_particle));
-    //    }
-    //    memcpy(data->p_jh_copy, r->ri_whfast.p_jh, data->allocated_N_whfast*sizeof(struct reb_particle));
-    //}
-    //data->r_copy->ri_whfast.p_jh= data->p_jh_copy;
-    
+    /// TODO REIMPLEMENT
+    ///if (strcmp(data->r->integrator_selected->name,"whfast")==0){
+    ///    struct reb_integrator_whfast_config* config = reb_simulation_get_integrator_config(r,"whfast");
+    ///    if (config->is_synchronized==0){
+    ///        if (config->allocated_N > data->allocated_N_whfast){
+    ///            size_changed = 1;
+    ///            data->allocated_N_whfast =config->allocated_N;
+    ///            data->p_jh_copy = realloc(data->p_jh_copy,data->allocated_N_whfast*sizeof(struct reb_particle));
+    ///        }
+    ///        memcpy(data->p_jh_copy,config->p_jh, data->allocated_N_whfast*sizeof(struct reb_particle));
+    ///    }
+    ///}
+
     return size_changed;
 }
 
@@ -1114,7 +1113,8 @@ void reb_display_prepare_data(struct reb_simulation* const r, int orbits){
     struct reb_simulation* const r_copy = data->r_copy;
 
     // this only does something for WHFAST
-    reb_integrator_synchronize(r_copy);
+    // TODO REIMPLEMENT. Right now this would operator on the original r->integrartor["whfast"].p_jh
+    //reb_integrator_synchronize(r_copy);
        
     // Update data on GPU 
     for (int i=0;i<r_copy->N;i++){
