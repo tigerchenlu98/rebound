@@ -17,5 +17,5 @@ Other naming rules
 ------------------
 
 - If a function operates on a struct, the struct's name appears first: e.g. `reb_simulation_move_to_com()`, **not** `reb_move_simulation_to_com().
-
+- `_init()` allocated and initializes a struct. All allocated memory will be release with `_free()`
 

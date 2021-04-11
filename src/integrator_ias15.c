@@ -996,7 +996,7 @@ void reb_integrator_ias15_save(struct reb_integrator* integrator, struct reb_sim
     REB_WRITE_FIELD_WITH_SIZE(CSA0,         config->csa0,   sizeof(double)*N3);
 }
 
-void* reb_integrator_ias15_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_ias15_init(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_ias15_config* config = calloc(1, sizeof(struct reb_integrator_ias15_config));
     config->epsilon         = 1e-9;
     config->min_dt      = 0;
@@ -1028,7 +1028,7 @@ void reb_integrator_ias15_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "ias15", 3); // 3 is a new index to avoid 0
     integrator->step        = reb_integrator_ias15_step;
     integrator->synchronize = NULL;
-    integrator->alloc       = reb_integrator_ias15_alloc;
+    integrator->init        = reb_integrator_ias15_init;
     integrator->free        = reb_integrator_ias15_free;
     integrator->load        = reb_integrator_ias15_load;
     integrator->save        = reb_integrator_ias15_save;

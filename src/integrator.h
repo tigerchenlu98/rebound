@@ -24,14 +24,4 @@
  */
 #ifndef _INTEGRATOR_H
 #define _INTEGRATOR_H
-struct reb_simulation;
-struct reb_integrator;
-struct reb_input_stream;
-struct reb_output_stream;
-struct reb_binary_field;
-
-
-
-void reb_integrator_step(struct reb_simulation* r);
-
 #endif

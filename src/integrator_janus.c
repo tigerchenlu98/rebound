@@ -333,7 +333,7 @@ void reb_integrator_janus_save(struct reb_integrator* integrator, struct reb_sim
 
 }
 
-void* reb_integrator_janus_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_janus_init(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_janus_config* config = calloc(1, sizeof(struct reb_integrator_janus_config));
     config->order = 2;
     config->scale_pos = 1e-16;
@@ -355,7 +355,7 @@ void reb_integrator_janus_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "janus", 8);
     integrator->step        = reb_integrator_janus_step;
     integrator->synchronize = reb_integrator_janus_synchronize;
-    integrator->alloc       = reb_integrator_janus_alloc;
+    integrator->init        = reb_integrator_janus_init;
     integrator->free        = reb_integrator_janus_free;
     integrator->load        = reb_integrator_janus_load;
     integrator->save        = reb_integrator_janus_save;

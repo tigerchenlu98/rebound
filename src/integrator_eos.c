@@ -744,7 +744,7 @@ void reb_integrator_eos_save(struct reb_integrator* integrator, struct reb_simul
     REB_WRITE_FIELD(ISSYNCHRON,  is_synchronized);
 }
 
-void* reb_integrator_eos_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_eos_init(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_eos_config* config = calloc(1, sizeof(struct reb_integrator_eos_config));
     config->n = 2;
     config->phi0 = REB_EOS_LF;
@@ -765,7 +765,7 @@ void reb_integrator_eos_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "eos", 11);
     integrator->step        = reb_integrator_eos_step;
     integrator->synchronize = reb_integrator_eos_synchronize;
-    integrator->alloc       = reb_integrator_eos_alloc;
+    integrator->init        = reb_integrator_eos_init;
     integrator->free        = reb_integrator_eos_free;
     integrator->load        = reb_integrator_eos_load;
     integrator->save        = reb_integrator_eos_save;

@@ -73,7 +73,7 @@ void reb_integrator_sei_save(struct reb_integrator* integrator, struct reb_simul
     REB_WRITE_FIELD(TANDTZ,   tandtz);
 }
 
-void* reb_integrator_sei_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_sei_init(struct reb_integrator* integrator, struct reb_simulation* r){
     printf("alloc\n");
     struct reb_integrator_sei_config* config = calloc(1, sizeof(struct reb_integrator_sei_config)); // sets all variables to zero
     return config;
@@ -185,7 +185,7 @@ void reb_integrator_sei_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "sei", 2);
     integrator->step        = reb_integrator_sei_step;
     integrator->synchronize = NULL;
-    integrator->alloc       = reb_integrator_sei_alloc;
+    integrator->init        = reb_integrator_sei_init;
     integrator->free        = reb_integrator_sei_free;
     integrator->load        = reb_integrator_sei_load;
     integrator->save        = reb_integrator_sei_save;

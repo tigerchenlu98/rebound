@@ -123,18 +123,21 @@ void reb_step(struct reb_simulation* const r){
     struct timeval time_beginning;
     gettimeofday(&time_beginning,NULL);
 
-    // A 'DKD'-like integrator will do the first 'D' part.
     if (r->pre_timestep_modifications){
-        reb_integrator_synchronize(r);
+        if (r->integrator_selected->synchronize){
+            r->integrator_selected->synchronize(r->integrator_selected, r);
+        }
         r->pre_timestep_modifications(r);
         //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
         //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
     }
    
-    reb_integrator_step(r);
+    r->integrator_selected->step(r->integrator_selected, r);
     
     if (r->post_timestep_modifications){
-        reb_integrator_synchronize(r);
+        if (r->integrator_selected->synchronize){
+            r->integrator_selected->synchronize(r->integrator_selected, r);
+        }
         r->post_timestep_modifications(r);
         //r->ri_whfast.recalculate_coordinates_this_timestep = 1; TODO Reimplement this
         //r->ri_mercurius.recalculate_coordinates_this_timestep = 1;
@@ -480,8 +483,8 @@ void reb_init_simulation(struct reb_simulation* r){
     reb_integrator_saba_register(r);
 
     for (int i=0; i<r->integrators_available_N; i++){
-        if (r->integrators_available[i].alloc){
-            r->integrators_available[i].config = r->integrators_available[i].alloc(&(r->integrators_available[i]), r);
+        if (r->integrators_available[i].init){
+            r->integrators_available[i].config = r->integrators_available[i].init(&(r->integrators_available[i]), r);
         }
     }
 
@@ -525,12 +528,16 @@ int reb_check_exit(struct reb_simulation* const r, const double tmax, double* la
                         r->status = REB_EXIT_SUCCESS;
                     }else{
                         // not there yet, do another step.
-                        reb_integrator_synchronize(r);
+                        if (r->integrator_selected->synchronize){
+                            r->integrator_selected->synchronize(r->integrator_selected, r);
+                        }
                         r->dt = tmax-r->t;
                     }
                 }else{
                     r->status = REB_RUNNING_LAST_STEP; // Do one small step, then exit.
-                    reb_integrator_synchronize(r);
+                    if (r->integrator_selected->synchronize){
+                        r->integrator_selected->synchronize(r->integrator_selected, r);
+                    }
                     if (r->dt_last_done!=0.){   // If first timestep is also last, do not use dt_last_done (which would be 0.)
                         *last_full_dt = r->dt_last_done; // store last full dt before decreasing the timestep to match finish time
                     }
@@ -648,7 +655,9 @@ static void* reb_integrate_raw(void* args){
 #endif // OPENGL
     }
 
-    reb_integrator_synchronize(r);
+    if (r->integrator_selected->synchronize){
+        r->integrator_selected->synchronize(r->integrator_selected, r);
+    }
     if (r->display_heartbeat){                          // Display Heartbeat
         r->display_heartbeat(r); 
     }

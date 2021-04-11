@@ -725,70 +725,6 @@ void reb_whfast_calculate_jerk(struct reb_simulation* r, struct reb_particle* co
 }
 
 
-int reb_integrator_whfast_init(struct reb_integrator* integrator, struct reb_simulation* const r){
-    for (int v=0;v<r->var_config_N;v++){
-        struct reb_variational_configuration const vc = r->var_config[v];
-        if (vc.order!=1){
-            reb_error(r, "WHFast/MEGNO only supports first order variational equations.");
-            return 1; // Error
-        }
-        if (vc.testparticle>=0){
-            reb_error(r, "Test particle variations not supported with WHFast. Use IAS15.");
-            return 1; // Error
-        }
-    }
-    struct reb_integrator_whfast_config* const config = (struct reb_integrator_whfast_config*) integrator->config;
-#if defined(_OPENMP)
-    if (config->coordinates!=REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC
-        && config->coordinates!=REB_WHFAST_COORDINATES_WHDS){
-        reb_error(r,"WHFast when used with OpenMP requires REB_WHFAST_COORDINATES_WHDS or REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC\n");
-        return 1; // Error
-    }
-#endif
-    if (r->var_config_N>0 && config->coordinates!=REB_WHFAST_COORDINATES_JACOBI){
-        reb_error(r, "Variational particles are only compatible with Jacobi coordinates.");
-        return 1; // Error
-    }
-    if (config->kernel!= REB_WHFAST_KERNEL_DEFAULT && config->coordinates!=REB_WHFAST_COORDINATES_JACOBI){
-        reb_error(r, "Non-standard kernel requires Jacobi coordinates.");
-        return 1; // Error
-    }
-    if (r->var_config_N>0 && config->kernel != REB_WHFAST_KERNEL_DEFAULT){
-        reb_error(r, "Variational particles are only compatible with the standard kernel.");
-        return 1; // Error
-    }
-    if (config->kernel>3){
-        reb_error(r, "Kernel method must be 0 (default), 1 (exact modified kick), 2 (composition kernel), or 3 (lazy implementer's modified kick). ");
-        return 1; // Error
-    }
-    if (config->corrector!=0 && config->coordinates!=REB_WHFAST_COORDINATES_JACOBI){
-        reb_error(r, "Symplectic correctors are only compatible with Jacobi coordinates.");
-        return 1; // Error
-    }
-    if (config->corrector!=0 && config->corrector!=3 && config->corrector!=5  && config->corrector!=7 && config->corrector!=11 && config->corrector!=17 ){
-        reb_error(r, "First symplectic correctors are only available in the following orders: 0, 3, 5, 7, 11, 17.");
-        return 1; // Error
-    }
-    if (config->keep_unsynchronized==1 && config->safe_mode==1){
-        reb_error(r, "config->keep_unsynchronized == 1 is not compatible with safe_mode. Must set config->safe_mode = 0.");
-    }
-    if (config->kernel == REB_WHFAST_KERNEL_MODIFIEDKICK || config->kernel == REB_WHFAST_KERNEL_LAZY){ 
-        r->gravity = REB_GRAVITY_JACOBI;
-    }else{
-        if (config->coordinates==REB_WHFAST_COORDINATES_JACOBI){
-            r->gravity_ignore_terms = 1;
-        }else{
-            r->gravity_ignore_terms = 2;
-        }
-    }
-    const int N = r->N;
-    if (config->allocated_N != N){
-        config->allocated_N = N;
-        config->p_jh = realloc(config->p_jh,sizeof(struct reb_particle)*N);
-        config->recalculate_coordinates_this_timestep = 1;
-    }
-    return 0;
-}
 
 void reb_integrator_whfast_from_inertial(struct reb_simulation* const r, enum REB_WHFAST_COORDINATES coordinates, struct reb_particle* const p_j){
     struct reb_particle* restrict const particles = r->particles;
@@ -909,9 +845,65 @@ void reb_integrator_whfast_step(struct reb_integrator* integrator, struct reb_si
     const int N_real = N-r->N_var;
     const double dt = r->dt;
     const int N_active = (r->N_active==-1 || r->testparticle_type==1)?N_real:r->N_active;
-    if (reb_integrator_whfast_init(integrator, r)){
-        // Non recoverable error occured.
-        return;
+
+    for (int v=0;v<r->var_config_N;v++){
+        struct reb_variational_configuration const vc = r->var_config[v];
+        if (vc.order!=1){
+            reb_error(r, "WHFast/MEGNO only supports first order variational equations.");
+            return; // Error
+        }
+        if (vc.testparticle>=0){
+            reb_error(r, "Test particle variations not supported with WHFast. Use IAS15.");
+            return; // Error
+        }
+    }
+#if defined(_OPENMP)
+    if (config->coordinates!=REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC
+        && config->coordinates!=REB_WHFAST_COORDINATES_WHDS){
+        reb_error(r,"WHFast when used with OpenMP requires REB_WHFAST_COORDINATES_WHDS or REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC\n");
+        return; // Error
+    }
+#endif
+    if (r->var_config_N>0 && config->coordinates!=REB_WHFAST_COORDINATES_JACOBI){
+        reb_error(r, "Variational particles are only compatible with Jacobi coordinates.");
+        return; // Error
+    }
+    if (config->kernel!= REB_WHFAST_KERNEL_DEFAULT && config->coordinates!=REB_WHFAST_COORDINATES_JACOBI){
+        reb_error(r, "Non-standard kernel requires Jacobi coordinates.");
+        return; // Error
+    }
+    if (r->var_config_N>0 && config->kernel != REB_WHFAST_KERNEL_DEFAULT){
+        reb_error(r, "Variational particles are only compatible with the standard kernel.");
+        return; // Error
+    }
+    if (config->kernel>3){
+        reb_error(r, "Kernel method must be 0 (default), 1 (exact modified kick), 2 (composition kernel), or 3 (lazy implementer's modified kick). ");
+        return; // Error
+    }
+    if (config->corrector!=0 && config->coordinates!=REB_WHFAST_COORDINATES_JACOBI){
+        reb_error(r, "Symplectic correctors are only compatible with Jacobi coordinates.");
+        return; // Error
+    }
+    if (config->corrector!=0 && config->corrector!=3 && config->corrector!=5  && config->corrector!=7 && config->corrector!=11 && config->corrector!=17 ){
+        reb_error(r, "First symplectic correctors are only available in the following orders: 0, 3, 5, 7, 11, 17.");
+        return; // Error
+    }
+    if (config->keep_unsynchronized==1 && config->safe_mode==1){
+        reb_error(r, "config->keep_unsynchronized == 1 is not compatible with safe_mode. Must set config->safe_mode = 0.");
+    }
+    if (config->kernel == REB_WHFAST_KERNEL_MODIFIEDKICK || config->kernel == REB_WHFAST_KERNEL_LAZY){ 
+        r->gravity = REB_GRAVITY_JACOBI;
+    }else{
+        if (config->coordinates==REB_WHFAST_COORDINATES_JACOBI){
+            r->gravity_ignore_terms = 1;
+        }else{
+            r->gravity_ignore_terms = 2;
+        }
+    }
+    if (config->allocated_N != N){
+        config->allocated_N = N;
+        config->p_jh = realloc(config->p_jh,sizeof(struct reb_particle)*N);
+        config->recalculate_coordinates_this_timestep = 1;
     }
     
     // Only recalculate Jacobi coordinates if needed
@@ -1208,7 +1200,7 @@ void reb_integrator_whfast_save(struct reb_integrator* integrator, struct reb_si
     REB_WRITE_FIELD_WITH_SIZE(PJ, config->p_jh, sizeof(struct reb_particle)*config->allocated_N);
 }
 
-void* reb_integrator_whfast_alloc(struct reb_integrator* integrator, struct reb_simulation* r){
+void* reb_integrator_whfast_init(struct reb_integrator* integrator, struct reb_simulation* r){
     struct reb_integrator_whfast_config* config = calloc(1, sizeof(struct reb_integrator_whfast_config));
     config->is_synchronized = 1;
     config->safe_mode = 1;
@@ -1229,7 +1221,7 @@ void reb_integrator_whfast_register(struct reb_simulation* r){
     struct reb_integrator* integrator = reb_simulation_register_integrator(r, "whfast", 1);
     integrator->step        = reb_integrator_whfast_step;
     integrator->synchronize = reb_integrator_whfast_synchronize;
-    integrator->alloc       = reb_integrator_whfast_alloc;
+    integrator->init        = reb_integrator_whfast_init;
     integrator->free        = reb_integrator_whfast_free;
     integrator->load        = reb_integrator_whfast_load;
     integrator->save        = reb_integrator_whfast_save;

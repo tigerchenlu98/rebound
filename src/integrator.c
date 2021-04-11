@@ -40,27 +40,6 @@
 #include "output.h"
 #include "integrator.h"
    
-void reb_integrator_step(struct reb_simulation* r){
-    r->integrator_selected->step(r->integrator_selected, r);
-}
-    
-void reb_integrator_synchronize(struct reb_simulation* r){
-    if (r->integrator_selected->synchronize){
-        r->integrator_selected->synchronize(r->integrator_selected, r);
-    }
-}
-
-void reb_integrator_reset(struct reb_simulation* r){
-    // TODO!!
-	//r->integrator = REB_INTEGRATOR_IAS15;
-	//r->gravity_ignore_terms = 0;
-	//reb_integrator_ias15_reset(r);
-	//reb_integrator_mercurius_reset(r);
-	//reb_integrator_sei_config_free(r->sei_config);   // TODO!
-	//r->sei_config = reb_integrator_sei_config_alloc();
-	//reb_integrator_janus_reset(r);
-	//reb_integrator_eos_reset(r);
-}
 
 void reb_update_acceleration(struct reb_simulation* r){
     // Update and simplify tree. 

@@ -62,7 +62,7 @@ struct reb_integrator {
     void* config;
     void (*step)(struct reb_integrator*, struct reb_simulation*);
     void (*synchronize)(struct reb_integrator*, struct reb_simulation*);
-    void* (*alloc)(struct reb_integrator*, struct reb_simulation*);
+    void* (*init)(struct reb_integrator*, struct reb_simulation*);
     void (*free)(struct reb_integrator*, struct reb_simulation*);
     size_t (*load)(struct reb_integrator*, struct reb_simulation*, struct reb_input_stream*, struct reb_binary_field);
     void (*save)(struct reb_integrator*, struct reb_simulation*, struct reb_output_stream*);
@@ -644,23 +644,6 @@ void reb_steps(struct reb_simulation* const r, unsigned int N_steps);
  * @return This function returns an integer, indicating the success of the integration.
  */
 enum REB_STATUS reb_integrate(struct reb_simulation* const r, double tmax);
-
-/**
- * @brief Synchronize particles manually at end of timestep
- * @details This function should be called if the WHFAST integrator
- * is used, safe_mode is set to zero and an output is needed.
- * This advances the positions and velocities to be synchronized.
- * If enabled, it also applies the symplectic corrector.
- * If safe_mode is enabled, this function has no effect.
- * @param r The rebound simulation to be synchronized
- */
-void reb_integrator_synchronize(struct reb_simulation* r);
-
-/** 
- * @brief Cleanup all temporarily stored integrator values.
- * @param r The rebound simulation to be considered
- **/
-void reb_integrator_reset(struct reb_simulation* r);
 
 /**
  * @brief Configure the boundary/root box
