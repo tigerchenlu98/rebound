@@ -176,6 +176,7 @@ void reb_simulation_steps(struct reb_simulation* const r, unsigned int N_steps){
         reb_simulation_step(r);
     }
 }
+
 void reb_simulation_step(struct reb_simulation* const r){
     // Update walltime
     struct timeval time_beginning;

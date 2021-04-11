@@ -60,8 +60,6 @@ const char* reb_version_str = "3.16.0";         // **VERSIONLINE** This line get
 const char* reb_githash_str = STRINGIFY(GITHASH);             // This line gets updated automatically. Do not edit manually.
     
 
-static int reb_error_message_waiting(struct reb_simulation* const r);
-
 void reb_simulation_set_integrator(struct reb_simulation* r, const char* name){
     for (int i=0; i<r->integrators_available_N; i++){
         if (strcmp(r->integrators_available[i].name,name)==0){

@@ -1,6 +1,6 @@
 include Makefile.defs
 
-OPT+= -fPIC -DLIBREBOUND
+OPT+= -fPIC
 
 SOURCES=rebound.c tree.c particle.c gravity.c simulation.c integrator_whfast.c integrator_saba.c integrator_ias15.c integrator_sei.c integrator_leapfrog.c integrator_mercurius.c integrator_eos.c boundary.c input.c binarydiff.c output.c collision.c display.c tools.c derivatives.c simulationarchive.c glad.c integrator_janus.c transformations.c
 OBJECTS=$(SOURCES:.c=.o)
