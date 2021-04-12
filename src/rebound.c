@@ -195,7 +195,6 @@ int reb_get_next_message(struct reb_simulation* const r, char* const buf) {
     return 0;
 }
 
-
 void reb_configure_box(struct reb_simulation* const r, const double root_size, const int root_nx, const int root_ny, const int root_nz) {
     r->root_size = root_size;
     r->root_nx   = root_nx;
@@ -211,9 +210,6 @@ void reb_configure_box(struct reb_simulation* const r, const double root_size, c
         reb_exit("Number of root boxes must be greater or equal to 1 in each direction.");
     }
 }
-
-
-
 
 #ifdef OPENMP
 void reb_omp_set_num_threads(int num_threads) {

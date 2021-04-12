@@ -26,11 +26,12 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "boundary.h"
 #include "collision.h"
+#include "display.h"
 #include "input.h"
 #include "integrator_eos.h"
 #include "integrator_ias15.h"
@@ -41,11 +42,10 @@
 #include "integrator_sei.h"
 #include "integrator_whfast.h"
 #include "output.h"
+#include "particle.h"
+#include "simulationarchive.h"
 #include "tools.h"
 #include "tree.h"
-#include "particle.h"
-#include "display.h"
-#include "simulationarchive.h"
 
 /////////////////////////////////////////
 // Memory management
@@ -257,9 +257,8 @@ void reb_simulation_step(struct reb_simulation* const r) {
     r->steps_done++; // This also counts failed IAS15 steps
 }
 
-
 /////////////////////////////////////////
-///  Integrate functions 
+///  Integrate functions
 
 static int reb_error_message_waiting(struct reb_simulation* const r) {
     if (r->messages) {
