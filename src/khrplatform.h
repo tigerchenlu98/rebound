@@ -94,6 +94,8 @@
  *                                  int arg2) KHRONOS_APIATTRIBUTES;
  */
 
+/* clang-format off */
+
 /*-------------------------------------------------------------------------
  * Definition of KHRONOS_APICALL
  *-------------------------------------------------------------------------
@@ -286,3 +288,5 @@ typedef enum {
 
 #endif /* __khrplatform_h_ */
 #endif // OPENGL
+
+/* clang-format on */

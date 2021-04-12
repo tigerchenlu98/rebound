@@ -20,6 +20,7 @@
         http://glad.dav1d.de/#profile=compatibility&language=c&specification=gl&api=gl%3D3.3&extensions=GL_ARB_framebuffer_sRGB&extensions=GL_ARB_multisample&extensions=GL_EXT_framebuffer_sRGB
 */
 
+/* clang-format off */
 
 #ifdef OPENGL
 #ifndef __glad_h_
@@ -3668,3 +3669,5 @@ GLAPI int GLAD_GL_EXT_framebuffer_sRGB;
 
 #endif
 #endif // OPENGL
+
+/* clang-format on */
