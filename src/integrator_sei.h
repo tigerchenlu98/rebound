@@ -2,7 +2,7 @@
  * @file 	integrator_sei.h
  * @brief 	Interface for numerical particle integrator
  * @author 	Hanno Rein <hanno@hanno-rein.de>
- * 
+ *
  * @section 	LICENSE
  * Copyright (c) 2015 Hanno Rein
  *
