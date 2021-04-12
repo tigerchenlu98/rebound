@@ -38,7 +38,6 @@ void reb_calculate_acceleration(struct reb_simulation* r);
   */
 void reb_calculate_acceleration_var(struct reb_simulation* r);
 
-
 /**
   * The function calculates the jerk (derivative of the acceleration) and applies it to the particles' velocity.
   */

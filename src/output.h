@@ -28,7 +28,7 @@
 struct reb_simulation;
 struct reb_output_stream;
 
-struct reb_output_stream{
+struct reb_output_stream {
     char* buf;
     size_t allocated;
     size_t size;

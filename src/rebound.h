@@ -27,26 +27,26 @@
 #define _MAIN_H
 
 #include <inttypes.h>
-#include <stdint.h>
-#include <sys/time.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <sys/time.h>
 #ifndef M_PI
-// Make sure M_PI is defined. 
-#define M_PI           3.14159265358979323846       ///< The mathematical constant pi.
+// Make sure M_PI is defined.
+#define M_PI 3.14159265358979323846 ///< The mathematical constant pi.
 #endif
 #ifndef GITHASH
-#define GITHASH notavailable0000000000000000000000000001 
+#define GITHASH notavailable0000000000000000000000000001
 #endif // GITHASH
 
 extern const int reb_max_messages_length;
 extern const int reb_max_messages_N;
-extern const char* reb_build_str;   ///< Date and time build string.
-extern const char* reb_version_str; ///< Version string.
-extern const char* reb_githash_str; ///< Current git hash.
-extern const char* reb_logo[26];    ///< Logo of rebound. 
-extern volatile sig_atomic_t reb_sigint;  ///< Graceful (evil?) global interrupt handler 
+extern const char* reb_build_str;        ///< Date and time build string.
+extern const char* reb_version_str;      ///< Version string.
+extern const char* reb_githash_str;      ///< Current git hash.
+extern const char* reb_logo[26];         ///< Logo of rebound.
+extern volatile sig_atomic_t reb_sigint; ///< Graceful (evil?) global interrupt handler
 
 // Forward declarations
 struct reb_simulation;
@@ -80,21 +80,21 @@ struct reb_integrator* reb_simulation_register_integrator(struct reb_simulation*
  * needs to be changes as well. 
  */
 struct reb_particle {
-    double x;           ///< x-position of the particle. 
-    double y;           ///< y-position of the particle. 
-    double z;           ///< z-position of the particle. 
-    double vx;          ///< x-velocity of the particle. 
-    double vy;          ///< y-velocity of the particle. 
-    double vz;          ///< z-velocity of the particle. 
-    double ax;          ///< x-acceleration of the particle. 
-    double ay;          ///< y-acceleration of the particle. 
-    double az;          ///< z-acceleration of the particle. 
-    double m;           ///< Mass of the particle. 
-    double r;           ///< Radius of the particle. 
+    double x;                   ///< x-position of the particle.
+    double y;                   ///< y-position of the particle.
+    double z;                   ///< z-position of the particle.
+    double vx;                  ///< x-velocity of the particle.
+    double vy;                  ///< y-velocity of the particle.
+    double vz;                  ///< z-velocity of the particle.
+    double ax;                  ///< x-acceleration of the particle.
+    double ay;                  ///< y-acceleration of the particle.
+    double az;                  ///< z-acceleration of the particle.
+    double m;                   ///< Mass of the particle.
+    double r;                   ///< Radius of the particle.
     double lastcollision;       ///< Last time the particle had a physical collision.
     struct reb_treecell* c;     ///< Pointer to the cell the particle is currently in.
-    uint32_t hash;      ///< hash to identify particle.
-    void* ap;           ///< Functionality for externally adding additional properties to particles.
+    uint32_t hash;              ///< hash to identify particle.
+    void* ap;                   ///< Functionality for externally adding additional properties to particles.
     struct reb_simulation* sim; ///< Pointer to the parent simulation.
 };
 
@@ -110,16 +110,14 @@ struct reb_vec3d {
 /**
  * @details Structure that contains the relative position and velocity of a ghostbox.
  */
-struct reb_ghostbox{
-    double shiftx;      ///< Relative x position
-    double shifty;      ///< Relative y position
-    double shiftz;      ///< Relative z position
-    double shiftvx;     ///< Relative x velocity
-    double shiftvy;     ///< Relative y velocity
-    double shiftvz;     ///< Relative z velocity
+struct reb_ghostbox {
+    double shiftx;  ///< Relative x position
+    double shifty;  ///< Relative y position
+    double shiftz;  ///< Relative z position
+    double shiftvx; ///< Relative x velocity
+    double shiftvy; ///< Relative y velocity
+    double shiftvz; ///< Relative z velocity
 };
-
-
 
 /**
  * @defgroup MiscRebStructs Miscellaneous REBOUND structures
@@ -131,9 +129,9 @@ struct reb_ghostbox{
  * @details This structure is used to save a collision during collision search. 
  * It is passed to the collision_resolve function.
  */
-struct reb_collision{
-    int p1;         ///< One of the colliding particles
-    int p2;         ///< One of the colliding particles
+struct reb_collision {
+    int p1;                 ///< One of the colliding particles
+    int p2;                 ///< One of the colliding particles
     struct reb_ghostbox gb; ///< Ghostbox (of particle p1, used for periodic and shearing sheet boundary conditions)
 };
 
@@ -141,19 +139,18 @@ struct reb_collision{
  * @brief Enumeration describing the return status of rebound_integrate
  */
 enum REB_STATUS {
-    REB_RUNNING_PAUSED = -3,    ///< Simulation is paused by visualization.
+    REB_RUNNING_PAUSED    = -3, ///< Simulation is paused by visualization.
     REB_RUNNING_LAST_STEP = -2, ///< Current timestep is the last one. Needed to ensure that t=tmax exactly.
-    REB_RUNNING = -1,           ///< Simulation is current running, no error occurred.
-    REB_EXIT_SUCCESS = 0,       ///< Integration finished successfully.
-    REB_EXIT_ERROR = 1,         ///< A generic error occurred and the integration was not successful.
-    REB_EXIT_NOPARTICLES = 2,   ///< The integration ends early because no particles are left in the simulation.
-    REB_EXIT_ENCOUNTER = 3,     ///< The integration ends early because two particles had a close encounter (see exit_min_distance)
-    REB_EXIT_ESCAPE = 4,        ///< The integration ends early because a particle escaped (see exit_max_distance)  
-    REB_EXIT_USER = 5,          ///< User caused exit, simulation did not finish successfully.
-    REB_EXIT_SIGINT = 6,        ///< SIGINT received. Simulation stopped.
-    REB_EXIT_COLLISION = 7,     ///< The integration ends early because two particles collided. 
+    REB_RUNNING           = -1, ///< Simulation is current running, no error occurred.
+    REB_EXIT_SUCCESS      = 0,  ///< Integration finished successfully.
+    REB_EXIT_ERROR        = 1,  ///< A generic error occurred and the integration was not successful.
+    REB_EXIT_NOPARTICLES  = 2,  ///< The integration ends early because no particles are left in the simulation.
+    REB_EXIT_ENCOUNTER    = 3,  ///< The integration ends early because two particles had a close encounter (see exit_min_distance)
+    REB_EXIT_ESCAPE       = 4,  ///< The integration ends early because a particle escaped (see exit_max_distance)
+    REB_EXIT_USER         = 5,  ///< User caused exit, simulation did not finish successfully.
+    REB_EXIT_SIGINT       = 6,  ///< SIGINT received. Simulation stopped.
+    REB_EXIT_COLLISION    = 7,  ///< The integration ends early because two particles collided.
 };
-
 
 /**
  * @brief Struct describing the properties of a set of variational equations.
@@ -165,9 +162,9 @@ enum REB_STATUS {
  * is the index in the particle array that corresponds to the 1st order variational 
  * equations.
  */
-struct reb_variational_configuration{
+struct reb_variational_configuration {
     struct reb_simulation* sim; ///< Reference to the simulation.
-    int order;                  ///< Order of the variational equation. 1 or 2. 
+    int order;                  ///< Order of the variational equation. 1 or 2.
     int index;                  ///< Index of the first variational particle in the particles array.
     int testparticle;           ///< Is this variational configuration describe a test particle? -1 if not.
     int index_1st_order_a;      ///< Used for 2nd order variational particles only: Index of the first order variational particle in the particles array.
@@ -183,129 +180,128 @@ struct reb_variational_configuration{
  * @brief Enumeration describing the contents of a binary field. Used to read and write binary files.
  */
 enum REB_BINARY_FIELD_TYPE {
-    REB_BINARY_FIELD_TYPE_T = 0,
-    REB_BINARY_FIELD_TYPE_G = 1,
-    REB_BINARY_FIELD_TYPE_SOFTENING = 2,
-    REB_BINARY_FIELD_TYPE_DT = 3,
-    REB_BINARY_FIELD_TYPE_N = 4,
-    REB_BINARY_FIELD_TYPE_NVAR = 5,
-    REB_BINARY_FIELD_TYPE_VARCONFIGN = 6,
-    REB_BINARY_FIELD_TYPE_NACTIVE = 7,
-    REB_BINARY_FIELD_TYPE_TESTPARTICLETYPE = 8,
-    REB_BINARY_FIELD_TYPE_HASHCTR = 9, 
-    REB_BINARY_FIELD_TYPE_OPENINGANGLE2 = 10,
-    REB_BINARY_FIELD_TYPE_STATUS = 11,
-    REB_BINARY_FIELD_TYPE_EXACTFINISHTIME = 12,
-    REB_BINARY_FIELD_TYPE_FORCEISVELOCITYDEP = 13,
-    REB_BINARY_FIELD_TYPE_GRAVITYIGNORETERMS = 14,
-    REB_BINARY_FIELD_TYPE_OUTPUTTIMINGLAST = 15,
-    REB_BINARY_FIELD_TYPE_SAVEMESSAGES = 16,
-    REB_BINARY_FIELD_TYPE_EXITMAXDISTANCE = 17,
-    REB_BINARY_FIELD_TYPE_EXITMINDISTANCE = 18,
-    REB_BINARY_FIELD_TYPE_USLEEP = 19,
-    REB_BINARY_FIELD_TYPE_TRACKENERGYOFFSET = 20,
-    REB_BINARY_FIELD_TYPE_ENERGYOFFSET = 21,
-    REB_BINARY_FIELD_TYPE_BOXSIZE = 22, 
-    REB_BINARY_FIELD_TYPE_BOXSIZEMAX = 23, 
-    REB_BINARY_FIELD_TYPE_ROOTSIZE = 24,
-    REB_BINARY_FIELD_TYPE_ROOTN = 25,
-    REB_BINARY_FIELD_TYPE_ROOTNX = 26, 
-    REB_BINARY_FIELD_TYPE_ROOTNY = 27,
-    REB_BINARY_FIELD_TYPE_ROOTNZ = 28,
-    REB_BINARY_FIELD_TYPE_NGHOSTX = 29,
-    REB_BINARY_FIELD_TYPE_NGHOSTY = 30,
-    REB_BINARY_FIELD_TYPE_NGHOSTZ = 31,
+    REB_BINARY_FIELD_TYPE_T                          = 0,
+    REB_BINARY_FIELD_TYPE_G                          = 1,
+    REB_BINARY_FIELD_TYPE_SOFTENING                  = 2,
+    REB_BINARY_FIELD_TYPE_DT                         = 3,
+    REB_BINARY_FIELD_TYPE_N                          = 4,
+    REB_BINARY_FIELD_TYPE_NVAR                       = 5,
+    REB_BINARY_FIELD_TYPE_VARCONFIGN                 = 6,
+    REB_BINARY_FIELD_TYPE_NACTIVE                    = 7,
+    REB_BINARY_FIELD_TYPE_TESTPARTICLETYPE           = 8,
+    REB_BINARY_FIELD_TYPE_HASHCTR                    = 9,
+    REB_BINARY_FIELD_TYPE_OPENINGANGLE2              = 10,
+    REB_BINARY_FIELD_TYPE_STATUS                     = 11,
+    REB_BINARY_FIELD_TYPE_EXACTFINISHTIME            = 12,
+    REB_BINARY_FIELD_TYPE_FORCEISVELOCITYDEP         = 13,
+    REB_BINARY_FIELD_TYPE_GRAVITYIGNORETERMS         = 14,
+    REB_BINARY_FIELD_TYPE_OUTPUTTIMINGLAST           = 15,
+    REB_BINARY_FIELD_TYPE_SAVEMESSAGES               = 16,
+    REB_BINARY_FIELD_TYPE_EXITMAXDISTANCE            = 17,
+    REB_BINARY_FIELD_TYPE_EXITMINDISTANCE            = 18,
+    REB_BINARY_FIELD_TYPE_USLEEP                     = 19,
+    REB_BINARY_FIELD_TYPE_TRACKENERGYOFFSET          = 20,
+    REB_BINARY_FIELD_TYPE_ENERGYOFFSET               = 21,
+    REB_BINARY_FIELD_TYPE_BOXSIZE                    = 22,
+    REB_BINARY_FIELD_TYPE_BOXSIZEMAX                 = 23,
+    REB_BINARY_FIELD_TYPE_ROOTSIZE                   = 24,
+    REB_BINARY_FIELD_TYPE_ROOTN                      = 25,
+    REB_BINARY_FIELD_TYPE_ROOTNX                     = 26,
+    REB_BINARY_FIELD_TYPE_ROOTNY                     = 27,
+    REB_BINARY_FIELD_TYPE_ROOTNZ                     = 28,
+    REB_BINARY_FIELD_TYPE_NGHOSTX                    = 29,
+    REB_BINARY_FIELD_TYPE_NGHOSTY                    = 30,
+    REB_BINARY_FIELD_TYPE_NGHOSTZ                    = 31,
     REB_BINARY_FIELD_TYPE_COLLISIONRESOLVEKEEPSORTED = 32,
-    REB_BINARY_FIELD_TYPE_MINIMUMCOLLISIONVELOCITY = 33,
-    REB_BINARY_FIELD_TYPE_COLLISIONSPLOG = 34, 
-    REB_BINARY_FIELD_TYPE_MAXRADIUS = 35, 
-    REB_BINARY_FIELD_TYPE_COLLISIONSNLOG = 36, 
-    REB_BINARY_FIELD_TYPE_CALCULATEMEGNO = 37, 
-    REB_BINARY_FIELD_TYPE_MEGNOYS = 38, 
-    REB_BINARY_FIELD_TYPE_MEGNOYSS = 39, 
-    REB_BINARY_FIELD_TYPE_MEGNOCOVYT = 40,
-    REB_BINARY_FIELD_TYPE_MEGNOVART = 41, 
-    REB_BINARY_FIELD_TYPE_MEGNOMEANT = 42, 
-    REB_BINARY_FIELD_TYPE_MEGNOMEANY = 43, 
-    REB_BINARY_FIELD_TYPE_MEGNON = 44,
-    REB_BINARY_FIELD_TYPE_SAAUTOINTERVAL = 47,
-    REB_BINARY_FIELD_TYPE_SAAUTOWALLTIME = 102,
-    REB_BINARY_FIELD_TYPE_SANEXT = 48,
-    REB_BINARY_FIELD_TYPE_COLLISION = 50,
-    REB_BINARY_FIELD_TYPE_INTEGRATOR = 51,
-    REB_BINARY_FIELD_TYPE_BOUNDARY = 52,
-    REB_BINARY_FIELD_TYPE_GRAVITY = 53,
-    REB_BINARY_FIELD_TYPE_OMEGA = 54,
-    REB_BINARY_FIELD_TYPE_OMEGAZ = 55,
-    REB_BINARY_FIELD_TYPE_PARTICLES = 85,
-    REB_BINARY_FIELD_TYPE_VARCONFIG = 86,
-    REB_BINARY_FIELD_TYPE_FUNCTIONPOINTERS = 87,
-    REB_BINARY_FIELD_TYPE_VISUALIZATION = 107,
-    REB_BINARY_FIELD_TYPE_WALLTIME = 126,
-    REB_BINARY_FIELD_TYPE_PYTHON_UNIT_L = 130,
-    REB_BINARY_FIELD_TYPE_PYTHON_UNIT_M = 131,
-    REB_BINARY_FIELD_TYPE_PYTHON_UNIT_T = 132,
-    REB_BINARY_FIELD_TYPE_SAAUTOSTEP = 135,
-    REB_BINARY_FIELD_TYPE_SANEXTSTEP = 136,
-    REB_BINARY_FIELD_TYPE_STEPSDONE = 137,
-    REB_BINARY_FIELD_TYPE_DTLASTDONE = 145,
-    REB_BINARY_FIELD_TYPE_RAND_SEED = 154,
-    REB_BINARY_FIELD_TYPE_TESTPARTICLEHIDEWARNINGS = 155,
-    REB_BINARY_FIELD_TYPE_INTEGRATOR_SELECTED = 156,
-    REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG = 0xFF000000,
-    REB_BINARY_FIELD_TYPE_HEADER = 1329743186,  // Corresponds to REBO (first characters of header text)
-    REB_BINARY_FIELD_TYPE_SABLOB = 9998,        // SA Blob
-    REB_BINARY_FIELD_TYPE_END = 9999,
+    REB_BINARY_FIELD_TYPE_MINIMUMCOLLISIONVELOCITY   = 33,
+    REB_BINARY_FIELD_TYPE_COLLISIONSPLOG             = 34,
+    REB_BINARY_FIELD_TYPE_MAXRADIUS                  = 35,
+    REB_BINARY_FIELD_TYPE_COLLISIONSNLOG             = 36,
+    REB_BINARY_FIELD_TYPE_CALCULATEMEGNO             = 37,
+    REB_BINARY_FIELD_TYPE_MEGNOYS                    = 38,
+    REB_BINARY_FIELD_TYPE_MEGNOYSS                   = 39,
+    REB_BINARY_FIELD_TYPE_MEGNOCOVYT                 = 40,
+    REB_BINARY_FIELD_TYPE_MEGNOVART                  = 41,
+    REB_BINARY_FIELD_TYPE_MEGNOMEANT                 = 42,
+    REB_BINARY_FIELD_TYPE_MEGNOMEANY                 = 43,
+    REB_BINARY_FIELD_TYPE_MEGNON                     = 44,
+    REB_BINARY_FIELD_TYPE_SAAUTOINTERVAL             = 47,
+    REB_BINARY_FIELD_TYPE_SAAUTOWALLTIME             = 102,
+    REB_BINARY_FIELD_TYPE_SANEXT                     = 48,
+    REB_BINARY_FIELD_TYPE_COLLISION                  = 50,
+    REB_BINARY_FIELD_TYPE_INTEGRATOR                 = 51,
+    REB_BINARY_FIELD_TYPE_BOUNDARY                   = 52,
+    REB_BINARY_FIELD_TYPE_GRAVITY                    = 53,
+    REB_BINARY_FIELD_TYPE_OMEGA                      = 54,
+    REB_BINARY_FIELD_TYPE_OMEGAZ                     = 55,
+    REB_BINARY_FIELD_TYPE_PARTICLES                  = 85,
+    REB_BINARY_FIELD_TYPE_VARCONFIG                  = 86,
+    REB_BINARY_FIELD_TYPE_FUNCTIONPOINTERS           = 87,
+    REB_BINARY_FIELD_TYPE_VISUALIZATION              = 107,
+    REB_BINARY_FIELD_TYPE_WALLTIME                   = 126,
+    REB_BINARY_FIELD_TYPE_PYTHON_UNIT_L              = 130,
+    REB_BINARY_FIELD_TYPE_PYTHON_UNIT_M              = 131,
+    REB_BINARY_FIELD_TYPE_PYTHON_UNIT_T              = 132,
+    REB_BINARY_FIELD_TYPE_SAAUTOSTEP                 = 135,
+    REB_BINARY_FIELD_TYPE_SANEXTSTEP                 = 136,
+    REB_BINARY_FIELD_TYPE_STEPSDONE                  = 137,
+    REB_BINARY_FIELD_TYPE_DTLASTDONE                 = 145,
+    REB_BINARY_FIELD_TYPE_RAND_SEED                  = 154,
+    REB_BINARY_FIELD_TYPE_TESTPARTICLEHIDEWARNINGS   = 155,
+    REB_BINARY_FIELD_TYPE_INTEGRATOR_SELECTED        = 156,
+    REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG          = 0xFF000000,
+    REB_BINARY_FIELD_TYPE_HEADER                     = 1329743186, // Corresponds to REBO (first characters of header text)
+    REB_BINARY_FIELD_TYPE_SABLOB                     = 9998,       // SA Blob
+    REB_BINARY_FIELD_TYPE_END                        = 9999,
 };
 
-#define REB_BINARY_FIELD_TYPE_GENERATOR(name) (REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG | (integrator->id<<16) | name)
-#define REB_IF_FIELD(name) if (field.type==REB_BINARY_FIELD_TYPE_GENERATOR(name))
-#define REB_READ_FIELD(name, ptr) REB_IF_FIELD(name) {\
-        return reb_input_stream_fread(stream, &(config->ptr), field.size, 1);\
+#define REB_BINARY_FIELD_TYPE_GENERATOR(name) (REB_BINARY_FIELD_TYPE_INTEGRATOR_CONFIG | (integrator->id << 16) | name)
+#define REB_IF_FIELD(name) if (field.type == REB_BINARY_FIELD_TYPE_GENERATOR(name))
+#define REB_READ_FIELD(name, ptr)                                             \
+    REB_IF_FIELD(name) {                                                      \
+        return reb_input_stream_fread(stream, &(config->ptr), field.size, 1); \
     }
 #define REB_WRITE_FIELD_WITH_SIZE(name, ptr, size) reb_output_stream_write_field(stream, REB_BINARY_FIELD_TYPE_GENERATOR(name), ptr, size)
 #define REB_WRITE_FIELD(name, ptr) REB_WRITE_FIELD_WITH_SIZE(name, &(config->ptr), sizeof(config->ptr))
-        
 
 /**
  * @brief This structure is used to save and load binary files.
  */
 struct reb_binary_field {
-    uint32_t type;  ///< Type of what field (enum of REB_BINARY_FIELD_TYPE)
-    uint64_t size;  ///< Size in bytes of field (only counting what follows, not the binary field, itself).
+    uint32_t type; ///< Type of what field (enum of REB_BINARY_FIELD_TYPE)
+    uint64_t size; ///< Size in bytes of field (only counting what follows, not the binary field, itself).
 };
 
 /**
  * @brief This structure is used to save and load simulation archive files.
  */
 struct reb_simulationarchive_blob {
-    int32_t index;                         ///< Index of previous blob (binary file is 0, first blob is 1)
-    int16_t offset_prev;                   ///< Offset to beginning of previous blob (size of previous blob).
-    int16_t offset_next;                   ///< Offset to end of following blob (size of following blob).
+    int32_t index;       ///< Index of previous blob (binary file is 0, first blob is 1)
+    int16_t offset_prev; ///< Offset to beginning of previous blob (size of previous blob).
+    int16_t offset_next; ///< Offset to end of following blob (size of following blob).
 };
-
 
 /**
  * @brief This structure is used to save and load SimulationArchive files.
  * @details Everthing in this struct is handled by REBOUND itself. Users 
  * should not need to access this struct manually.
  */
-struct reb_simulationarchive{
-    FILE* inf;              ///< File pointer (will be kept open)
-    char* filename;         ///< Filename of open file
-    double auto_interval;   ///< Interval setting used to create SA (if used)
-    double auto_walltime;   ///< Walltime setting used to create SA (if used)
-    unsigned long long auto_step;  ///< Steps in-between SA snapshots (if used)
-    long nblobs;            ///< Total number of snapshots (including initial binary)
-    uint32_t* offset;       ///< Index of offsets in file (length nblobs)
-    double* t;              ///< Index of simulation times in file (length nblobs)
+struct reb_simulationarchive {
+    FILE* inf;                    ///< File pointer (will be kept open)
+    char* filename;               ///< Filename of open file
+    double auto_interval;         ///< Interval setting used to create SA (if used)
+    double auto_walltime;         ///< Walltime setting used to create SA (if used)
+    unsigned long long auto_step; ///< Steps in-between SA snapshots (if used)
+    long nblobs;                  ///< Total number of snapshots (including initial binary)
+    uint32_t* offset;             ///< Index of offsets in file (length nblobs)
+    double* t;                    ///< Index of simulation times in file (length nblobs)
 };
 
 /**
  * @brief Holds a particle's hash and the particle's index in the particles array.
  * @details This structure is used for the simulation's particle_lookup_table.
  */
-struct reb_hash_pointer_pair{
+struct reb_hash_pointer_pair {
     uint32_t hash;
     int index;
 };
@@ -319,30 +315,29 @@ struct reb_hash_pointer_pair{
  * @{
 */
 
-
 /**
  * @brief Structure representing a Keplerian orbit.
  * @details This structure is returned when calculating 
  * a Keplerian orbit from Cartesian coordinates. 
  */
 struct reb_orbit {
-    double d;        ///< Radial distance from central object
-    double v;        ///< velocity relative to central object's velocity
-    double h;        ///< Angular momentum
-    double P;        ///< Orbital period
-    double n;        ///< Mean motion
-    double a;        ///< Semi-major axis
-    double e;        ///< Eccentricity
-    double inc;      ///< Inclination
-    double Omega;    ///< Longitude of ascending node
-    double omega;    ///< Argument of pericenter
-    double pomega;   ///< Longitude of pericenter
-    double f;        ///< True anomaly
-    double M;        ///< Mean anomaly
-    double l;        ///< Mean Longitude
-    double theta;    ///< True Longitude
-    double T;        ///< Time of pericenter passage
-    double rhill;    ///< Circular Hill radius 
+    double d;      ///< Radial distance from central object
+    double v;      ///< velocity relative to central object's velocity
+    double h;      ///< Angular momentum
+    double P;      ///< Orbital period
+    double n;      ///< Mean motion
+    double a;      ///< Semi-major axis
+    double e;      ///< Eccentricity
+    double inc;    ///< Inclination
+    double Omega;  ///< Longitude of ascending node
+    double omega;  ///< Argument of pericenter
+    double pomega; ///< Longitude of pericenter
+    double f;      ///< True anomaly
+    double M;      ///< Mean anomaly
+    double l;      ///< Mean Longitude
+    double theta;  ///< True Longitude
+    double T;      ///< Time of pericenter passage
+    double rhill;  ///< Circular Hill radius
 };
 
 /**
@@ -356,80 +351,80 @@ struct reb_simulation {
      * \name Variables related to time, current number of particles and simulation status/control 
      * @{
      */
-    double  t;                      ///< Current simulation time. 
-    double  G;                      ///< Gravitational constant. Default: 1. 
-    double  Omega;                  ///< Epicyclic/orbital frequency used for shearing sheet simulation with SEI integrator. Default: 1. 
-    double  Omega_z;                ///< Vertical epicyclic frequency used for shearing sheet simulation with SEI integrator. Default: NAN (use Omega). 
-    double  softening;              ///< Gravitational softening parameter. Default: 0. 
-    double  dt;                     ///< Current timestep. 
-    double  dt_last_done;           ///< Last dt used by integrator
-    unsigned long long steps_done;  ///< Timesteps done
-    int     N;                      ///< Current number of particles on this node. 
-    int     N_var;                  ///< Total number of variational particles. Default: 0.
-    int     var_config_N;           ///< Number of variational configuration structs. Default: 0.
-    struct reb_variational_configuration* var_config;   ///< These configuration structs contain details on variational particles. 
-    int     N_active;               ///< Number of massive particles included in force calculation (default: N). Particles with index >= N_active are considered testparticles.
-    int     testparticle_type;      ///< Type of the particles with an index>=N_active. 0 means particle does not influence any other particle (default), 1 means particles with index < N_active feel testparticles (similar to MERCURY's small particles). Testparticles never feel each other.
-    int     testparticle_hidewarnings;      ///< Hide testparticle warnings if 1. Default: 0.
+    double t;                                            ///< Current simulation time.
+    double G;                                            ///< Gravitational constant. Default: 1.
+    double Omega;                                        ///< Epicyclic/orbital frequency used for shearing sheet simulation with SEI integrator. Default: 1.
+    double Omega_z;                                      ///< Vertical epicyclic frequency used for shearing sheet simulation with SEI integrator. Default: NAN (use Omega).
+    double softening;                                    ///< Gravitational softening parameter. Default: 0.
+    double dt;                                           ///< Current timestep.
+    double dt_last_done;                                 ///< Last dt used by integrator
+    unsigned long long steps_done;                       ///< Timesteps done
+    int N;                                               ///< Current number of particles on this node.
+    int N_var;                                           ///< Total number of variational particles. Default: 0.
+    int var_config_N;                                    ///< Number of variational configuration structs. Default: 0.
+    struct reb_variational_configuration* var_config;    ///< These configuration structs contain details on variational particles.
+    int N_active;                                        ///< Number of massive particles included in force calculation (default: N). Particles with index >= N_active are considered testparticles.
+    int testparticle_type;                               ///< Type of the particles with an index>=N_active. 0 means particle does not influence any other particle (default), 1 means particles with index < N_active feel testparticles (similar to MERCURY's small particles). Testparticles never feel each other.
+    int testparticle_hidewarnings;                       ///< Hide testparticle warnings if 1. Default: 0.
     struct reb_hash_pointer_pair* particle_lookup_table; ///< Array of pairs that map particles' hashes to their index in the particles array.
-    int     hash_ctr;               ///< Counter for number of assigned hashes to assign unique values.
-    int     N_lookup;               ///< Number of entries in the particle lookup table.
-    int     allocatedN_lookup;      ///< Number of lookup table entries allocated.
-    int     allocatedN;             ///< Current maximum space allocated in the particles array on this node. 
-    struct reb_particle* particles; ///< Main particle array. This contains all particles on this node.  
-    struct reb_vec3d* gravity_cs;   ///< Vector containing the information for compensated gravity summation 
-    int     gravity_cs_allocatedN;  ///< Current number of allocated space for cs array
-    struct reb_treecell** tree_root;///< Pointer to the roots of the trees. 
-    int     tree_needs_update;      ///< Flag to force a tree update (after boundary check)
-    double opening_angle2;          ///< Square of the cell opening angle \f$ \theta \f$. 
-    enum REB_STATUS status;         ///< Set to 1 to exit the simulation at the end of the next timestep. 
-    int     exact_finish_time;      ///< Set to 1 to finish the integration exactly at tmax. Set to 0 to finish at the next dt. Default is 1. 
+    int hash_ctr;                                        ///< Counter for number of assigned hashes to assign unique values.
+    int N_lookup;                                        ///< Number of entries in the particle lookup table.
+    int allocatedN_lookup;                               ///< Number of lookup table entries allocated.
+    int allocatedN;                                      ///< Current maximum space allocated in the particles array on this node.
+    struct reb_particle* particles;                      ///< Main particle array. This contains all particles on this node.
+    struct reb_vec3d* gravity_cs;                        ///< Vector containing the information for compensated gravity summation
+    int gravity_cs_allocatedN;                           ///< Current number of allocated space for cs array
+    struct reb_treecell** tree_root;                     ///< Pointer to the roots of the trees.
+    int tree_needs_update;                               ///< Flag to force a tree update (after boundary check)
+    double opening_angle2;                               ///< Square of the cell opening angle \f$ \theta \f$.
+    enum REB_STATUS status;                              ///< Set to 1 to exit the simulation at the end of the next timestep.
+    int exact_finish_time;                               ///< Set to 1 to finish the integration exactly at tmax. Set to 0 to finish at the next dt. Default is 1.
 
-    unsigned int force_is_velocity_dependent;   ///< Set to 1 if integrator needs to consider velocity dependent forces.  
-    unsigned int gravity_ignore_terms; ///< Ignore the gravity form the central object (1 for WHFast, 2 for WHFastHelio, 0 otherwise)
-    double output_timing_last;      ///< Time when reb_output_timing() was called the last time. 
-    unsigned long display_clock;    ///< Display clock, internal variable for timing refreshs.
-    int save_messages;              ///< Set to 1 to ignore messages (used in python interface).
-    char** messages;                ///< Array of strings containing last messages (only used if save_messages==1). 
-    double exit_max_distance;       ///< Exit simulation if distance from origin larger than this value 
-    double exit_min_distance;       ///< Exit simulation if distance from another particle smaller than this value 
-    double usleep;                  ///< Wait this number of microseconds after each timestep, useful for slowing down visualization.  
-    struct reb_display_data* display_data; /// < Datastructure stores visualization related data. Does not have to be modified by the user. 
-    int track_energy_offset;        ///< Track energy change during collisions and ejections (default: 0).
-    double energy_offset;           ///< Energy offset due to collisions and ejections (only calculated if track_energy_offset=1).
-    double walltime;                ///< Walltime in seconds used by REBOUND for this simulation (integration only, not visualization, heartbeat function, etc).
-    uint32_t python_unit_l;         ///< Information only used for when working with units in python.
-    uint32_t python_unit_m;         ///< Information only used for when working with units in python.
-    uint32_t python_unit_t;         ///< Information only used for when working with units in python.
+    unsigned int force_is_velocity_dependent; ///< Set to 1 if integrator needs to consider velocity dependent forces.
+    unsigned int gravity_ignore_terms;        ///< Ignore the gravity form the central object (1 for WHFast, 2 for WHFastHelio, 0 otherwise)
+    double output_timing_last;                ///< Time when reb_output_timing() was called the last time.
+    unsigned long display_clock;              ///< Display clock, internal variable for timing refreshs.
+    int save_messages;                        ///< Set to 1 to ignore messages (used in python interface).
+    char** messages;                          ///< Array of strings containing last messages (only used if save_messages==1).
+    double exit_max_distance;                 ///< Exit simulation if distance from origin larger than this value
+    double exit_min_distance;                 ///< Exit simulation if distance from another particle smaller than this value
+    double usleep;                            ///< Wait this number of microseconds after each timestep, useful for slowing down visualization.
+    struct reb_display_data* display_data;    /// < Datastructure stores visualization related data. Does not have to be modified by the user.
+    int track_energy_offset;                  ///< Track energy change during collisions and ejections (default: 0).
+    double energy_offset;                     ///< Energy offset due to collisions and ejections (only calculated if track_energy_offset=1).
+    double walltime;                          ///< Walltime in seconds used by REBOUND for this simulation (integration only, not visualization, heartbeat function, etc).
+    uint32_t python_unit_l;                   ///< Information only used for when working with units in python.
+    uint32_t python_unit_m;                   ///< Information only used for when working with units in python.
+    uint32_t python_unit_t;                   ///< Information only used for when working with units in python.
     /** @} */
 
     /**
      * \name Variables related to ghost/root boxes 
      * @{
      */
-    struct  reb_vec3d boxsize;  ///< Size of the entire box, root_x*boxsize. 
-    double  boxsize_max;        ///< Maximum size of the entire box in any direction. Set in box_init().
-    double  root_size;      ///< Size of a root box. 
-    int     root_n;         ///< Total number of root boxes in all directions, root_nx*root_ny*root_nz. Default: 1. Set in box_init().
-    int     root_nx;        ///< Number of root boxes in x direction. Default: 1. 
-    int     root_ny;        ///< Number of root boxes in y direction. Default: 1. 
-    int     root_nz;        ///< Number of root boxes in z direction. Default: 1. 
-    int     nghostx;        ///< Number of ghostboxes in x direction. 
-    int     nghosty;        ///< Number of ghostboxes in y direction. 
-    int     nghostz;        ///< Number of ghostboxes in z direction. 
+    struct reb_vec3d boxsize; ///< Size of the entire box, root_x*boxsize.
+    double boxsize_max;       ///< Maximum size of the entire box in any direction. Set in box_init().
+    double root_size;         ///< Size of a root box.
+    int root_n;               ///< Total number of root boxes in all directions, root_nx*root_ny*root_nz. Default: 1. Set in box_init().
+    int root_nx;              ///< Number of root boxes in x direction. Default: 1.
+    int root_ny;              ///< Number of root boxes in y direction. Default: 1.
+    int root_nz;              ///< Number of root boxes in z direction. Default: 1.
+    int nghostx;              ///< Number of ghostboxes in x direction.
+    int nghosty;              ///< Number of ghostboxes in y direction.
+    int nghostz;              ///< Number of ghostboxes in z direction.
     /** @} */
 
     /**
      * \name Variables related to collision search and detection 
      * @{
      */
-    int collision_resolve_keep_sorted;      ///< Keep particles sorted if collision_resolve removes particles during a collision. 
-    struct reb_collision* collisions;       ///< Array of all collisions. 
-    int collisions_allocatedN;          ///< Size allocated for collisions.
-    double minimum_collision_velocity;      ///< Used for hard sphere collision model. 
-    double collisions_plog;             ///< Keep track of momentum exchange (used to calculate collisional viscosity in ring systems.
-    double max_radius[2];               ///< Two largest particle radii, set automatically, needed for collision search.
-    long collisions_Nlog;               ///< Keep track of number of collisions. 
+    int collision_resolve_keep_sorted; ///< Keep particles sorted if collision_resolve removes particles during a collision.
+    struct reb_collision* collisions;  ///< Array of all collisions.
+    int collisions_allocatedN;         ///< Size allocated for collisions.
+    double minimum_collision_velocity; ///< Used for hard sphere collision model.
+    double collisions_plog;            ///< Keep track of momentum exchange (used to calculate collisional viscosity in ring systems.
+    double max_radius[2];              ///< Two largest particle radii, set automatically, needed for collision search.
+    long collisions_Nlog;              ///< Keep track of number of collisions.
     /** @} */
 
     /**
@@ -437,27 +432,26 @@ struct reb_simulation {
      * @{
      */
     int calculate_megno;    ///< Internal flag that determines if megno is calculated (default=0, but megno_init() sets it to the index of variational particles used for megno)
-    double megno_Ys;    ///< Running megno sum (internal use)
-    double megno_Yss;   ///< Running megno sum (internal use)
+    double megno_Ys;        ///< Running megno sum (internal use)
+    double megno_Yss;       ///< Running megno sum (internal use)
     double megno_cov_Yt;    ///< covariance of MEGNO Y and t
-    double megno_var_t;     ///< variance of t 
+    double megno_var_t;     ///< variance of t
     double megno_mean_t;    ///< mean of t
     double megno_mean_Y;    ///< mean of MEGNO Y
-    long   megno_n;     ///< number of covariance updates
+    long megno_n;           ///< number of covariance updates
     unsigned int rand_seed; ///< seed for random number generator
     /** @} */
-    
-    
+
     /**
      * \name Variables related to SimulationArchive 
      * @{
      */
-    double simulationarchive_auto_interval;     ///< Current sampling cadence, in code units
-    double simulationarchive_auto_walltime;     ///< Current sampling cadence, in wall time
-    unsigned long long simulationarchive_auto_step;  ///< Current sampling cadence, in time steps
-    double simulationarchive_next;              ///< Next output time (simulation tim or wall time, depending on wether auto_interval or auto_walltime is set)
+    double simulationarchive_auto_interval;         ///< Current sampling cadence, in code units
+    double simulationarchive_auto_walltime;         ///< Current sampling cadence, in wall time
+    unsigned long long simulationarchive_auto_step; ///< Current sampling cadence, in time steps
+    double simulationarchive_next;                  ///< Next output time (simulation tim or wall time, depending on wether auto_interval or auto_walltime is set)
     unsigned long long simulationarchive_next_step; ///< Next output step (only used if auto_steps is set)
-    char*  simulationarchive_filename;          ///< Name of output file
+    char* simulationarchive_filename;               ///< Name of output file
     /** @} */
 
     /**
@@ -468,21 +462,21 @@ struct reb_simulation {
      * @brief Available visualization options
      */
     enum {
-        REB_VISUALIZATION_NONE = 0,     ///< No visualization (default if OPENGL compiler flag is turned off)
-        REB_VISUALIZATION_OPENGL = 1,   ///< OpenGL visualization (default if OPENGL compiler flag is turned on)
-        REB_VISUALIZATION_WEBGL = 2,    ///< WebGL visualization, only usable from Jupyter notebook widget
-        } visualization;
+        REB_VISUALIZATION_NONE   = 0, ///< No visualization (default if OPENGL compiler flag is turned off)
+        REB_VISUALIZATION_OPENGL = 1, ///< OpenGL visualization (default if OPENGL compiler flag is turned on)
+        REB_VISUALIZATION_WEBGL  = 2, ///< WebGL visualization, only usable from Jupyter notebook widget
+    } visualization;
     /**
      * @brief Available collision routines
      */
     enum {
-        REB_COLLISION_NONE = 0,     ///< Do not search for collisions (default)
-        REB_COLLISION_DIRECT = 1,   ///< Direct collision search O(N^2)
-        REB_COLLISION_TREE = 2,     ///< Tree based collision search O(N log(N))
-        REB_COLLISION_MERCURIUS = 3,///< OBSOLETE, use REB_COLLISION_DIRECT instead
-        REB_COLLISION_LINE = 4,     ///< Direct collision search O(N^2), looks for collisions by assuming a linear path over the last timestep
-        REB_COLLISION_LINETREE = 5, ///< Tree-based collision search O(N log(N)), looks for collisions by assuming a linear path over the last timestep
-        } collision;
+        REB_COLLISION_NONE      = 0, ///< Do not search for collisions (default)
+        REB_COLLISION_DIRECT    = 1, ///< Direct collision search O(N^2)
+        REB_COLLISION_TREE      = 2, ///< Tree based collision search O(N log(N))
+        REB_COLLISION_MERCURIUS = 3, ///< OBSOLETE, use REB_COLLISION_DIRECT instead
+        REB_COLLISION_LINE      = 4, ///< Direct collision search O(N^2), looks for collisions by assuming a linear path over the last timestep
+        REB_COLLISION_LINETREE  = 5, ///< Tree-based collision search O(N log(N)), looks for collisions by assuming a linear path over the last timestep
+    } collision;
 
     struct reb_integrator* integrators_available;
     unsigned int integrators_available_N;
@@ -492,23 +486,23 @@ struct reb_simulation {
      * @brief Available boundary conditions
      */
     enum {
-        REB_BOUNDARY_NONE = 0,      ///< Do not check for anything (default)
-        REB_BOUNDARY_OPEN = 1,      ///< Open boundary conditions. Removes particles if they leave the box 
-        REB_BOUNDARY_PERIODIC = 2,  ///< Periodic boundary conditions
-        REB_BOUNDARY_SHEAR = 3,     ///< Shear periodic boundary conditions, needs OMEGA variable
-        } boundary;
+        REB_BOUNDARY_NONE     = 0, ///< Do not check for anything (default)
+        REB_BOUNDARY_OPEN     = 1, ///< Open boundary conditions. Removes particles if they leave the box
+        REB_BOUNDARY_PERIODIC = 2, ///< Periodic boundary conditions
+        REB_BOUNDARY_SHEAR    = 3, ///< Shear periodic boundary conditions, needs OMEGA variable
+    } boundary;
 
     /**
      * @brief Available gravity routines
      */
     enum {
-        REB_GRAVITY_NONE = 0,       ///< Do not calculate graviational forces
-        REB_GRAVITY_BASIC = 1,      ///< Basic O(N^2) direct summation algorithm, choose this for shearing sheet and periodic boundary conditions
-        REB_GRAVITY_COMPENSATED = 2,    ///< Direct summation algorithm O(N^2) but with compensated summation, slightly slower than BASIC but more accurate
-        REB_GRAVITY_TREE = 3,       ///< Use the tree to calculate gravity, O(N log(N)), set opening_angle2 to adjust accuracy.
-        REB_GRAVITY_MERCURIUS = 4,  ///< Special gravity routine only for MERCURIUS
-        REB_GRAVITY_JACOBI = 5,     ///< Special gravity routine which includes the Jacobi terms for WH integrators 
-        } gravity;
+        REB_GRAVITY_NONE        = 0, ///< Do not calculate graviational forces
+        REB_GRAVITY_BASIC       = 1, ///< Basic O(N^2) direct summation algorithm, choose this for shearing sheet and periodic boundary conditions
+        REB_GRAVITY_COMPENSATED = 2, ///< Direct summation algorithm O(N^2) but with compensated summation, slightly slower than BASIC but more accurate
+        REB_GRAVITY_TREE        = 3, ///< Use the tree to calculate gravity, O(N log(N)), set opening_angle2 to adjust accuracy.
+        REB_GRAVITY_MERCURIUS   = 4, ///< Special gravity routine only for MERCURIUS
+        REB_GRAVITY_JACOBI      = 5, ///< Special gravity routine which includes the Jacobi terms for WH integrators
+    } gravity;
     /** @} */
 
     /**
@@ -518,47 +512,47 @@ struct reb_simulation {
     /**
      * @brief This function allows the user to add additional (non-gravitational) forces.
      */
-    void (*additional_forces) (struct reb_simulation* const r);
+    void (*additional_forces)(struct reb_simulation* const r);
     /**
      * @brief This function allows the user to make changes before each timestep.
      */
-    void (*pre_timestep_modifications) (struct reb_simulation* const r);
+    void (*pre_timestep_modifications)(struct reb_simulation* const r);
     /**
      * @brief This function allows the user to make changes after each timestep.
      */
-    void (*post_timestep_modifications) (struct reb_simulation* const r);
+    void (*post_timestep_modifications)(struct reb_simulation* const r);
     /**
      * @brief This function is called at the beginning of the simulation and at the end of
      * each timestep.
      */
-    void (*heartbeat) (struct reb_simulation* r);
+    void (*heartbeat)(struct reb_simulation* r);
     /**
      * @brief This function is called at the beginning of the simulation and at the end of
      * each timestep.
      */
-    void (*display_heartbeat) (struct reb_simulation* r);
+    void (*display_heartbeat)(struct reb_simulation* r);
     /**
      * @brief Return the coefficient of restitution. By default, it is NULL, assuming a coefficient of 1.
      * @details The velocity of the collision is given to allow for velocity dependent coefficients
      * of restitution.
      */
-    double (*coefficient_of_restitution) (const struct reb_simulation* const r, double v); 
+    double (*coefficient_of_restitution)(const struct reb_simulation* const r, double v);
     /**
      * @brief Resolve collision within this function. By default, it is NULL, assuming hard sphere model.
      * @details A return value of 0 indicates that both particles remain in the simulation. A return value of 1 (2) indicates that particle 1 (2) should be removed from the simulation. A return value of 3 indicates that both particles should be removed from the simulation. 
      */
-    int (*collision_resolve) (struct reb_simulation* const r, struct reb_collision);
+    int (*collision_resolve)(struct reb_simulation* const r, struct reb_collision);
 
     /**
      * @brief Free particle's ap pointer.  Called in reb_remove function.
      */
-    void (*free_particle_ap) (struct reb_particle* p);
+    void (*free_particle_ap)(struct reb_particle* p);
     /**
      * @brief Called in reb_free_pointers function for any necessary cleanup in external libraries that depend on the simulation structure.
      */
-    void (*extras_cleanup) (struct reb_simulation* r);
+    void (*extras_cleanup)(struct reb_simulation* r);
     /** @} */
-    
+
     /**
      * \name Hooks for external libraries
      * @{
@@ -577,7 +571,6 @@ struct reb_simulation {
  * @details These are the functions that typically need to be called by the user.
  * @{
  */
-
 
 void* reb_simulation_get_integrator_config(struct reb_simulation* r, const char* name);
 void reb_simulation_set_integrator(struct reb_simulation* r, const char* name);
@@ -705,8 +698,6 @@ struct reb_particle* reb_get_particle_by_hash(struct reb_simulation* const r, ui
  * @param r The rebound simulation to be considered
  */
 void reb_run_heartbeat(struct reb_simulation* const r);
-
-
 
 /**
  * @brief Resolve collision by simply halting the integration and setting r->status=REB_EXIT_COLLISION (Default)
@@ -1063,17 +1054,17 @@ struct reb_simulation* reb_create_simulation_from_binary(char* filename);
  * @brief Enum describing possible errors that might occur during binary file reading.
  */
 enum reb_input_binary_messages {
-    REB_INPUT_BINARY_WARNING_NONE = 0,
-    REB_INPUT_BINARY_ERROR_NOFILE = 1,
-    REB_INPUT_BINARY_WARNING_VERSION = 2,
-    REB_INPUT_BINARY_WARNING_POINTERS = 4,
-    REB_INPUT_BINARY_WARNING_PARTICLES = 8,
-    REB_INPUT_BINARY_ERROR_FILENOTOPEN = 16,
-    REB_INPUT_BINARY_ERROR_OUTOFRANGE = 32,
-    REB_INPUT_BINARY_ERROR_SEEK = 64,
+    REB_INPUT_BINARY_WARNING_NONE         = 0,
+    REB_INPUT_BINARY_ERROR_NOFILE         = 1,
+    REB_INPUT_BINARY_WARNING_VERSION      = 2,
+    REB_INPUT_BINARY_WARNING_POINTERS     = 4,
+    REB_INPUT_BINARY_WARNING_PARTICLES    = 8,
+    REB_INPUT_BINARY_ERROR_FILENOTOPEN    = 16,
+    REB_INPUT_BINARY_ERROR_OUTOFRANGE     = 32,
+    REB_INPUT_BINARY_ERROR_SEEK           = 64,
     REB_INPUT_BINARY_WARNING_FIELD_UNKOWN = 128,
-    REB_INPUT_BINARY_ERROR_INTEGRATOR = 256,
-    REB_INPUT_BINARY_WARNING_CORRUPTFILE = 512,
+    REB_INPUT_BINARY_ERROR_INTEGRATOR     = 256,
+    REB_INPUT_BINARY_WARNING_CORRUPTFILE  = 512,
 };
 
 /**
@@ -1313,7 +1304,6 @@ void reb_simulationarchive_automate_walltime(struct reb_simulation* const r, con
  */
 void reb_simulationarchive_automate_step(struct reb_simulation* const r, const char* filename, unsigned long long step);
 
-
 /**
  * @cond PRIVATE
  */
@@ -1353,7 +1343,7 @@ void reb_free_simulationarchive_pointers(struct reb_simulationarchive* sa);
 
 void reb_transformations_inertial_to_jacobi_posvel(const struct reb_particle* const particles, struct reb_particle* const p_j, const struct reb_particle* const p_mass, const unsigned int N, const int N_active);
 void reb_transformations_inertial_to_jacobi_posvelacc(const struct reb_particle* const particles, struct reb_particle* const p_j, const struct reb_particle* const p_mass, const unsigned int N, const int N_active);
-void reb_transformations_inertial_to_jacobi_acc(const struct reb_particle* const particles, struct reb_particle* const p_j,const struct reb_particle* const p_mass, const unsigned int N, const int N_active);
+void reb_transformations_inertial_to_jacobi_acc(const struct reb_particle* const particles, struct reb_particle* const p_j, const struct reb_particle* const p_mass, const unsigned int N, const int N_active);
 /** @} */
 /**
  * \name From Jacobi to inertial coordinates
@@ -1537,7 +1527,7 @@ int reb_get_next_message(struct reb_simulation* const r, char* const buf);
  * Internal functions for calling various integrator steps. Nothing to be changed by the user.
  */
 
-void reb_integrator_ias15_reset(struct reb_simulation* r);              ///< Internal function used to call a specific integrator
+void reb_integrator_ias15_reset(struct reb_simulation* r); ///< Internal function used to call a specific integrator
 
 /** 
  * @brief This function updates the acceleration on all particles. 
@@ -1556,12 +1546,12 @@ struct reb_quaternion {
     double x, y, z, w;
 };
 struct reb_particle_opengl {
-    float x,y,z;
-    float vx,vy,vz;
+    float x, y, z;
+    float vx, vy, vz;
     float r;
 };
 struct reb_orbit_opengl {
-    float x,y,z;
+    float x, y, z;
     float a, e, f;
     float omega, Omega, inc;
 };
@@ -1580,18 +1570,18 @@ struct reb_display_data {
     double mouse_x;
     double mouse_y;
     double retina;
-    pthread_mutex_t mutex;          /**< Mutex to guarantee non-flickering */
-    int spheres;                    /**< Switches between point sprite and real spheres. */
-    int pause;                      /**< Pauses visualization, but keep simulation running */
-    int wire;                       /**< Shows/hides orbit wires. */
-    int onscreentext;               /**< Shows/hides onscreen text. */
-    int onscreenhelp;               /**< Shows/hides onscreen help. */
-    int multisample;                /**< Turn off/on multisampling. */
-    int clear;                      /**< Toggles clearing the display on each draw. */
-    int ghostboxes;                 /**< Shows/hides ghost boxes. */
-    int reference;                  /**< reb_particle used as a reference for centering. */
-    unsigned int mouse_action;      
-    unsigned int key_mods;      
+    pthread_mutex_t mutex; /**< Mutex to guarantee non-flickering */
+    int spheres;           /**< Switches between point sprite and real spheres. */
+    int pause;             /**< Pauses visualization, but keep simulation running */
+    int wire;              /**< Shows/hides orbit wires. */
+    int onscreentext;      /**< Shows/hides onscreen text. */
+    int onscreenhelp;      /**< Shows/hides onscreen help. */
+    int multisample;       /**< Turn off/on multisampling. */
+    int clear;             /**< Toggles clearing the display on each draw. */
+    int ghostboxes;        /**< Shows/hides ghost boxes. */
+    int reference;         /**< reb_particle used as a reference for centering. */
+    unsigned int mouse_action;
+    unsigned int key_mods;
     struct reb_quaternion view;
     unsigned int simplefont_tex;
     unsigned int simplefont_shader_program;
@@ -1622,6 +1612,5 @@ struct reb_display_data {
 /**
  * @endcond
  */
-
 
 #endif

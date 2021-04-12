@@ -25,5 +25,4 @@
 #ifndef _BINARYDIFF_H
 #define _BINARYDIFF_H
 
-
 #endif // _BINARYDIFF_H
