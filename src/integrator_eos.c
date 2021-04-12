@@ -23,14 +23,17 @@
  *
  */
 
+#include <math.h>
+#include <stdlib.h>
+
+#include "rebound.h"
+
 #include "integrator_eos.h"
 #include "gravity.h"
 #include "input.h"
 #include "output.h"
-#include "rebound.h"
 #include "tools.h"
-#include <math.h>
-#include <stdlib.h>
+
 #define MIN(a, b) ((a) > (b) ? (b) : (a)) ///< Returns the minimum of a and b
 #define MAX(a, b) ((a) > (b) ? (a) : (b)) ///< Returns the maximum of a and b
 

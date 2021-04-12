@@ -27,8 +27,9 @@
  *
  */
 
-#include "integrator_leapfrog.h"
 #include "rebound.h"
+
+#include "integrator_leapfrog.h"
 
 void reb_integrator_leapfrog_step(struct reb_integrator* integrator,
                                   struct reb_simulation* r) {

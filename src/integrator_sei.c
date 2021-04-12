@@ -29,11 +29,13 @@
  * along with rebound.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include "integrator_sei.h"
-#include "output.h"
-#include "rebound.h"
 #include <math.h>
 #include <stdlib.h>
+
+#include "rebound.h"
+
+#include "integrator_sei.h"
+#include "output.h"
 
 struct reb_integrator_sei_config {
     // Cached values
