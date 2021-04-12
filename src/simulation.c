@@ -179,8 +179,7 @@ struct reb_simulation* reb_simulation_copy(struct reb_simulation* r) {
 /////////////////////////////////////////
 // Time stepping
 
-void reb_simulation_steps(struct reb_simulation* const r,
-                          unsigned int N_steps) {
+void reb_simulation_steps(struct reb_simulation* const r, unsigned int N_steps) {
     for (unsigned int i = 0; i < N_steps; i++) {
         reb_simulation_step(r);
     }
