@@ -55,7 +55,7 @@ struct reb_integrator_ias15_config {
      * and the timestep becomes excessively small.
      **/
     double min_dt;
-    
+
     /** 
      * @brief Flag that determines how relative acceleration error is estimated.
      * @details If set to 1, estimate the fractional error by max(acceleration_error)/max(acceleration), 
@@ -69,29 +69,27 @@ struct reb_integrator_ias15_config {
      */
     unsigned long iterations_max_exceeded;
 
+    int allocated_N; ///< Size of allocated arrays.
 
-
-    int allocated_N;             ///< Size of allocated arrays.
-
-    double* at;            ///< Temporary buffer for acceleration
-    double* x0;            ///<                      position (used for initial values at h=0)
-    double* v0;            ///<                      velocity
-    double* a0;            ///<                      acceleration
-    double* csx;           ///<                      compensated summation for x
-    double* csv;           ///<                      compensated summation for v
-    double* csa0;          ///<                      compensated summation for a
+    double* at;   ///< Temporary buffer for acceleration
+    double* x0;   ///<                      position (used for initial values at h=0)
+    double* v0;   ///<                      velocity
+    double* a0;   ///<                      acceleration
+    double* csx;  ///<                      compensated summation for x
+    double* csv;  ///<                      compensated summation for v
+    double* csa0; ///<                      compensated summation for a
 
     struct reb_dp7 g;
     struct reb_dp7 b;
-    struct reb_dp7 csb;         ///< Compensated summation for b
+    struct reb_dp7 csb; ///< Compensated summation for b
     struct reb_dp7 e;
 
     // The following values are used for resetting the b and e coefficients if a timestep gets rejected
     struct reb_dp7 br;
     struct reb_dp7 er;
 
-    int* map;               // map to particles (identity map for non-mercurius simulations)
-    int map_allocated_N;    // allocated size for map
+    int* map;            // map to particles (identity map for non-mercurius simulations)
+    int map_allocated_N; // allocated size for map
 };
 
 void reb_integrator_ias15_register(struct reb_simulation* r);
