@@ -68,11 +68,11 @@ void reb_simulation_init(struct reb_simulation* r) {
     r->dt      = 0.001;
 
     // Tree related parameters
-    r->root_size = -1; // Will be set by user. If not, this generates an error
-    r->root_nx   = 1;
-    r->root_ny   = 1;
-    r->root_nz   = 1;
-    r->root_n    = 1;
+    r->root_size      = -1; // Will be set by user. If not, this generates an error
+    r->root_nx        = 1;
+    r->root_ny        = 1;
+    r->root_nz        = 1;
+    r->root_n         = 1;
     r->opening_angle2 = 0.25;
 
     r->N_active           = -1;

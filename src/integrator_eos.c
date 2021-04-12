@@ -28,9 +28,9 @@
 
 #include "rebound.h"
 
-#include "integrator_eos.h"
 #include "gravity.h"
 #include "input.h"
+#include "integrator_eos.h"
 #include "output.h"
 #include "tools.h"
 
