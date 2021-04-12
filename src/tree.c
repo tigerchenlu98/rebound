@@ -31,9 +31,9 @@
 
 #include "rebound.h"
 
-#include "tree.h"
 #include "boundary.h"
 #include "particle.h"
+#include "tree.h"
 
 /**
   * @brief Given a particle and a pointer to a node cell, the function returns the index of the octant which the particle belongs to.

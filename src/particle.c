@@ -31,10 +31,10 @@
 
 #include "rebound.h"
 
-#include "particle.h"
 #include "boundary.h"
 #include "integrator_ias15.h"
 #include "integrator_mercurius.h"
+#include "particle.h"
 #include "tree.h"
 #ifndef COLLISIONS_NONE
 #include "collision.h"

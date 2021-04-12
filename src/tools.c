@@ -33,8 +33,8 @@
 
 #include "rebound.h"
 
-#include "tools.h"
 #include "particle.h"
+#include "tools.h"
 
 void reb_tools_init_srand(struct reb_simulation* r) {
     struct timeval tim;

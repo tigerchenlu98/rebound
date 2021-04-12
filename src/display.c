@@ -35,7 +35,6 @@
 
 #include "rebound.h"
 
-#include "display.h"
 #include "boundary.h"
 #include "display.h"
 #include "output.h"

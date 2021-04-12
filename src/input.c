@@ -32,8 +32,8 @@
 
 #include "rebound.h"
 
-#include "input.h"
 #include "collision.h"
+#include "input.h"
 #include "integrator_sei.h"
 #include "particle.h"
 #include "simulationarchive.h"

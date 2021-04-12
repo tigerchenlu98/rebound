@@ -32,8 +32,8 @@
 
 #include "rebound.h"
 
-#include "output.h"
 #include "input.h"
+#include "output.h"
 #include "particle.h"
 #include "tools.h"
 

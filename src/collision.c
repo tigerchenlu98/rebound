@@ -37,8 +37,8 @@
 
 #include "rebound.h"
 
-#include "collision.h"
 #include "boundary.h"
+#include "collision.h"
 #include "integrator_mercurius.h"
 #include "particle.h"
 #include "tree.h"
