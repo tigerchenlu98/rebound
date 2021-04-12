@@ -26,6 +26,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 
 #include "boundary.h"
@@ -42,6 +43,9 @@
 #include "output.h"
 #include "tools.h"
 #include "tree.h"
+#include "particle.h"
+#include "display.h"
+#include "simulationarchive.h"
 
 /////////////////////////////////////////
 // Memory management
@@ -176,6 +180,27 @@ struct reb_simulation* reb_simulation_copy(struct reb_simulation* r) {
     return r_copy;
 }
 
+int reb_simulation_diff(struct reb_simulation* r1, struct reb_simulation* r2, int output_option) {
+    if (output_option != 1 && output_option != 2) {
+        // Not implemented
+        return -1;
+    }
+    struct reb_output_stream stream1 = {0};
+    reb_output_stream_write_binary(&stream1, r1);
+
+    struct reb_output_stream stream2 = {0};
+    reb_output_stream_write_binary(&stream2, r2);
+
+    struct reb_input_stream istream1 = {.mem_stream = stream1.buf, .size = stream1.size, .file_stream = NULL};
+    struct reb_input_stream istream2 = {.mem_stream = stream2.buf, .size = stream2.size, .file_stream = NULL};
+    struct reb_output_stream ostream = {0};
+    int ret                          = reb_binary_diff(&istream1, &istream2, &ostream, output_option);
+
+    free(stream1.buf);
+    free(stream2.buf);
+    return ret;
+}
+
 /////////////////////////////////////////
 // Time stepping
 
@@ -230,4 +255,234 @@ void reb_simulation_step(struct reb_simulation* const r) {
                    (time_end.tv_usec - time_beginning.tv_usec) / 1e6;
     // Update step counter
     r->steps_done++; // This also counts failed IAS15 steps
+}
+
+
+/////////////////////////////////////////
+///  Integrate functions 
+
+static int reb_error_message_waiting(struct reb_simulation* const r) {
+    if (r->messages) {
+        for (int i = 0; i < reb_max_messages_N; i++) {
+            if (r->messages[i] != NULL) {
+                if (r->messages[i][0] == 'e') {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+void reb_run_heartbeat(struct reb_simulation* const r) {
+    if (r->heartbeat) {
+        r->heartbeat(r);
+    } // Heartbeat
+    if (r->display_heartbeat) {
+        reb_check_for_display_heartbeat(r);
+    }
+    if (r->exit_max_distance) {
+        // Check for escaping particles
+        const double max2                          = r->exit_max_distance * r->exit_max_distance;
+        const struct reb_particle* const particles = r->particles;
+        const int N                                = r->N - r->N_var;
+        for (int i = 0; i < N; i++) {
+            struct reb_particle p = particles[i];
+            double r2             = p.x * p.x + p.y * p.y + p.z * p.z;
+            if (r2 > max2) {
+                r->status = REB_EXIT_ESCAPE;
+            }
+        }
+    }
+    if (r->exit_min_distance) {
+        // Check for close encounters
+        const double min2                          = r->exit_min_distance * r->exit_min_distance;
+        const struct reb_particle* const particles = r->particles;
+        const int N                                = r->N - r->N_var;
+        for (int i = 0; i < N; i++) {
+            struct reb_particle pi = particles[i];
+            for (int j = 0; j < i; j++) {
+                struct reb_particle pj = particles[j];
+                const double x         = pi.x - pj.x;
+                const double y         = pi.y - pj.y;
+                const double z         = pi.z - pj.z;
+                const double r2        = x * x + y * y + z * z;
+                if (r2 < min2) {
+                    r->status = REB_EXIT_ENCOUNTER;
+                }
+            }
+        }
+    }
+    if (r->usleep > 0) {
+        usleep(r->usleep);
+    }
+}
+
+int reb_check_exit(struct reb_simulation* const r, const double tmax, double* last_full_dt) {
+    while (r->status == REB_RUNNING_PAUSED) {
+        // Wait for user to disable paused simulation
+        usleep(1000);
+    }
+    const double dtsign = copysign(1., r->dt); // Used to determine integration direction
+    if (reb_error_message_waiting(r)) {
+        r->status = REB_EXIT_ERROR;
+    }
+    if (r->status >= 0) {
+        // Exit now.
+    } else if (tmax != INFINITY) {
+        if (r->exact_finish_time == 1) {
+            if ((r->t + r->dt) * dtsign >= tmax * dtsign) { // Next step would overshoot
+                if (r->t == tmax) {
+                    r->status = REB_EXIT_SUCCESS;
+                } else if (r->status == REB_RUNNING_LAST_STEP) {
+                    double tscale = 1e-12 * fabs(tmax); // Find order of magnitude for time
+                    if (tscale < 1e-200) {              // Failsafe if tmax==0.
+                        tscale = 1e-12;
+                    }
+                    if (fabs(r->t - tmax) < tscale) {
+                        r->status = REB_EXIT_SUCCESS;
+                    } else {
+                        // not there yet, do another step.
+                        if (r->integrator_selected->synchronize) {
+                            r->integrator_selected->synchronize(r->integrator_selected, r);
+                        }
+                        r->dt = tmax - r->t;
+                    }
+                } else {
+                    r->status = REB_RUNNING_LAST_STEP; // Do one small step, then exit.
+                    if (r->integrator_selected->synchronize) {
+                        r->integrator_selected->synchronize(r->integrator_selected, r);
+                    }
+                    if (r->dt_last_done != 0.) {         // If first timestep is also last, do not use dt_last_done (which would be 0.)
+                        *last_full_dt = r->dt_last_done; // store last full dt before decreasing the timestep to match finish time
+                    }
+                    r->dt = tmax - r->t;
+                }
+            } else {
+                if (r->status == REB_RUNNING_LAST_STEP) {
+                    // This will get executed if an adaptive integrator reduces
+                    // the timestep in what was supposed to be the last timestep.
+                    r->status = REB_RUNNING;
+                }
+            }
+        } else {
+            if (r->t * dtsign >= tmax * dtsign) { // Past the integration time
+                r->status = REB_EXIT_SUCCESS;     // Exit now.
+            }
+        }
+    }
+    if (r->N <= 0) {
+        reb_warning(r, "No particles found. Will exit.");
+        r->status = REB_EXIT_NOPARTICLES; // Exit now.
+    }
+    return r->status;
+}
+
+struct reb_thread_info {
+    struct reb_simulation* r;
+    double tmax;
+};
+
+volatile sig_atomic_t reb_sigint;
+
+void reb_sigint_handler(int signum) {
+    // Handles graceful shutdown for interrupts
+    if (signum == SIGINT) {
+        reb_sigint = 1;
+    }
+}
+
+static void* reb_integrate_raw(void* args) {
+    reb_sigint = 0;
+    signal(SIGINT, reb_sigint_handler);
+    struct reb_thread_info* thread_info = (struct reb_thread_info*)args;
+    struct reb_simulation* const r      = thread_info->r;
+
+    double last_full_dt = r->dt; // need to store r->dt in case timestep gets artificially shrunk to meet exact_finish_time=1
+    r->dt_last_done     = 0.;    // Reset in case first timestep attempt will fail
+
+    if (r->testparticle_hidewarnings == 0 && reb_particle_check_testparticles(r)) {
+        reb_warning(r, "At least one test particle (type 0) has finite mass. This might lead to unexpected behaviour. Set testparticle_hidewarnings=1 to hide this warning.");
+    }
+
+    r->status = REB_RUNNING;
+    reb_run_heartbeat(r);
+    while (reb_check_exit(r, thread_info->tmax, &last_full_dt) < 0) {
+#ifdef OPENGL
+        if (r->display_data) {
+            if (r->display_data->opengl_enabled) {
+                pthread_mutex_lock(&(r->display_data->mutex));
+            }
+        }
+#endif // OPENGL
+        if (r->simulationarchive_filename) {
+            reb_simulationarchive_heartbeat(r);
+        }
+        reb_simulation_step(r);
+        reb_run_heartbeat(r);
+        if (reb_sigint == 1) {
+            r->status = REB_EXIT_SIGINT;
+        }
+#ifdef OPENGL
+        if (r->display_data) {
+            if (r->display_data->opengl_enabled) {
+                pthread_mutex_unlock(&(r->display_data->mutex));
+            }
+        }
+#endif // OPENGL
+    }
+
+    if (r->integrator_selected->synchronize) {
+        r->integrator_selected->synchronize(r->integrator_selected, r);
+    }
+    if (r->display_heartbeat) { // Display Heartbeat
+        r->display_heartbeat(r);
+    }
+    if (r->exact_finish_time == 1) { // if finish_time = 1, r->dt could have been shrunk, so set to the last full timestep
+        r->dt = last_full_dt;
+    }
+    if (r->simulationarchive_filename) {
+        reb_simulationarchive_heartbeat(r);
+    }
+
+    return NULL;
+}
+
+enum REB_STATUS reb_integrate(struct reb_simulation* const r, double tmax) {
+    struct reb_thread_info thread_info = {
+        .r    = r,
+        .tmax = tmax,
+    };
+    switch (r->visualization) {
+    case REB_VISUALIZATION_NONE: {
+        if (r->display_data) {
+            r->display_data->opengl_enabled = 0;
+        }
+        reb_integrate_raw(&thread_info);
+    } break;
+    case REB_VISUALIZATION_OPENGL: {
+#ifdef OPENGL
+        reb_display_init_data(r);
+        r->display_data->opengl_enabled = 1;
+
+        pthread_t compute_thread;
+        if (pthread_create(&compute_thread, NULL, reb_integrate_raw, &thread_info)) {
+            reb_error(r, "Error creating display thread.");
+        }
+
+        reb_display_init(r); // Display routines running on main thread.
+
+        if (pthread_join(compute_thread, NULL)) {
+            reb_error(r, "Error joining display thread.");
+        }
+#else  // OPENGL
+        reb_error(r, "REBOUND was not compiled/linked with OPENGL libraries.");
+        return REB_EXIT_ERROR;
+#endif // OPENGL
+    } break;
+    case REB_VISUALIZATION_WEBGL: {
+        reb_display_init_data(r);
+        reb_integrate_raw(&thread_info);
+    } break;
+    }
+    return r->status;
 }
