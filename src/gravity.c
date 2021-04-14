@@ -63,11 +63,6 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
     const int _testparticle_type             = r->testparticle_type;
     switch (r->gravity) {
     case REB_GRAVITY_NONE: // Do nothing.
-        for (int j = 0; j < N; j++) {
-            particles[j].ax = 0;
-            particles[j].ay = 0;
-            particles[j].az = 0;
-        }
         break;
     case REB_GRAVITY_JACOBI: {
         double Rjx = 0.;
@@ -75,9 +70,6 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
         double Rjz = 0.;
         double Mj  = 0.;
         for (int j = 0; j < N; j++) {
-            particles[j].ax = 0;
-            particles[j].ay = 0;
-            particles[j].az = 0;
             for (int i = 0; i < j + 1; i++) {
                 if (j > 1) {
                     ////////////////
@@ -130,12 +122,6 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
         const int starti = (_gravity_ignore_terms == 0) ? 1 : 2;
         const int startj = (_gravity_ignore_terms == 2) ? 1 : 0;
 #endif // OPENMP
-#pragma omp parallel for
-        for (int i = 0; i < N; i++) {
-            particles[i].ax = 0;
-            particles[i].ay = 0;
-            particles[i].az = 0;
-        }
         // Summing over all Ghost Boxes
         for (int gbx = -nghostx; gbx <= nghostx; gbx++) {
             for (int gby = -nghosty; gby <= nghosty; gby++) {
@@ -237,12 +223,6 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
         }
     } break;
     case REB_GRAVITY_TREE: {
-#pragma omp parallel for schedule(guided)
-        for (int i = 0; i < N; i++) {
-            particles[i].ax = 0;
-            particles[i].ay = 0;
-            particles[i].az = 0;
-        }
         // Summing over all Ghost Boxes
         for (int gbx = -r->nghostx; gbx <= r->nghostx; gbx++) {
             for (int gby = -r->nghosty; gby <= r->nghosty; gby++) {
@@ -292,11 +272,6 @@ void reb_calculate_acceleration_var(struct reb_simulation* r) {
                 //////////////////
                 struct reb_particle* const particles_var1 = particles + vc.index;
                 if (vc.testparticle < 0) {
-                    for (int i = 0; i < _N_real; i++) {
-                        particles_var1[i].ax = 0.;
-                        particles_var1[i].ay = 0.;
-                        particles_var1[i].az = 0.;
-                    }
                     for (int i = starti; i < _N_active; i++) {
                         for (int j = startj; j < i; j++) {
                             const double dx    = particles[i].x - particles[j].x;
@@ -379,9 +354,6 @@ void reb_calculate_acceleration_var(struct reb_simulation* r) {
                     }
                 } else { //testparticle
                     int i                = vc.testparticle;
-                    particles_var1[0].ax = 0.;
-                    particles_var1[0].ay = 0.;
-                    particles_var1[0].az = 0.;
                     for (int j = 0; j < _N_real; j++) {
                         if (i == j)
                             continue;
@@ -430,11 +402,6 @@ void reb_calculate_acceleration_var(struct reb_simulation* r) {
                 struct reb_particle* const particles_var1a = particles + vc.index_1st_order_a;
                 struct reb_particle* const particles_var1b = particles + vc.index_1st_order_b;
                 if (vc.testparticle < 0) {
-                    for (int i = 0; i < _N_real; i++) {
-                        particles_var2[i].ax = 0.;
-                        particles_var2[i].ay = 0.;
-                        particles_var2[i].az = 0.;
-                    }
                     for (int i = 0; i < _N_real; i++) {
                         for (int j = i + 1; j < _N_real; j++) {
                             // TODO: Need to implement WH skipping
@@ -493,9 +460,6 @@ void reb_calculate_acceleration_var(struct reb_simulation* r) {
                     }
                 } else { //testparticle
                     int i                = vc.testparticle;
-                    particles_var2[0].ax = 0.;
-                    particles_var2[0].ay = 0.;
-                    particles_var2[0].az = 0.;
                     for (int j = 0; j < _N_real; j++) {
                         if (i == j)
                             continue;

@@ -71,6 +71,16 @@ void reb_simulation_set_integrator(struct reb_simulation* r, const char* name) {
 }
 
 void reb_simulation_calculate_acceleration(struct reb_simulation* r) {
+    // Reset all accelerations to zero
+    struct reb_particle* const particles     = r->particles;
+    const int N                              = r->N;
+#pragma omp parallel for
+    for (int j = 0; j < N; j++) {
+        particles[j].ax = 0;
+        particles[j].ay = 0;
+        particles[j].az = 0;
+    }
+    
     // Update and simplify tree.
     // This function also creates the tree if called for the first time.
     if (r->tree_needs_update || r->gravity == REB_GRAVITY_TREE || r->collision == REB_COLLISION_TREE || r->collision == REB_COLLISION_LINETREE) {
