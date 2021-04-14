@@ -240,7 +240,7 @@ void reb_integrator_janus_step(struct reb_integrator* integrator, struct reb_sim
     drift(r, gg(s, 0) * dt / 2., scale_pos, scale_vel);
     to_double(r->particles, ri_janus->p_int, r->N, scale_pos, scale_vel);
 
-    reb_update_acceleration(r);
+    reb_simulation_calculate_acceleration(r);
 
     switch (ri_janus->order) {
     case 2:
@@ -267,7 +267,7 @@ void reb_integrator_janus_step(struct reb_integrator* integrator, struct reb_sim
     for (unsigned int i = 1; i < s.stages; i++) {
         drift(r, (gg(s, i - 1) + gg(s, i)) * dt / 2., scale_pos, scale_vel);
         to_double(r->particles, ri_janus->p_int, N, scale_pos, scale_vel);
-        reb_update_acceleration(r);
+        reb_simulation_calculate_acceleration(r);
         kick(r, gg(s, i) * dt, scale_vel);
     }
     drift(r, gg(s, s.stages - 1) * dt / 2., scale_pos, scale_vel);

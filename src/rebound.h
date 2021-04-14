@@ -1531,7 +1531,7 @@ void reb_integrator_ias15_reset(struct reb_simulation* r); ///< Internal functio
  * @details It uses the current position and velocity data in the 
  * (struct reb_particle*) particles structure.
  */
-void reb_update_acceleration(struct reb_simulation* r);
+void reb_simulation_calculate_acceleration(struct reb_simulation* r);
 
 /** @endcond */
 

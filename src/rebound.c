@@ -70,7 +70,7 @@ void reb_simulation_set_integrator(struct reb_simulation* r, const char* name) {
     exit(EXIT_FAILURE);
 }
 
-void reb_update_acceleration(struct reb_simulation* r) {
+void reb_simulation_calculate_acceleration(struct reb_simulation* r) {
     // Update and simplify tree.
     // This function also creates the tree if called for the first time.
     if (r->tree_needs_update || r->gravity == REB_GRAVITY_TREE || r->collision == REB_COLLISION_TREE || r->collision == REB_COLLISION_LINETREE) {
@@ -86,7 +86,7 @@ void reb_update_acceleration(struct reb_simulation* r) {
     }
 
     // Main force calculation:
-    reb_calculate_acceleration(r);
+    reb_simulation_calculate_gravity(r);
     if (r->N_var) {
         reb_calculate_acceleration_var(r);
     }

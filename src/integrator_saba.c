@@ -217,7 +217,7 @@ static void reb_saba_corrector_step(struct reb_simulation* r, double cc) {
     case 1: // modified kick
         // Calculate normal kick
         reb_transformations_jacobi_to_inertial_pos(particles, p_j, particles, N, N);
-        reb_update_acceleration(r);
+        reb_simulation_calculate_acceleration(r);
         // Calculate jerk
         reb_whfast_calculate_jerk(r, p_j);
 
@@ -240,7 +240,7 @@ static void reb_saba_corrector_step(struct reb_simulation* r, double cc) {
 
         // Calculate normal kick
         reb_transformations_jacobi_to_inertial_pos(particles, p_j, particles, N, N);
-        reb_update_acceleration(r);
+        reb_simulation_calculate_acceleration(r);
         reb_transformations_inertial_to_jacobi_acc(particles, p_j, particles, N, N);
 
         // make copy of original positions and accelerations
@@ -256,7 +256,7 @@ static void reb_saba_corrector_step(struct reb_simulation* r, double cc) {
 
         // recalculate kick
         reb_transformations_jacobi_to_inertial_pos(particles, p_j, particles, N, N);
-        reb_update_acceleration(r);
+        reb_simulation_calculate_acceleration(r);
         reb_transformations_inertial_to_jacobi_acc(particles, p_j, particles, N, N);
 
         const double prefact = cc * r->dt * 12.;
@@ -328,7 +328,7 @@ void reb_integrator_saba_step(struct reb_integrator* integrator, struct reb_simu
         return;
     }
     if (type >= 0x100) {
-        // Force Jacobi terms to be calculated in reb_update_acceleration if corrector is used
+        // Force Jacobi terms to be calculated in reb_simulation_calculate_acceleration if corrector is used
         r->gravity = REB_GRAVITY_JACOBI;
     } else {
         // Otherwise can do either way
@@ -369,7 +369,7 @@ void reb_integrator_saba_step(struct reb_integrator* integrator, struct reb_simu
 
     reb_integrator_whfast_to_inertial(r, config->coordinates, p_j);
 
-    reb_update_acceleration(r);
+    reb_simulation_calculate_acceleration(r);
 
     const int stages                              = reb_saba_stages(type);
     const int N                                   = r->N;
@@ -392,7 +392,7 @@ void reb_integrator_saba_step(struct reb_integrator* integrator, struct reb_simu
                 i = stages - j - 1;
             }
             reb_transformations_jacobi_to_inertial_pos(particles, p_j, particles, N, N);
-            reb_update_acceleration(r);
+            reb_simulation_calculate_acceleration(r);
             reb_whfast_interaction_step(r, reb_saba_d[type % 0x100][i] * r->dt, config->coordinates, p_j);
         }
     }

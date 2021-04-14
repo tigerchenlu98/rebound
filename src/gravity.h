@@ -31,7 +31,7 @@ struct reb_simulation;
   * Calculate all the gravitational acceleration for all particles.
   * Different methods implement this function in a different way.
   */
-void reb_calculate_acceleration(struct reb_simulation* r);
+void reb_simulation_calculate_gravity(struct reb_simulation* r);
 
 /**
   * The function calculates the acceleration for the variational equations.

@@ -46,7 +46,7 @@ void reb_integrator_leapfrog_step(struct reb_integrator* integrator,
     }
     r->t += dt / 2.;
 
-    reb_update_acceleration(r);
+    reb_simulation_calculate_acceleration(r);
 
 #pragma omp parallel for schedule(guided)
     for (int i = 0; i < N; i++) {

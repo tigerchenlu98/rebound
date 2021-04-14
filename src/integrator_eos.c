@@ -69,7 +69,7 @@ static inline void reb_integrator_eos_interaction_shell0(struct reb_simulation* 
     // Calculate gravity using standard gravity routine
     r->gravity_ignore_terms = 2;
     r->gravity              = REB_GRAVITY_BASIC;
-    reb_update_acceleration(r);
+    reb_simulation_calculate_acceleration(r);
     if (v != 0.) {
         reb_calculate_and_apply_jerk(r, v);
     }

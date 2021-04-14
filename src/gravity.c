@@ -51,7 +51,7 @@ static void reb_calculate_acceleration_for_particle(const struct reb_simulation*
 /**
  * Main Gravity Routine
  */
-void reb_calculate_acceleration(struct reb_simulation* r) {
+void reb_simulation_calculate_gravity(struct reb_simulation* r) {
     struct reb_particle* const particles     = r->particles;
     const int N                              = r->N;
     const int N_active                       = r->N_active;

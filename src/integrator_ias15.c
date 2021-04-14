@@ -217,7 +217,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
 
     N3 = 3 * N; // combine with previous N3
 
-    reb_update_acceleration(r);
+    reb_simulation_calculate_acceleration(r);
 
     // New order is better. Old order for backwards compatibility.
     double* restrict const csx  = config->csx;
@@ -336,7 +336,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
                 }
             }
 
-            reb_update_acceleration(r); // Calculate forces at interval n
+            reb_simulation_calculate_acceleration(r); // Calculate forces at interval n
             if (r->calculate_megno) {
                 integrator_megno_thisdt += w[n] * r->t * reb_tools_megno_deltad_delta(r);
             }
