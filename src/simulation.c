@@ -130,7 +130,6 @@ void reb_simulation_destroy(struct reb_simulation* const r) {
         free(r->display_data->orbit_data);
         free(r->display_data); // TODO: Free other pointers in display_data
     }
-    free(r->gravity_cs);
     free(r->collisions);
 
     for (int i = 0; i < r->integrators_available_N; i++) {

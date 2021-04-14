@@ -180,7 +180,6 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
         config->a0   = realloc(config->a0, sizeof(double) * N3);
         config->csx  = realloc(config->csx, sizeof(double) * N3);
         config->csv  = realloc(config->csv, sizeof(double) * N3);
-        config->csa0 = realloc(config->csa0, sizeof(double) * N3);
 
         double* restrict const csx = config->csx;
         double* restrict const csv = config->csv;
@@ -223,13 +222,10 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
     // New order is better. Old order for backwards compatibility.
     double* restrict const csx  = config->csx;
     double* restrict const csv  = config->csv;
-    double* restrict const csa0 = config->csa0;
     double* restrict const at   = config->at;
     double* restrict const x0   = config->x0;
     double* restrict const v0   = config->v0;
     double* restrict const a0   = config->a0;
-
-    struct reb_vec3d* gravity_cs = r->gravity_cs;
 
     const struct reb_dpconst7 g   = dpcast(config->g);
     const struct reb_dpconst7 e   = dpcast(config->e);
@@ -248,19 +244,6 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
         a0[3 * k]     = particles[mk].ax;
         a0[3 * k + 1] = particles[mk].ay;
         a0[3 * k + 2] = particles[mk].az;
-    }
-    if (r->gravity == REB_GRAVITY_COMPENSATED) {
-        for (int k = 0; k < N; k++) {
-            int mk          = map[k];
-            csa0[3 * k]     = gravity_cs[mk].x;
-            csa0[3 * k + 1] = gravity_cs[mk].y;
-            csa0[3 * k + 2] = gravity_cs[mk].z;
-        }
-    } else {
-        gravity_cs = (struct reb_vec3d*)csa0; // Always 0.
-        for (int k = 0; k < N3; k++) {
-            csa0[k] = 0;
-        }
     }
     for (int k = 0; k < N3; k++) {
         // Memset might be faster!
@@ -368,10 +351,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
             case 1:
                 for (int k = 0; k < N3; ++k) {
                     double tmp   = g.p0[k];
-                    double gk    = at[k];
-                    double gk_cs = ((double*)(gravity_cs))[k];
-                    add_cs(&gk, &gk_cs, -a0[k]);
-                    add_cs(&gk, &gk_cs, csa0[k]);
+                    double gk    = at[k] - a0[k];
                     g.p0[k] = gk / rr[0];
                     add_cs(&(b.p0[k]), &(csb.p0[k]), g.p0[k] - tmp);
                 }
@@ -379,10 +359,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
             case 2:
                 for (int k = 0; k < N3; ++k) {
                     double tmp   = g.p1[k];
-                    double gk    = at[k];
-                    double gk_cs = ((double*)(gravity_cs))[k];
-                    add_cs(&gk, &gk_cs, -a0[k]);
-                    add_cs(&gk, &gk_cs, csa0[k]);
+                    double gk    = at[k] - a0[k];
                     g.p1[k] = (gk / rr[1] - g.p0[k]) / rr[2];
                     tmp     = g.p1[k] - tmp;
                     add_cs(&(b.p0[k]), &(csb.p0[k]), tmp * c[0]);
@@ -392,10 +369,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
             case 3:
                 for (int k = 0; k < N3; ++k) {
                     double tmp   = g.p2[k];
-                    double gk    = at[k];
-                    double gk_cs = ((double*)(gravity_cs))[k];
-                    add_cs(&gk, &gk_cs, -a0[k]);
-                    add_cs(&gk, &gk_cs, csa0[k]);
+                    double gk    = at[k] - a0[k];
                     g.p2[k] = ((gk / rr[3] - g.p0[k]) / rr[4] - g.p1[k]) / rr[5];
                     tmp     = g.p2[k] - tmp;
                     add_cs(&(b.p0[k]), &(csb.p0[k]), tmp * c[1]);
@@ -406,10 +380,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
             case 4:
                 for (int k = 0; k < N3; ++k) {
                     double tmp   = g.p3[k];
-                    double gk    = at[k];
-                    double gk_cs = ((double*)(gravity_cs))[k];
-                    add_cs(&gk, &gk_cs, -a0[k]);
-                    add_cs(&gk, &gk_cs, csa0[k]);
+                    double gk    = at[k] - a0[k];
                     g.p3[k] = (((gk / rr[6] - g.p0[k]) / rr[7] - g.p1[k]) / rr[8] - g.p2[k]) / rr[9];
                     tmp     = g.p3[k] - tmp;
                     add_cs(&(b.p0[k]), &(csb.p0[k]), tmp * c[3]);
@@ -421,10 +392,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
             case 5:
                 for (int k = 0; k < N3; ++k) {
                     double tmp   = g.p4[k];
-                    double gk    = at[k];
-                    double gk_cs = ((double*)(gravity_cs))[k];
-                    add_cs(&gk, &gk_cs, -a0[k]);
-                    add_cs(&gk, &gk_cs, csa0[k]);
+                    double gk    = at[k] - a0[k];
                     g.p4[k] = ((((gk / rr[10] - g.p0[k]) / rr[11] - g.p1[k]) / rr[12] - g.p2[k]) / rr[13] - g.p3[k]) / rr[14];
                     tmp     = g.p4[k] - tmp;
                     add_cs(&(b.p0[k]), &(csb.p0[k]), tmp * c[6]);
@@ -437,10 +405,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
             case 6:
                 for (int k = 0; k < N3; ++k) {
                     double tmp   = g.p5[k];
-                    double gk    = at[k];
-                    double gk_cs = ((double*)(gravity_cs))[k];
-                    add_cs(&gk, &gk_cs, -a0[k]);
-                    add_cs(&gk, &gk_cs, csa0[k]);
+                    double gk    = at[k] - a0[k];
                     g.p5[k] = (((((gk / rr[15] - g.p0[k]) / rr[16] - g.p1[k]) / rr[17] - g.p2[k]) / rr[18] - g.p3[k]) / rr[19] - g.p4[k]) / rr[20];
                     tmp     = g.p5[k] - tmp;
                     add_cs(&(b.p0[k]), &(csb.p0[k]), tmp * c[10]);
@@ -456,10 +421,7 @@ static int reb_integrator_ias15_step_internal(struct reb_simulation* r) {
                 double maxb6ktmp = 0.0;
                 for (int k = 0; k < N3; ++k) {
                     double tmp   = g.p6[k];
-                    double gk    = at[k];
-                    double gk_cs = ((double*)(gravity_cs))[k];
-                    add_cs(&gk, &gk_cs, -a0[k]);
-                    add_cs(&gk, &gk_cs, csa0[k]);
+                    double gk    = at[k] - a0[k];
                     g.p6[k] = ((((((gk / rr[21] - g.p0[k]) / rr[22] - g.p1[k]) / rr[23] - g.p2[k]) / rr[24] - g.p3[k]) / rr[25] - g.p4[k]) / rr[26] - g.p5[k]) / rr[27];
                     tmp     = g.p6[k] - tmp;
                     add_cs(&(b.p0[k]), &(csb.p0[k]), tmp * c[15]);
@@ -987,17 +949,6 @@ size_t reb_integrator_ias15_load(struct reb_integrator* integrator, struct reb_s
         }
         return 0;
     }
-    REB_IF_FIELD(CSA0) {
-        if (config->csa0) {
-            free(config->csa0);
-        }
-        config->allocated_N = (int)(field.size / sizeof(double));
-        if (field.size) {
-            config->csa0 = malloc(field.size);
-            return reb_input_stream_fread(stream, config->csa0, field.size, 1);
-        }
-        return 0;
-    }
     return 0;
 }
 
@@ -1015,7 +966,6 @@ void reb_integrator_ias15_save(struct reb_integrator* integrator, struct reb_sim
     REB_WRITE_FIELD_WITH_SIZE(A0, config->a0, sizeof(double) * N3);
     REB_WRITE_FIELD_WITH_SIZE(CSX, config->csx, sizeof(double) * N3);
     REB_WRITE_FIELD_WITH_SIZE(CSV, config->csv, sizeof(double) * N3);
-    REB_WRITE_FIELD_WITH_SIZE(CSA0, config->csa0, sizeof(double) * N3);
 }
 
 void* reb_integrator_ias15_new(struct reb_integrator* integrator, struct reb_simulation* r) {
@@ -1042,7 +992,6 @@ void reb_integrator_ias15_free(struct reb_integrator* integrator, struct reb_sim
     free(config->a0);
     free(config->csx);
     free(config->csv);
-    free(config->csa0);
     free(config->map);
     free(config);
 }

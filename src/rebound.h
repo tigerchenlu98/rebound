@@ -372,8 +372,6 @@ struct reb_simulation {
     int allocatedN_lookup;                               ///< Number of lookup table entries allocated.
     int allocatedN;                                      ///< Current maximum space allocated in the particles array on this node.
     struct reb_particle* particles;                      ///< Main particle array. This contains all particles on this node.
-    struct reb_vec3d* gravity_cs;                        ///< Vector containing the information for compensated gravity summation
-    int gravity_cs_allocatedN;                           ///< Current number of allocated space for cs array
     struct reb_treecell** tree_root;                     ///< Pointer to the roots of the trees.
     int tree_needs_update;                               ///< Flag to force a tree update (after boundary check)
     double opening_angle2;                               ///< Square of the cell opening angle \f$ \theta \f$.
@@ -498,7 +496,6 @@ struct reb_simulation {
     enum {
         REB_GRAVITY_NONE        = 0, ///< Do not calculate graviational forces
         REB_GRAVITY_BASIC       = 1, ///< Basic O(N^2) direct summation algorithm, choose this for shearing sheet and periodic boundary conditions
-        REB_GRAVITY_COMPENSATED = 2, ///< Direct summation algorithm O(N^2) but with compensated summation, slightly slower than BASIC but more accurate
         REB_GRAVITY_TREE        = 3, ///< Use the tree to calculate gravity, O(N log(N)), set opening_angle2 to adjust accuracy.
         REB_GRAVITY_MERCURIUS   = 4, ///< Special gravity routine only for MERCURIUS
         REB_GRAVITY_JACOBI      = 5, ///< Special gravity routine which includes the Jacobi terms for WH integrators
