@@ -57,71 +57,16 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
     const int N_active                       = r->N_active;
     const double G                           = r->G;
     const double softening2                  = r->softening * r->softening;
-    const unsigned int _gravity_ignore_terms = r->gravity_ignore_terms;
     const int _N_real                        = N - r->N_var;
     const int _N_active                      = ((N_active == -1) ? _N_real : N_active);
     const int _testparticle_type             = r->testparticle_type;
     switch (r->gravity) {
     case REB_GRAVITY_NONE: // Do nothing.
         break;
-    case REB_GRAVITY_JACOBI: {
-        double Rjx = 0.;
-        double Rjy = 0.;
-        double Rjz = 0.;
-        double Mj  = 0.;
-        for (int j = 0; j < N; j++) {
-            for (int i = 0; i < j + 1; i++) {
-                if (j > 1) {
-                    ////////////////
-                    // Jacobi Term
-                    // Note: ignoring j==1 term here and below as they cancel
-                    const double Qjx = particles[j].x - Rjx / Mj;
-                    const double Qjy = particles[j].y - Rjy / Mj;
-                    const double Qjz = particles[j].z - Rjz / Mj;
-                    const double dr  = sqrt(Qjx * Qjx + Qjy * Qjy + Qjz * Qjz);
-                    double dQjdri    = Mj;
-                    if (i < j) {
-                        dQjdri = -particles[j].m; //rearranged such that m==0 does not diverge
-                    }
-                    const double prefact = G * dQjdri / (dr * dr * dr);
-                    particles[i].ax += prefact * Qjx;
-                    particles[i].ay += prefact * Qjy;
-                    particles[i].az += prefact * Qjz;
-                }
-                if (i != j && (i != 0 || j != 1)) {
-                    ////////////////
-                    // Direct Term
-                    // Note: ignoring i==0 && j==1 term here and above as they cancel
-                    const double dx       = particles[i].x - particles[j].x;
-                    const double dy       = particles[i].y - particles[j].y;
-                    const double dz       = particles[i].z - particles[j].z;
-                    const double dr       = sqrt(dx * dx + dy * dy + dz * dz);
-                    const double prefact  = G / (dr * dr * dr);
-                    const double prefacti = prefact * particles[i].m;
-                    const double prefactj = prefact * particles[j].m;
-
-                    particles[i].ax -= prefactj * dx;
-                    particles[i].ay -= prefactj * dy;
-                    particles[i].az -= prefactj * dz;
-                    particles[j].ax += prefacti * dx;
-                    particles[j].ay += prefacti * dy;
-                    particles[j].az += prefacti * dz;
-                }
-            }
-            Rjx += particles[j].m * particles[j].x;
-            Rjy += particles[j].m * particles[j].y;
-            Rjz += particles[j].m * particles[j].z;
-            Mj += particles[j].m;
-        }
-    } break;
     case REB_GRAVITY_BASIC: {
         const int nghostx = r->nghostx;
         const int nghosty = r->nghosty;
         const int nghostz = r->nghostz;
-#ifndef OPENMP // OPENMP off
-        const int starti = (_gravity_ignore_terms == 0) ? 1 : 2;
-        const int startj = (_gravity_ignore_terms == 2) ? 1 : 0;
-#endif // OPENMP
         // Summing over all Ghost Boxes
         for (int gbx = -nghostx; gbx <= nghostx; gbx++) {
             for (int gby = -nghosty; gby <= nghosty; gby++) {
@@ -130,10 +75,10 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
                     // All active particle pairs
 #ifndef OPENMP // OPENMP off, do O(1/2*N^2)
 #pragma omp parallel for
-                    for (int i = starti; i < _N_active; i++) {
+                    for (int i = 1; i < _N_active; i++) {
                         if (reb_sigint)
                             return;
-                        for (int j = startj; j < i; j++) {
+                        for (int j = 0; j < i; j++) {
                             const double dx       = (gb.shiftx + particles[i].x) - particles[j].x;
                             const double dy       = (gb.shifty + particles[i].y) - particles[j].y;
                             const double dz       = (gb.shiftz + particles[i].z) - particles[j].z;
@@ -173,11 +118,11 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
 #endif         // OPENMP \
                // Interactions of test particles with active particles
 #ifndef OPENMP // OPENMP off
-                    const int startitestp = MAX(_N_active, starti);
+                    const int startitestp = MAX(_N_active, 1);
                     for (int i = startitestp; i < _N_real; i++) {
                         if (reb_sigint)
                             return;
-                        for (int j = startj; j < _N_active; j++) {
+                        for (int j = 0; j < _N_active; j++) {
                             const double dx       = (gb.shiftx + particles[i].x) - particles[j].x;
                             const double dy       = (gb.shifty + particles[i].y) - particles[j].y;
                             const double dz       = (gb.shiftz + particles[i].z) - particles[j].z;
@@ -245,8 +190,6 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
             }
         }
     } break;
-    default:
-        reb_exit("Gravity calculation not yet implemented.");
     }
 }
 
@@ -600,6 +543,161 @@ void reb_calculate_and_apply_jerk(struct reb_simulation* r, const double v) {
         reb_error(r, "Jerk calculation only supported for BASIC gravity routine.");
         break;
     }
+}
+    
+
+void gravity_jacobi(struct reb_simulation* r){
+    struct reb_particle* const particles     = r->particles;
+    const int N                              = r->N;
+    const double G                           = r->G;
+    double Rjx = 0.;
+    double Rjy = 0.;
+    double Rjz = 0.;
+    double Mj  = 0.;
+    for (int j = 0; j < N; j++) {
+        for (int i = 0; i < j + 1; i++) {
+            if (j > 1) {
+                ////////////////
+                // Jacobi Term
+                // Note: ignoring j==1 term here and below as they cancel
+                const double Qjx = particles[j].x - Rjx / Mj;
+                const double Qjy = particles[j].y - Rjy / Mj;
+                const double Qjz = particles[j].z - Rjz / Mj;
+                const double dr  = sqrt(Qjx * Qjx + Qjy * Qjy + Qjz * Qjz);
+                double dQjdri    = Mj;
+                if (i < j) {
+                    dQjdri = -particles[j].m; //rearranged such that m==0 does not diverge
+                }
+                const double prefact = G * dQjdri / (dr * dr * dr);
+                particles[i].ax += prefact * Qjx;
+                particles[i].ay += prefact * Qjy;
+                particles[i].az += prefact * Qjz;
+            }
+            if (i != j && (i != 0 || j != 1)) {
+                ////////////////
+                // Direct Term
+                // Note: ignoring i==0 && j==1 term here and above as they cancel
+                const double dx       = particles[i].x - particles[j].x;
+                const double dy       = particles[i].y - particles[j].y;
+                const double dz       = particles[i].z - particles[j].z;
+                const double dr       = sqrt(dx * dx + dy * dy + dz * dz);
+                const double prefact  = G / (dr * dr * dr);
+                const double prefacti = prefact * particles[i].m;
+                const double prefactj = prefact * particles[j].m;
+
+                particles[i].ax -= prefactj * dx;
+                particles[i].ay -= prefactj * dy;
+                particles[i].az -= prefactj * dz;
+                particles[j].ax += prefacti * dx;
+                particles[j].ay += prefacti * dy;
+                particles[j].az += prefacti * dz;
+            }
+        }
+        Rjx += particles[j].m * particles[j].x;
+        Rjy += particles[j].m * particles[j].y;
+        Rjz += particles[j].m * particles[j].z;
+        Mj += particles[j].m;
+        printf("WARNING: Need to implement test particles and variational aprticles");
+    }
+}
+
+void gravity_democratic_heliocentric(struct reb_simulation* r){
+    const double softening2                  = r->softening * r->softening;
+    const int _testparticle_type             = r->testparticle_type;
+    struct reb_particle* const particles     = r->particles;
+    const int N                              = r->N;
+    const int _N_real                        = N - r->N_var;
+    const int _N_active                      = ((r->N_active == -1) ? _N_real : r->N_active);
+    const double G                           = r->G;
+    // All active particle pairs
+#ifndef OPENMP // OPENMP off, do O(1/2*N^2)
+#pragma omp parallel for
+    for (int i = 2; i < _N_active; i++) {
+        if (reb_sigint)
+            return;
+        for (int j = 1; j < i; j++) {
+            const double dx       = particles[i].x - particles[j].x;
+            const double dy       = particles[i].y - particles[j].y;
+            const double dz       = particles[i].z - particles[j].z;
+            const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+            const double prefact  = G / (_r * _r * _r);
+            const double prefactj = -prefact * particles[j].m;
+            const double prefacti = prefact * particles[i].m;
+
+            particles[i].ax += prefactj * dx;
+            particles[i].ay += prefactj * dy;
+            particles[i].az += prefactj * dz;
+            particles[j].ax += prefacti * dx;
+            particles[j].ay += prefacti * dy;
+            particles[j].az += prefacti * dz;
+        }
+    }
+#else          // OPENMP on, do O(N^2)
+    for (int i = 0; i < _N_real; i++) {
+        for (int j = 0; j < _N_active; j++) {
+            if (j == 0 || i == 0)
+                continue;
+            if (i == j)
+                continue;
+            const double dx      = particles[i].x - particles[j].x;
+            const double dy      = particles[i].y - particles[j].y;
+            const double dz      = particles[i].z - particles[j].z;
+            const double _r      = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+            const double prefact = -G / (_r * _r * _r) * particles[j].m;
+
+            particles[i].ax += prefact * dx;
+            particles[i].ay += prefact * dy;
+            particles[i].az += prefact * dz;
+        }
+    }
+#endif         // OPENMP
+    // Interactions of test particles with active particles
+#ifndef OPENMP // OPENMP off
+    const int startitestp = MAX(_N_active, 2);
+    for (int i = startitestp; i < _N_real; i++) {
+        if (reb_sigint)
+            return;
+        for (int j = 1; j < _N_active; j++) {
+            const double dx       = particles[i].x - particles[j].x;
+            const double dy       = particles[i].y - particles[j].y;
+            const double dz       = particles[i].z - particles[j].z;
+            const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+            const double prefact  = G / (_r * _r * _r);
+            const double prefactj = -prefact * particles[j].m;
+
+            particles[i].ax += prefactj * dx;
+            particles[i].ay += prefactj * dy;
+            particles[i].az += prefactj * dz;
+            if (_testparticle_type) {
+                const double prefacti = prefact * particles[i].m;
+                particles[j].ax += prefacti * dx;
+                particles[j].ay += prefacti * dy;
+                particles[j].az += prefacti * dz;
+            }
+        }
+    }
+#else // OPENMP on
+    if (_testparticle_type) {
+#pragma omp parallel for
+        for (int i = 0; i < _N_active; i++) {
+            for (int j = _N_active; j < _N_real; j++) {
+                if (_gravity_ignore_terms == 1 && ((j == 1 && i == 0)))
+                    continue;
+                if (_gravity_ignore_terms == 2 && ((j == 0 || i == 0)))
+                    continue;
+                const double dx      = particles[i].x - particles[j].x;
+                const double dy      = particles[i].y - particles[j].y;
+                const double dz      = particles[i].z - particles[j].z;
+                const double _r      = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+                const double prefact = -G / (_r * _r * _r) * particles[j].m;
+
+                particles[i].ax += prefact * dx;
+                particles[i].ay += prefact * dy;
+                particles[i].az += prefact * dz;
+            }
+        }
+    }
+#endif // OPENMP
 }
 
 // Helper routines for REB_GRAVITY_TREE

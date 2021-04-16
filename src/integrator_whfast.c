@@ -868,8 +868,12 @@ void reb_integrator_whfast_step(struct reb_integrator* integrator, struct reb_si
         reb_error(r, "Variational particles are only compatible with Jacobi coordinates.");
         return; // Error
     }
-    if (config->kernel != REB_WHFAST_KERNEL_DEFAULT && config->coordinates != REB_WHFAST_COORDINATES_JACOBI) {
-        reb_error(r, "Non-standard kernel requires Jacobi coordinates.");
+    if (config->kernel == REB_WHFAST_KERNEL_MODIFIEDKICK && config->coordinates != REB_WHFAST_COORDINATES_JACOBI) {
+        reb_error(r, "Modified kick kernel requires Jacobi coordinates.");
+        return; // Error
+    }
+    if (config->kernel == REB_WHFAST_KERNEL_LAZY && config->coordinates != REB_WHFAST_COORDINATES_JACOBI) {
+        reb_error(r, "Lazy kernel requires Jacobi coordinates.");
         return; // Error
     }
     if (r->var_config_N > 0 && config->kernel != REB_WHFAST_KERNEL_DEFAULT) {

@@ -395,7 +395,6 @@ static void reb_mercurius_encounter_step(struct reb_simulation* const r, const d
 void reb_integrator_mercurius_synchronize(struct reb_integrator* integrator, struct reb_simulation* r) {
     struct reb_integrator_mercurius_config* const config = (struct reb_integrator_mercurius_config*)&(integrator->config);
     if (config->is_synchronized == 0) {
-        r->gravity   = REB_GRAVITY_MERCURIUS; // needed here again for SimulationArchive
         config->mode = 0;
         if (config->L == NULL) {
             // Setting default switching function
@@ -492,11 +491,6 @@ void reb_integrator_mercurius_step(struct reb_integrator* integrator, struct reb
         reb_warning(r, "Mercurius only works with a direct collision search.");
     }
 
-    // Calculate gravity with special function
-    if (r->gravity != REB_GRAVITY_BASIC && r->gravity != REB_GRAVITY_MERCURIUS) {
-        reb_warning(r, "Mercurius has it's own gravity routine. Gravity routine set by the user will be ignored.");
-    }
-    r->gravity   = REB_GRAVITY_MERCURIUS;
     config->mode = 0;
 
     if (config->L == NULL) {
