@@ -90,13 +90,16 @@ void reb_simulation_calculate_acceleration(struct reb_simulation* r) {
         // Update tree (this will remove particles which left the box)
         reb_tree_update(r);
     }
+    
+    // Main force calculation:
     if (r->tree_root != NULL && r->gravity == REB_GRAVITY_TREE) {
         // Update center of mass and quadrupole moments in tree in preparation of force calculation.
         reb_tree_update_gravity_data(r);
+        reb_gravity_tree(r);
+    }else{
+        reb_gravity_basic(r);
     }
 
-    // Main force calculation:
-    reb_simulation_calculate_gravity(r);
     if (r->N_var) {
         reb_calculate_acceleration_var(r);
     }

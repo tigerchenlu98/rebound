@@ -327,13 +327,6 @@ void reb_integrator_saba_step(struct reb_integrator* integrator, struct reb_simu
         reb_error(r, "Invalid SABA integrator type used.");
         return;
     }
-    if (type >= 0x100) {
-        // Force Jacobi terms to be calculated in reb_simulation_calculate_acceleration if corrector is used
-        r->gravity = REB_GRAVITY_JACOBI;
-    } else {
-        // Otherwise can do either way
-        r->gravity_ignore_terms = 1;
-    }
     // TODO REIMPLEMENT
     //if (reb_integrator_whfast_init(r)){
     //    // Non recoverable error occured.

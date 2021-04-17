@@ -494,10 +494,8 @@ struct reb_simulation {
      * @brief Available gravity routines
      */
     enum {
-        REB_GRAVITY_NONE        = 0, ///< Do not calculate graviational forces
         REB_GRAVITY_BASIC       = 1, ///< Basic O(N^2) direct summation algorithm, choose this for shearing sheet and periodic boundary conditions
         REB_GRAVITY_TREE        = 3, ///< Use the tree to calculate gravity, O(N log(N)), set opening_angle2 to adjust accuracy.
-        REB_GRAVITY_JACOBI      = 5, ///< Special gravity routine which includes the Jacobi terms for WH integrators
     } gravity;
     /** @} */
 

@@ -51,7 +51,7 @@ static void reb_calculate_acceleration_for_particle(const struct reb_simulation*
 /**
  * Main Gravity Routine
  */
-void reb_simulation_calculate_gravity(struct reb_simulation* r) {
+void reb_gravity_basic(struct reb_simulation* r) {
     struct reb_particle* const particles     = r->particles;
     const int N                              = r->N;
     const int N_active                       = r->N_active;
@@ -60,49 +60,91 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
     const int _N_real                        = N - r->N_var;
     const int _N_active                      = ((N_active == -1) ? _N_real : N_active);
     const int _testparticle_type             = r->testparticle_type;
-    switch (r->gravity) {
-    case REB_GRAVITY_NONE: // Do nothing.
-        break;
-    case REB_GRAVITY_BASIC: {
-        const int nghostx = r->nghostx;
-        const int nghosty = r->nghosty;
-        const int nghostz = r->nghostz;
-        // Summing over all Ghost Boxes
-        for (int gbx = -nghostx; gbx <= nghostx; gbx++) {
-            for (int gby = -nghosty; gby <= nghosty; gby++) {
-                for (int gbz = -nghostz; gbz <= nghostz; gbz++) {
-                    struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx, gby, gbz);
-                    // All active particle pairs
+    const int nghostx = r->nghostx;
+    const int nghosty = r->nghosty;
+    const int nghostz = r->nghostz;
+    // Summing over all Ghost Boxes
+    for (int gbx = -nghostx; gbx <= nghostx; gbx++) {
+        for (int gby = -nghosty; gby <= nghosty; gby++) {
+            for (int gbz = -nghostz; gbz <= nghostz; gbz++) {
+                struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx, gby, gbz);
+                // All active particle pairs
 #ifndef OPENMP // OPENMP off, do O(1/2*N^2)
 #pragma omp parallel for
-                    for (int i = 1; i < _N_active; i++) {
-                        if (reb_sigint)
-                            return;
-                        for (int j = 0; j < i; j++) {
-                            const double dx       = (gb.shiftx + particles[i].x) - particles[j].x;
-                            const double dy       = (gb.shifty + particles[i].y) - particles[j].y;
-                            const double dz       = (gb.shiftz + particles[i].z) - particles[j].z;
-                            const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
-                            const double prefact  = G / (_r * _r * _r);
-                            const double prefactj = -prefact * particles[j].m;
-                            const double prefacti = prefact * particles[i].m;
+                for (int i = 1; i < _N_active; i++) {
+                    if (reb_sigint)
+                        return;
+                    for (int j = 0; j < i; j++) {
+                        const double dx       = (gb.shiftx + particles[i].x) - particles[j].x;
+                        const double dy       = (gb.shifty + particles[i].y) - particles[j].y;
+                        const double dz       = (gb.shiftz + particles[i].z) - particles[j].z;
+                        const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+                        const double prefact  = G / (_r * _r * _r);
+                        const double prefactj = -prefact * particles[j].m;
+                        const double prefacti = prefact * particles[i].m;
 
-                            particles[i].ax += prefactj * dx;
-                            particles[i].ay += prefactj * dy;
-                            particles[i].az += prefactj * dz;
+                        particles[i].ax += prefactj * dx;
+                        particles[i].ay += prefactj * dy;
+                        particles[i].az += prefactj * dz;
+                        particles[j].ax += prefacti * dx;
+                        particles[j].ay += prefacti * dy;
+                        particles[j].az += prefacti * dz;
+                    }
+                }
+#else          // OPENMP on, do O(N^2)
+                for (int i = 0; i < _N_real; i++) {
+                    for (int j = 0; j < _N_active; j++) {
+                        if (_gravity_ignore_terms == 1 && ((j == 1 && i == 0) || (i == 1 && j == 0)))
+                            continue;
+                        if (_gravity_ignore_terms == 2 && ((j == 0 || i == 0)))
+                            continue;
+                        if (i == j)
+                            continue;
+                        const double dx      = (gb.shiftx + particles[i].x) - particles[j].x;
+                        const double dy      = (gb.shifty + particles[i].y) - particles[j].y;
+                        const double dz      = (gb.shiftz + particles[i].z) - particles[j].z;
+                        const double _r      = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+                        const double prefact = -G / (_r * _r * _r) * particles[j].m;
+
+                        particles[i].ax += prefact * dx;
+                        particles[i].ay += prefact * dy;
+                        particles[i].az += prefact * dz;
+                    }
+                }
+#endif         // OPENMP \
+                // Interactions of test particles with active particles
+#ifndef OPENMP // OPENMP off
+                const int startitestp = MAX(_N_active, 1);
+                for (int i = startitestp; i < _N_real; i++) {
+                    if (reb_sigint)
+                        return;
+                    for (int j = 0; j < _N_active; j++) {
+                        const double dx       = (gb.shiftx + particles[i].x) - particles[j].x;
+                        const double dy       = (gb.shifty + particles[i].y) - particles[j].y;
+                        const double dz       = (gb.shiftz + particles[i].z) - particles[j].z;
+                        const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+                        const double prefact  = G / (_r * _r * _r);
+                        const double prefactj = -prefact * particles[j].m;
+
+                        particles[i].ax += prefactj * dx;
+                        particles[i].ay += prefactj * dy;
+                        particles[i].az += prefactj * dz;
+                        if (_testparticle_type) {
+                            const double prefacti = prefact * particles[i].m;
                             particles[j].ax += prefacti * dx;
                             particles[j].ay += prefacti * dy;
                             particles[j].az += prefacti * dz;
                         }
                     }
-#else          // OPENMP on, do O(N^2)
-                    for (int i = 0; i < _N_real; i++) {
-                        for (int j = 0; j < _N_active; j++) {
-                            if (_gravity_ignore_terms == 1 && ((j == 1 && i == 0) || (i == 1 && j == 0)))
+                }
+#else // OPENMP on
+                if (_testparticle_type) {
+#pragma omp parallel for
+                    for (int i = 0; i < _N_active; i++) {
+                        for (int j = _N_active; j < _N_real; j++) {
+                            if (_gravity_ignore_terms == 1 && ((j == 1 && i == 0)))
                                 continue;
                             if (_gravity_ignore_terms == 2 && ((j == 0 || i == 0)))
-                                continue;
-                            if (i == j)
                                 continue;
                             const double dx      = (gb.shiftx + particles[i].x) - particles[j].x;
                             const double dy      = (gb.shifty + particles[i].y) - particles[j].y;
@@ -115,81 +157,36 @@ void reb_simulation_calculate_gravity(struct reb_simulation* r) {
                             particles[i].az += prefact * dz;
                         }
                     }
-#endif         // OPENMP \
-               // Interactions of test particles with active particles
-#ifndef OPENMP // OPENMP off
-                    const int startitestp = MAX(_N_active, 1);
-                    for (int i = startitestp; i < _N_real; i++) {
-                        if (reb_sigint)
-                            return;
-                        for (int j = 0; j < _N_active; j++) {
-                            const double dx       = (gb.shiftx + particles[i].x) - particles[j].x;
-                            const double dy       = (gb.shifty + particles[i].y) - particles[j].y;
-                            const double dz       = (gb.shiftz + particles[i].z) - particles[j].z;
-                            const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
-                            const double prefact  = G / (_r * _r * _r);
-                            const double prefactj = -prefact * particles[j].m;
-
-                            particles[i].ax += prefactj * dx;
-                            particles[i].ay += prefactj * dy;
-                            particles[i].az += prefactj * dz;
-                            if (_testparticle_type) {
-                                const double prefacti = prefact * particles[i].m;
-                                particles[j].ax += prefacti * dx;
-                                particles[j].ay += prefacti * dy;
-                                particles[j].az += prefacti * dz;
-                            }
-                        }
-                    }
-#else // OPENMP on
-                    if (_testparticle_type) {
-#pragma omp parallel for
-                        for (int i = 0; i < _N_active; i++) {
-                            for (int j = _N_active; j < _N_real; j++) {
-                                if (_gravity_ignore_terms == 1 && ((j == 1 && i == 0)))
-                                    continue;
-                                if (_gravity_ignore_terms == 2 && ((j == 0 || i == 0)))
-                                    continue;
-                                const double dx      = (gb.shiftx + particles[i].x) - particles[j].x;
-                                const double dy      = (gb.shifty + particles[i].y) - particles[j].y;
-                                const double dz      = (gb.shiftz + particles[i].z) - particles[j].z;
-                                const double _r      = sqrt(dx * dx + dy * dy + dz * dz + softening2);
-                                const double prefact = -G / (_r * _r * _r) * particles[j].m;
-
-                                particles[i].ax += prefact * dx;
-                                particles[i].ay += prefact * dy;
-                                particles[i].az += prefact * dz;
-                            }
-                        }
-                    }
-#endif // OPENMP
                 }
+#endif // OPENMP
             }
         }
-    } break;
-    case REB_GRAVITY_TREE: {
-        // Summing over all Ghost Boxes
-        for (int gbx = -r->nghostx; gbx <= r->nghostx; gbx++) {
-            for (int gby = -r->nghosty; gby <= r->nghosty; gby++) {
-                for (int gbz = -r->nghostz; gbz <= r->nghostz; gbz++) {
-                    // Summing over all particle pairs
+    }
+}
+
+void reb_gravity_tree(struct reb_simulation* r) {
+    struct reb_particle* const particles     = r->particles;
+    const int N                              = r->N;
+    // Summing over all Ghost Boxes
+    for (int gbx = -r->nghostx; gbx <= r->nghostx; gbx++) {
+        for (int gby = -r->nghosty; gby <= r->nghosty; gby++) {
+            for (int gbz = -r->nghostz; gbz <= r->nghostz; gbz++) {
+                // Summing over all particle pairs
 #pragma omp parallel for schedule(guided)
-                    for (int i = 0; i < N; i++) {
+                for (int i = 0; i < N; i++) {
 #ifndef OPENMP
-                        if (reb_sigint)
-                            return;
+                    if (reb_sigint)
+                        return;
 #endif // OPENMP
-                        struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx, gby, gbz);
-                        // Precalculated shifted position
-                        gb.shiftx += particles[i].x;
-                        gb.shifty += particles[i].y;
-                        gb.shiftz += particles[i].z;
-                        reb_calculate_acceleration_for_particle(r, i, gb);
-                    }
+                    struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx, gby, gbz);
+                    // Precalculated shifted position
+                    gb.shiftx += particles[i].x;
+                    gb.shifty += particles[i].y;
+                    gb.shiftz += particles[i].z;
+                    reb_calculate_acceleration_for_particle(r, i, gb);
                 }
             }
         }
-    } break;
     }
 }
 
@@ -204,8 +201,6 @@ void reb_calculate_acceleration_var(struct reb_simulation* r) {
     const int starti                         = (r->gravity_ignore_terms == 0) ? 1 : 2;
     const int startj                         = (r->gravity_ignore_terms == 2) ? 1 : 0;
     switch (r->gravity) {
-    case REB_GRAVITY_NONE: // Do nothing.
-        break;
     case REB_GRAVITY_BASIC:
         for (int v = 0; v < r->var_config_N; v++) {
             struct reb_variational_configuration const vc = r->var_config[v];
@@ -458,6 +453,7 @@ void reb_calculate_acceleration_var(struct reb_simulation* r) {
     }
 }
 
+
 void reb_calculate_and_apply_jerk(struct reb_simulation* r, const double v) {
     struct reb_particle* const particles = r->particles;
     const int N                          = r->N;
@@ -469,8 +465,6 @@ void reb_calculate_and_apply_jerk(struct reb_simulation* r, const double v) {
     const int starti                     = (r->gravity_ignore_terms == 0) ? 1 : 2;
     const int startj                     = (r->gravity_ignore_terms == 2) ? 1 : 0;
     switch (r->gravity) {
-    case REB_GRAVITY_NONE: // Do nothing.
-        break;
     case REB_GRAVITY_BASIC:
         // All interactions between active particles
 #pragma omp parallel for
@@ -546,7 +540,7 @@ void reb_calculate_and_apply_jerk(struct reb_simulation* r, const double v) {
 }
     
 
-void gravity_jacobi(struct reb_simulation* r){
+void reb_gravity_jacobi(struct reb_simulation* r){
     struct reb_particle* const particles     = r->particles;
     const int N                              = r->N;
     const double G                           = r->G;
@@ -601,7 +595,7 @@ void gravity_jacobi(struct reb_simulation* r){
     }
 }
 
-void gravity_democratic_heliocentric(struct reb_simulation* r){
+void reb_gravity_democratic_heliocentric(struct reb_simulation* r){
     const double softening2                  = r->softening * r->softening;
     const int _testparticle_type             = r->testparticle_type;
     struct reb_particle* const particles     = r->particles;
