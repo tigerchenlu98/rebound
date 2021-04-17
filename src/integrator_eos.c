@@ -67,9 +67,7 @@ void reb_integrator_eos_synchronize(struct reb_integrator* integrator, struct re
 
 static inline void reb_integrator_eos_interaction_shell0(struct reb_simulation* r, double y, double v) {
     // Calculate gravity using standard gravity routine
-    r->gravity_ignore_terms = 2;
-    r->gravity              = REB_GRAVITY_BASIC;
-    reb_simulation_calculate_acceleration(r);
+    reb_gravity_democratic_heliocentric(r);
     if (v != 0.) {
         reb_calculate_and_apply_jerk(r, v);
     }
@@ -542,10 +540,6 @@ static void reb_integrator_eos_drift_shell0(struct reb_simulation* const r, doub
 }
 
 void reb_integrator_eos_step(struct reb_integrator* integrator, struct reb_simulation* r) {
-    if (r->gravity != REB_GRAVITY_BASIC) {
-        reb_warning(r, "EOS only supports the BASIC gravity routine.");
-    }
-
     struct reb_integrator_eos_config* const reos = (struct reb_integrator_eos_config*)&(r->integrator_selected->config);
     const double dt                              = r->dt;
 
@@ -677,7 +671,7 @@ void reb_integrator_eos_step(struct reb_integrator* integrator, struct reb_simul
     r->dt_last_done = r->dt;
 
     if (r->calculate_megno) {
-        r->gravity_ignore_terms = 0;
+        r->gravity_ignore_terms = 0; // Not sure this is correct.
         reb_calculate_acceleration_var(r);
         double dY = r->dt * 2. * r->t * reb_tools_megno_deltad_delta(r);
         reb_tools_megno_update(r, dY);
