@@ -31,7 +31,7 @@ struct reb_simulation;
   * Calculate all the gravitational acceleration for all particles.
   * Different methods implement this function in a different way.
   */
-void reb_gravity_basic(struct reb_simulation* r);
+void reb_gravity_basic(struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb);
 void reb_gravity_tree(struct reb_simulation* r);
 
 /**

@@ -97,7 +97,10 @@ void reb_simulation_calculate_acceleration(struct reb_simulation* r) {
         reb_tree_update_gravity_data(r);
         reb_gravity_tree(r);
     }else{
-        reb_gravity_basic(r);
+        // TODO add ghotbox
+        struct reb_ghostbox gb = {0};
+        reb_gravity_basic(r->particles, r->N, r->G, r->softening, gb);
+        // TODO add test particles here
     }
 
     if (r->N_var) {
