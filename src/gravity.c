@@ -55,7 +55,6 @@ static void reb_calculate_acceleration_for_particle(const struct reb_simulation*
 void reb_gravity_basic(struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb) {
     const double softening2                  = softening * softening;
 #ifndef OPENMP // OPENMP off, do O(1/2*N^2)
-#pragma omp parallel for
     for (int i = 1; i < N; i++) {
         if (reb_sigint)
             return;
@@ -77,6 +76,7 @@ void reb_gravity_basic(struct reb_particle* particles, unsigned int N, double G,
         }
     }
 #else          // OPENMP on, do O(N^2)
+#pragma omp parallel for
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             if (i == j)

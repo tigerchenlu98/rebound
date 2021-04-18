@@ -56,7 +56,7 @@ double tmax = 7.3e7;
 void heartbeat(struct reb_simulation* const r);
 
 int main(int argc, char* argv[]) {
-    struct reb_simulation* r = reb_create_simulation();
+    struct reb_simulation* r = reb_simulation_new();
     // Setup constants
     const double k = 0.01720209895; // Gaussian constant
     r->dt = 40;            // in days
