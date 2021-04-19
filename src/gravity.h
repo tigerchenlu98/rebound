@@ -45,6 +45,8 @@ void reb_calculate_acceleration_var(struct reb_simulation* r);
 void reb_calculate_and_apply_jerk(struct reb_simulation* r, const double v);
 
 void reb_gravity_jacobi(struct reb_simulation* r);
-void reb_gravity_democratic_heliocentric(struct reb_simulation* r);
+void reb_gravity_democratic_heliocentric(struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb);
+void reb_gravity_democratic_heliocentric_tp0(struct reb_particle* particles_active, unsigned int N_active, struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb);
+void reb_gravity_democratic_heliocentric_tp1(struct reb_particle* particles_active, unsigned int N_active, struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb);
 
 #endif

@@ -605,22 +605,16 @@ void reb_gravity_jacobi(struct reb_simulation* r){
         Rjy += particles[j].m * particles[j].y;
         Rjz += particles[j].m * particles[j].z;
         Mj += particles[j].m;
-        printf("WARNING: Need to implement test particles and variational aprticles");
+        printf("WARNING: Need to implement test particles and variational particles\n");
     }
 }
 
-void reb_gravity_democratic_heliocentric(struct reb_simulation* r){
-    const double softening2                  = r->softening * r->softening;
-    const int _testparticle_type             = r->testparticle_type;
-    struct reb_particle* const particles     = r->particles;
-    const int N                              = r->N;
-    const int _N_real                        = N - r->N_var;
-    const int _N_active                      = ((r->N_active == -1) ? _N_real : r->N_active);
-    const double G                           = r->G;
+void reb_gravity_democratic_heliocentric(struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb) {
+    const double softening2                  = softening * softening;
     // All active particle pairs
 #ifndef OPENMP // OPENMP off, do O(1/2*N^2)
 #pragma omp parallel for
-    for (int i = 2; i < _N_active; i++) {
+    for (int i = 2; i < N; i++) {
         if (reb_sigint)
             return;
         for (int j = 1; j < i; j++) {
@@ -641,10 +635,8 @@ void reb_gravity_democratic_heliocentric(struct reb_simulation* r){
         }
     }
 #else          // OPENMP on, do O(N^2)
-    for (int i = 0; i < _N_real; i++) {
-        for (int j = 0; j < _N_active; j++) {
-            if (j == 0 || i == 0)
-                continue;
+    for (int i = 1; i < N; i++) {
+        for (int j = 1; j < N; j++) {
             if (i == j)
                 continue;
             const double dx      = particles[i].x - particles[j].x;
@@ -659,48 +651,77 @@ void reb_gravity_democratic_heliocentric(struct reb_simulation* r){
         }
     }
 #endif         // OPENMP
-    // Interactions of test particles with active particles
+}
+
+void reb_gravity_democratic_heliocentric_tp0(struct reb_particle* particles_active, unsigned int N_active, struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb) {
+    const double softening2                  = softening * softening;
+    // All active particle pairs
+#pragma omp parallel for
+    for (int i = 0; i < N; i++) {
+        for (int j = 1; j < N_active; j++) {
+            const double dx      = particles[i].x - particles_active[j].x;
+            const double dy      = particles[i].y - particles_active[j].y;
+            const double dz      = particles[i].z - particles_active[j].z;
+            const double _r      = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+            const double prefact = -G / (_r * _r * _r) * particles_active[j].m;
+
+            particles[i].ax += prefact * dx;
+            particles[i].ay += prefact * dy;
+            particles[i].az += prefact * dz;
+        }
+    }
+}
+
+void reb_gravity_democratic_heliocentric_tp1(struct reb_particle* particles_active, unsigned int N_active, struct reb_particle* particles, unsigned int N, double G, double softening, struct reb_ghostbox gb) {
+    const double softening2                  = softening * softening;
 #ifndef OPENMP // OPENMP off
-    const int startitestp = MAX(_N_active, 2);
-    for (int i = startitestp; i < _N_real; i++) {
+    for (int i = 0; i < N; i++) {
         if (reb_sigint)
             return;
-        for (int j = 1; j < _N_active; j++) {
-            const double dx       = particles[i].x - particles[j].x;
-            const double dy       = particles[i].y - particles[j].y;
-            const double dz       = particles[i].z - particles[j].z;
+        for (int j = 1; j < N_active; j++) {
+            const double dx       = particles[i].x - particles_active[j].x;
+            const double dy       = particles[i].y - particles_active[j].y;
+            const double dz       = particles[i].z - particles_active[j].z;
             const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
             const double prefact  = G / (_r * _r * _r);
-            const double prefactj = -prefact * particles[j].m;
-
+            const double prefactj = -prefact * particles_active[j].m;
             particles[i].ax += prefactj * dx;
             particles[i].ay += prefactj * dy;
             particles[i].az += prefactj * dz;
-            if (_testparticle_type) {
-                const double prefacti = prefact * particles[i].m;
-                particles[j].ax += prefacti * dx;
-                particles[j].ay += prefacti * dy;
-                particles[j].az += prefacti * dz;
-            }
+
+            const double prefacti = prefact * particles[i].m;
+            particles_active[j].ax += prefacti * dx;
+            particles_active[j].ay += prefacti * dy;
+            particles_active[j].az += prefacti * dz;
         }
     }
 #else // OPENMP on
-    if (_testparticle_type) {
 #pragma omp parallel for
-        for (int i = 1; i < _N_active; i++) {
-            for (int j = _N_active; j < _N_real; j++) {
-                if (j == 0 ) // Should not occur. 
-                    continue;
-                const double dx      = particles[i].x - particles[j].x;
-                const double dy      = particles[i].y - particles[j].y;
-                const double dz      = particles[i].z - particles[j].z;
-                const double _r      = sqrt(dx * dx + dy * dy + dz * dz + softening2);
-                const double prefact = -G / (_r * _r * _r) * particles[j].m;
-
-                particles[i].ax += prefact * dx;
-                particles[i].ay += prefact * dy;
-                particles[i].az += prefact * dz;
-            }
+    for (int i = 0; i < N; i++) {
+        for (int j = 1; j < N_active; j++) {
+            const double dx       = particles[i].x - particles_active[j].x;
+            const double dy       = particles[i].y - particles_active[j].y;
+            const double dz       = particles[i].z - particles_active[j].z;
+            const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+            const double prefact  = G / (_r * _r * _r);
+            const double prefactj = -prefact * particles_active[j].m;
+            particles[i].ax += prefactj * dx;
+            particles[i].ay += prefactj * dy;
+            particles[i].az += prefactj * dz;
+        }
+    }
+#pragma omp parallel for
+    for (int j = 1; j < N_active; j++) {  // Note reversed loop order
+        for (int i = 0; i < N; i++) {
+            const double dx       = particles[i].x - particles_active[j].x;
+            const double dy       = particles[i].y - particles_active[j].y;
+            const double dz       = particles[i].z - particles_active[j].z;
+            const double _r       = sqrt(dx * dx + dy * dy + dz * dz + softening2);
+            const double prefact  = G / (_r * _r * _r);
+            const double prefacti = prefact * particles[i].m;
+            particles_active[j].ax += prefacti * dx;
+            particles_active[j].ay += prefacti * dy;
+            particles_active[j].az += prefacti * dz;
         }
     }
 #endif // OPENMP

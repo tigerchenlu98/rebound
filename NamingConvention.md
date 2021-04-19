@@ -23,3 +23,11 @@ Other naming rules
 - `_destroy()`  uninitializes a sturcture, but does not free memory for the structure itself.
 - `_copy()` allocates memory and performs a deep copy.
 
+Particle types
+--------------
+
+- Massive particles
+- Small particles (old testparticle type 1). Small particles only see massive particle, massive particles see small particles. But small particles see no other small particles.
+- Test particles (old testparticle type 0). Test particles only see massive particles. Test particles do not see small particles.
+
+
