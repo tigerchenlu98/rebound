@@ -339,6 +339,8 @@ void reb_output_binary_to_stream(struct reb_simulation* r, char** bufp, size_t* 
     WRITE_FIELD(JANUS_RECALC,       &r->ri_janus.recalculate_integer_coordinates_this_timestep, sizeof(unsigned int));
     WRITE_FIELD(JANUS_PINT,         r->ri_janus.p_int,                  sizeof(struct reb_particle_int)*r->ri_janus.allocated_N);
     WRITE_FIELD(MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac,           sizeof(double));
+    WRITE_FIELD(MERCURIUS_R1,       &r->ri_mercurius.R1,                sizeof(double));
+    WRITE_FIELD(MERCURIUS_R2,       &r->ri_mercurius.R2,                sizeof(double));
     WRITE_FIELD(MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode,         sizeof(unsigned int));
     WRITE_FIELD(MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized, sizeof(unsigned int));
     WRITE_FIELD(MERCURIUS_DCRIT,    r->ri_mercurius.dcrit,              sizeof(double)*r->ri_mercurius.dcrit_allocatedN);

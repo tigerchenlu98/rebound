@@ -202,6 +202,8 @@ int reb_input_field(struct reb_simulation* r, FILE* inf, enum reb_input_binary_m
         CASE(JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N);
         CASE(JANUS_RECALC,       &r->ri_janus.recalculate_integer_coordinates_this_timestep);
         CASE(MERCURIUS_HILLFAC,  &r->ri_mercurius.hillfac);
+        CASE(MERCURIUS_R1,      &r->ri_mercurius.R1);
+        CASE(MERCURIUS_R2,      &r->ri_mercurius.R2);
         CASE(MERCURIUS_SAFEMODE, &r->ri_mercurius.safe_mode);
         CASE(MERCURIUS_ISSYNCHRON, &r->ri_mercurius.is_synchronized);
         CASE(MERCURIUS_COMPOS,   &r->ri_mercurius.com_pos);
