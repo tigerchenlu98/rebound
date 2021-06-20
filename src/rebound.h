@@ -131,6 +131,8 @@ struct reb_simulation_integrator_ias15 {
 struct reb_simulation_integrator_mercurius {
     double (*L) (const struct reb_simulation* const r, double d, double dcrit);  
     double hillfac;        
+    double R1;        
+    double R2;        
     unsigned int recalculate_coordinates_this_timestep;
     unsigned int recalculate_dcrit_this_timestep;
     unsigned int safe_mode;
@@ -406,6 +408,8 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_EOS_ISSYNCHRON = 152,
     REB_BINARY_FIELD_TYPE_RAND_SEED = 154,
     REB_BINARY_FIELD_TYPE_TESTPARTICLEHIDEWARNINGS = 155,
+    REB_BINARY_FIELD_TYPE_MERCURIUS_R1 = 156,
+    REB_BINARY_FIELD_TYPE_MERCURIUS_R2 = 157,
 
     REB_BINARY_FIELD_TYPE_HEADER = 1329743186,  // Corresponds to REBO (first characters of header text)
     REB_BINARY_FIELD_TYPE_SABLOB = 9998,        // SA Blob

@@ -2004,6 +2004,11 @@ class reb_simulation_integrator_mercurius(Structure):
     
     :ivar float hillfac:      
         Switching radius in units of the hill radius.
+    :ivar float R1:      
+        Inner switching radius for encounters with the primary in code units. See Levison and Duncon 2000.
+    :ivar float R2:      
+        Outer switching radius for encounters with the primary in code units. See Levison and Duncon 2000.
+        Switching radius in units of the hill radius.
 
     Example usage:
     
@@ -2017,6 +2022,8 @@ class reb_simulation_integrator_mercurius(Structure):
 
     _fields_ = [("_L", CFUNCTYPE(c_double, POINTER(Simulation), c_double, c_double)),
                 ("hillfac", c_double),
+                ("R1", c_double),
+                ("R2", c_double),
                 ("recalculate_coordinates_this_timestep", c_uint),
                 ("recalculate_dcrit_this_timestep", c_uint),
                 ("safe_mode", c_uint),

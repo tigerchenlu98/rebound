@@ -552,6 +552,8 @@ void reb_integrator_mercurius_reset(struct reb_simulation* r){
     r->ri_mercurius.encounterN = 0;
     r->ri_mercurius.encounterNactive = 0;
     r->ri_mercurius.hillfac = 3;
+    r->ri_mercurius.R1 = 0;
+    r->ri_mercurius.R2 = 0;
     r->ri_mercurius.tponly_encounter = 0;
     r->ri_mercurius.recalculate_coordinates_this_timestep = 0;
     // Internal arrays (only used within one timestep)

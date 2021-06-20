@@ -578,6 +578,8 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_mercurius.is_synchronized = 1;
     r->ri_mercurius.encounterN = 0;
     r->ri_mercurius.hillfac = 3;
+    r->ri_mercurius.R1 = 0;
+    r->ri_mercurius.R2 = 0;
     
     // ********** EOS
     r->ri_eos.n = 2;
