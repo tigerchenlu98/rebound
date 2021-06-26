@@ -219,10 +219,11 @@ struct reb_simulation_integrator_whfast {
 struct reb_simulation_integrator_bs {
     int maxOrder; 
     int* sequence;      // stepsize sequence
+    unsigned int sequence_length; 
     int* costPerStep;   // overall cost of applying step reduction up to iteration k + 1, in number of calls.
     double* costPerTimeUnit; // cost per unit step.
     double* optimalStep; // optimal steps for each order. 
-    double** coeffl;    // extrapolation coefficients.
+    double** coeff;    // extrapolation coefficients.
     int performTest; // stability check enabling parameter
     int maxChecks;  // maximal number of checks for each iteration. 
     int maxIter;    // maximal number of iterations for which checks are performed.
@@ -235,6 +236,14 @@ struct reb_simulation_integrator_bs {
     double orderControl2;
     int useInterpolationError; // use interpolation error in stepsize control.
     int mudif; // interpolation order control parameter.
+    // StepsizeHelper
+    double scalAbsoluteTolerance; // Allowed absolute scalar error.
+    double scalRelativeTolerance; // Allowed relative scalar error.
+    int mainSetDimension;
+    double initialStep;
+    double minStep;
+    double maxStep;
+
 
 };
 

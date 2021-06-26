@@ -59,6 +59,134 @@
 #include "rebound.h"
 #include "integrator_bs.h"
 
+void setStabilityCheck(struct reb_simulation_integrator_bs* ri_bs, int performStabilityCheck, int maxNumIter, int maxNumChecks, double stepsizeReductionFactor) {
+    ri_bs->performTest = performStabilityCheck;
+    ri_bs->maxIter     = (maxNumIter   <= 0) ? 2 : maxNumIter;
+    ri_bs->maxChecks   = (maxNumChecks <= 0) ? 1 : maxNumChecks;
+
+    if ((stepsizeReductionFactor < 0.0001) || (stepsizeReductionFactor > 0.9999)) {
+        ri_bs->stabilityReduction = 0.5;
+    } else {
+        ri_bs->stabilityReduction = stepsizeReductionFactor;
+    }
+}
+
+void setControlFactors(struct reb_simulation_integrator_bs* ri_bs, double control1, double control2, double control3, double control4) {
+
+    if ((control1 < 0.0001) || (control1 > 0.9999)) {
+        ri_bs->stepControl1 = 0.65;
+    } else {
+        ri_bs->stepControl1 = control1;
+    }
+
+    if ((control2 < 0.0001) || (control2 > 0.9999)) {
+        ri_bs->stepControl2 = 0.94;
+    } else {
+        ri_bs->stepControl2 = control2;
+    }
+
+    if ((control3 < 0.0001) || (control3 > 0.9999)) {
+        ri_bs->stepControl3 = 0.02;
+    } else {
+        ri_bs->stepControl3 = control3;
+    }
+
+    if ((control4 < 1.0001) || (control4 > 999.9)) {
+        ri_bs->stepControl4 = 4.0;
+    } else {
+        ri_bs->stepControl4 = control4;
+    }
+
+}
+
+void initializeArrays(struct reb_simulation_integrator_bs* ri_bs) {
+
+    int size = ri_bs->maxOrder / 2;
+
+    if ((ri_bs->sequence == NULL) || (ri_bs->sequence_length != size)) {
+        // all arrays should be reallocated with the right size
+        ri_bs->sequence        = realloc(ri_bs->sequence,sizeof(int)*size);
+        ri_bs->costPerStep     = realloc(ri_bs->costPerStep,sizeof(int)*size);
+        ri_bs->coeff           = realloc(ri_bs->coeff,sizeof(double*)*size);
+        for (int k = ri_bs->sequence_length; k < size; ++k) {
+            ri_bs->coeff[k] = NULL;
+        }
+        ri_bs->costPerTimeUnit = realloc(ri_bs->costPerTimeUnit,sizeof(double)*size);
+        ri_bs->optimalStep     = realloc(ri_bs->optimalStep,sizeof(double)*size);
+    }
+
+    // step size sequence: 2, 6, 10, 14, ...
+    for (int k = 0; k < size; ++k) {
+        ri_bs->sequence[k] = 4 * k + 2;
+    }
+
+    // initialize the order selection cost array
+    // (number of function calls for each column of the extrapolation table)
+    ri_bs->costPerStep[0] = ri_bs->sequence[0] + 1;
+    for (int k = 1; k < size; ++k) {
+        ri_bs->costPerStep[k] = ri_bs->costPerStep[k - 1] + ri_bs->sequence[k];
+    }
+
+    // initialize the extrapolation tables
+    for (int k = 1; k < size; ++k) {
+        ri_bs->coeff[k] = realloc(ri_bs->coeff[k],sizeof(double)*k);
+        for (int l = 0; l < k; ++l) {
+            double ratio = ((double) ri_bs->sequence[k]) / ri_bs->sequence[k - l - 1];
+            ri_bs->coeff[k][l] = 1.0 / (ratio * ratio - 1.0);
+        }
+    }
+
+}
+
+void setInterpolationControl(struct reb_simulation_integrator_bs* ri_bs, int useInterpolationErrorForControl, int mudifControlParameter) {
+
+    ri_bs->useInterpolationError = useInterpolationErrorForControl;
+
+    if ((mudifControlParameter <= 0) || (mudifControlParameter >= 7)) {
+        ri_bs->mudif = 4;
+    } else {
+        ri_bs->mudif = mudifControlParameter;
+    }
+
+}
+
+void setOrderControl(struct reb_simulation_integrator_bs* ri_bs, int maximalOrder, double control1, double control2) {
+
+    if (maximalOrder > 6 && maximalOrder % 2 == 0) {
+        ri_bs->maxOrder = maximalOrder;
+    } else {
+        ri_bs->maxOrder = 18;
+    }
+
+    if ((control1 < 0.0001) || (control1 > 0.9999)) {
+        ri_bs->orderControl1 = 0.8;
+    } else {
+        ri_bs->orderControl1 = control1;
+    }
+
+    if ((control2 < 0.0001) || (control2 > 0.9999)) {
+        ri_bs->orderControl2 = 0.9;
+    } else {
+        ri_bs->orderControl2 = control2;
+    }
+
+    // reinitialize the arrays
+    initializeArrays(ri_bs);
+
+}
+
+void bs_constructor(struct reb_simulation* r){
+    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
+    ri_bs->minStep = fabs(ri_bs->minStep);
+    ri_bs->maxStep = fabs(ri_bs->maxStep);
+    ri_bs->initialStep = -1;
+    setStabilityCheck(ri_bs, 1, -1, -1, -1);
+    setControlFactors(ri_bs, -1, -1, -1, -1);
+    setOrderControl(ri_bs, -1, -1, -1);
+    setInterpolationControl(ri_bs, 1, -1);
+}
+
+
 void reb_integrator_bs_part1(struct reb_simulation* r){
 	r->t+=r->dt/2.;
 }
