@@ -58,6 +58,7 @@
 #include <time.h>
 #include "rebound.h"
 #include "integrator_bs.h"
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 void setStabilityCheck(struct reb_simulation_integrator_bs* ri_bs, int performStabilityCheck, int maxNumIter, int maxNumChecks, double stepsizeReductionFactor) {
     ri_bs->performTest = performStabilityCheck;
@@ -185,6 +186,75 @@ void bs_constructor(struct reb_simulation* r){
     setOrderControl(ri_bs, -1, -1, -1);
     setInterpolationControl(ri_bs, 1, -1);
 }
+
+double* computeDerivatives(double t, double* const yEnd){
+    // DUMMY
+    return 0; // TODO 
+}
+
+
+int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const double* y0, const int y0_length, const double step, const int k, const double* scale, const int scale_length, const double** f, double* const yMiddle, double* const yEnd) {
+
+    const int    n        = ri_bs->sequence[k];
+    const double subStep  = step / n;
+    const double subStep2 = 2 * subStep;
+
+    // first substep
+    double t = t0 + subStep;
+    for (int i = 0; i < y0_length; ++i) {
+        yEnd[i] = y0[i] + subStep * f[0][i];
+    }
+    f[1] = computeDerivatives(t, yEnd);
+
+    // other substeps
+    double* const yTmp = malloc(sizeof(double)*y0_length); // IMPROVE: should allocate this only once
+    for (int j = 1; j < n; ++j) {
+
+        if (2 * j == n) {
+            // save the point at the middle of the step
+            for (int i = 0; i < y0_length; ++i) {
+                yMiddle[i] = yEnd[i];
+            }
+        }
+
+        t += subStep;
+        for (int i = 0; i < y0_length; ++i) {
+            const double middle = yEnd[i];
+            yEnd[i]       = y0[i] + subStep2 * f[j][i];
+            yTmp[i]       = middle;
+        }
+
+        f[j + 1] = computeDerivatives(t, yEnd);
+
+        // stability check
+        if (ri_bs->performTest && (j <= ri_bs->maxChecks) && (k < ri_bs->maxIter)) {
+            double initialNorm = 0.0;
+            for (int l = 0; l < scale_length; ++l) {
+                const double ratio = f[0][l] / scale[l];
+                initialNorm += ratio * ratio;
+            }
+            double deltaNorm = 0.0;
+            for (int l = 0; l < scale_length; ++l) {
+                const double ratio = (f[j + 1][l] - f[0][l]) / scale[l];
+                deltaNorm += ratio * ratio;
+            }
+            if (deltaNorm > 4 * MAX(1.0e-15, initialNorm)) {
+                return 0;
+            }
+        }
+
+    }
+
+    // correction of the last substep (at t0 + step)
+    for (int i = 0; i < y0_length; ++i) {
+        yEnd[i] = 0.5 * (yTmp[i] + yEnd[i] + subStep * f[n][i]);
+    }
+
+    free(yTmp);
+    return 1;
+
+}
+
 
 
 void reb_integrator_bs_part1(struct reb_simulation* r){
