@@ -255,6 +255,23 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
 
 }
 
+void extrapolate(struct reb_simulation_integrator_bs* ri_bs, const int offset, const int k, double** const diag, double* const last, const int last_length) {
+    // update the diagonal
+    for (int j = 1; j < k; ++j) {
+        for (int i = 0; i < last_length; ++i) {
+            // Aitken-Neville's recursive formula
+            diag[k - j - 1][i] = diag[k - j][i] +
+                ri_bs->coeff[k + offset][j - 1] * (diag[k - j][i] - diag[k - j - 1][i]);
+        }
+    }
+
+    // update the last element
+    for (int i = 0; i < last_length; ++i) {
+        // Aitken-Neville's recursive formula
+        last[i] = diag[0][i] + ri_bs->coeff[k + offset][k - 1] * (diag[0][i] - last[i]);
+    }
+}
+
 
 
 void reb_integrator_bs_part1(struct reb_simulation* r){
