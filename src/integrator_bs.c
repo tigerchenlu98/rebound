@@ -272,20 +272,397 @@ void extrapolate(struct reb_simulation_integrator_bs* ri_bs, const int offset, c
     }
 }
 
+// TODO should return ODE STATE
+void integrate(const ExpandableODE equations, const ODEState initialState, const double finalTime){
+
+    sanityChecks(initialState, finalTime);
+    setStepStart(initIntegration(equations, initialState, finalTime));
+    final boolean forward = finalTime > initialState.getTime();
+
+    // create some internal working arrays
+    double[]         y        = getStepStart().getCompleteState();
+    final double[]   y1       = new double[y.length];
+    final double[][] diagonal = new double[sequence.length - 1][];
+    final double[][] y1Diag   = new double[sequence.length - 1][];
+    for (int k = 0; k < sequence.length - 1; ++k) {
+        diagonal[k] = new double[y.length];
+        y1Diag[k]   = new double[y.length];
+    }
+
+    final double[][][] fk = new double[sequence.length][][];
+    for (int k = 0; k < sequence.length; ++k) {
+        fk[k] = new double[sequence[k] + 1][];
+    }
+
+    // scaled derivatives at the middle of the step $\tau$
+    // (element k is $h^{k} d^{k}y(\tau)/dt^{k}$ where h is step size...)
+    final double[][] yMidDots = new double[1 + 2 * sequence.length][y.length];
+
+    // initial scaling
+    final int mainSetDimension = getStepSizeHelper().getMainSetDimension();
+    final double[] scale = new double[mainSetDimension];
+    rescale(y, y, scale);
+
+    // initial order selection
+    final double tol    = getStepSizeHelper().getRelativeTolerance(0);
+    final double log10R = FastMath.log10(FastMath.max(1.0e-10, tol));
+    int targetIter = FastMath.max(1,
+            FastMath.min(sequence.length - 2,
+                (int) FastMath.floor(0.5 - 0.6 * log10R)));
+
+    double  hNew                     = 0;
+    double  maxError                 = Double.MAX_VALUE;
+    boolean previousRejected         = false;
+    boolean firstTime                = true;
+    boolean newStep                  = true;
+    costPerTimeUnit[0] = 0;
+    setIsLastStep(false);
+    do {
+
+        double error;
+        boolean reject = false;
+
+        if (newStep) {
+
+            // first evaluation, at the beginning of the step
+            final double[] yDot0 = getStepStart().getCompleteDerivative();
+            for (int k = 0; k < sequence.length; ++k) {
+                // all sequences start from the same point, so we share the derivatives
+                fk[k][0] = yDot0;
+            }
+
+            if (firstTime) {
+                hNew = initializeStep(forward, 2 * targetIter + 1, scale,
+                        getStepStart(), equations.getMapper());
+            }
+
+            newStep = false;
+
+        }
+
+        setStepSize(hNew);
+
+        // step adjustment near bounds
+        if (forward) {
+            if (getStepStart().getTime() + getStepSize() >= finalTime) {
+                setStepSize(finalTime - getStepStart().getTime());
+            }
+        } else {
+            if (getStepStart().getTime() + getStepSize() <= finalTime) {
+                setStepSize(finalTime - getStepStart().getTime());
+            }
+        }
+        final double nextT = getStepStart().getTime() + getStepSize();
+        setIsLastStep(forward ? (nextT >= finalTime) : (nextT <= finalTime));
+
+        // iterate over several substep sizes
+        int k = -1;
+        for (boolean loop = true; loop; ) {
+
+            ++k;
+
+            // modified midpoint integration with the current substep
+            if ( ! tryStep(getStepStart().getTime(), y, getStepSize(), k, scale, fk[k],
+                        (k == 0) ? yMidDots[0] : diagonal[k - 1],
+                        (k == 0) ? y1 : y1Diag[k - 1])) {
+
+                // the stability check failed, we reduce the global step
+                hNew   = FastMath.abs(getStepSizeHelper().filterStep(getStepSize() * stabilityReduction, forward, false));
+                reject = true;
+                loop   = false;
+
+            } else {
+
+                // the substep was computed successfully
+                if (k > 0) {
+
+                    // extrapolate the state at the end of the step
+                    // using last iteration data
+                    extrapolate(0, k, y1Diag, y1);
+                    rescale(y, y1, scale);
+
+                    // estimate the error at the end of the step.
+                    error = 0;
+                    for (int j = 0; j < mainSetDimension; ++j) {
+                        final double e = FastMath.abs(y1[j] - y1Diag[0][j]) / scale[j];
+                        error += e * e;
+                    }
+                    error = FastMath.sqrt(error / mainSetDimension);
+                    if (Double.isNaN(error)) {
+                        throw new MathIllegalStateException(LocalizedODEFormats.NAN_APPEARING_DURING_INTEGRATION,
+                                nextT);
+                    }
+
+                    if ((error > 1.0e15) || ((k > 1) && (error > maxError))) {
+                        // error is too big, we reduce the global step
+                        hNew   = FastMath.abs(getStepSizeHelper().filterStep(getStepSize() * stabilityReduction, forward, false));
+                        reject = true;
+                        loop   = false;
+                    } else {
+
+                        maxError = FastMath.max(4 * error, 1.0);
+
+                        // compute optimal stepsize for this order
+                        final double exp = 1.0 / (2 * k + 1);
+                        double fac = stepControl2 / FastMath.pow(error / stepControl1, exp);
+                        final double pow = FastMath.pow(stepControl3, exp);
+                        fac = FastMath.max(pow / stepControl4, FastMath.min(1 / pow, fac));
+                        final boolean acceptSmall = k < targetIter;
+                        optimalStep[k]     = FastMath.abs(getStepSizeHelper().filterStep(getStepSize() * fac, forward, acceptSmall));
+                        costPerTimeUnit[k] = costPerStep[k] / optimalStep[k];
+
+                        // check convergence
+                        switch (k - targetIter) {
+
+                            case -1 :
+                                if ((targetIter > 1) && ! previousRejected) {
+
+                                    // check if we can stop iterations now
+                                    if (error <= 1.0) {
+                                        // convergence have been reached just before targetIter
+                                        loop = false;
+                                    } else {
+                                        // estimate if there is a chance convergence will
+                                        // be reached on next iteration, using the
+                                        // asymptotic evolution of error
+                                        final double ratio = ((double) sequence [targetIter] * sequence[targetIter + 1]) /
+                                            (sequence[0] * sequence[0]);
+                                        if (error > ratio * ratio) {
+                                            // we don't expect to converge on next iteration
+                                            // we reject the step immediately and reduce order
+                                            reject = true;
+                                            loop   = false;
+                                            targetIter = k;
+                                            if ((targetIter > 1) &&
+                                                    (costPerTimeUnit[targetIter - 1] <
+                                                     orderControl1 * costPerTimeUnit[targetIter])) {
+                                                --targetIter;
+                                            }
+                                            hNew = getStepSizeHelper().filterStep(optimalStep[targetIter], forward, false);
+                                        }
+                                    }
+                                }
+                                break;
+
+                            case 0:
+                                if (error <= 1.0) {
+                                    // convergence has been reached exactly at targetIter
+                                    loop = false;
+                                } else {
+                                    // estimate if there is a chance convergence will
+                                    // be reached on next iteration, using the
+                                    // asymptotic evolution of error
+                                    final double ratio = ((double) sequence[k + 1]) / sequence[0];
+                                    if (error > ratio * ratio) {
+                                        // we don't expect to converge on next iteration
+                                        // we reject the step immediately
+                                        reject = true;
+                                        loop = false;
+                                        if ((targetIter > 1) &&
+                                                (costPerTimeUnit[targetIter - 1] <
+                                                 orderControl1 * costPerTimeUnit[targetIter])) {
+                                            --targetIter;
+                                        }
+                                        hNew = getStepSizeHelper().filterStep(optimalStep[targetIter], forward, false);
+                                    }
+                                }
+                                break;
+
+                            case 1 :
+                                if (error > 1.0) {
+                                    reject = true;
+                                    if ((targetIter > 1) &&
+                                            (costPerTimeUnit[targetIter - 1] <
+                                             orderControl1 * costPerTimeUnit[targetIter])) {
+                                        --targetIter;
+                                    }
+                                    hNew = getStepSizeHelper().filterStep(optimalStep[targetIter], forward, false);
+                                }
+                                loop = false;
+                                break;
+
+                            default :
+                                if ((firstTime || isLastStep()) && (error <= 1.0)) {
+                                    loop = false;
+                                }
+                                break;
+
+                        }
+
+                    }
+                }
+            }
+        }
+
+        // dense output handling
+        double hInt = getMaxStep();
+        final GraggBulirschStoerStateInterpolator interpolator;
+        if (! reject) {
+
+            // extrapolate state at middle point of the step
+            for (int j = 1; j <= k; ++j) {
+                extrapolate(0, j, diagonal, yMidDots[0]);
+            }
+
+            final int mu = 2 * k - mudif + 3;
+
+            for (int l = 0; l < mu; ++l) {
+
+                // derivative at middle point of the step
+                final int l2 = l / 2;
+                double factor = FastMath.pow(0.5 * sequence[l2], l);
+                int middleIndex = fk[l2].length / 2;
+                for (int i = 0; i < y.length; ++i) {
+                    yMidDots[l + 1][i] = factor * fk[l2][middleIndex + l][i];
+                }
+                for (int j = 1; j <= k - l2; ++j) {
+                    factor = FastMath.pow(0.5 * sequence[j + l2], l);
+                    middleIndex = fk[l2 + j].length / 2;
+                    for (int i = 0; i < y.length; ++i) {
+                        diagonal[j - 1][i] = factor * fk[l2 + j][middleIndex + l][i];
+                    }
+                    extrapolate(l2, j, diagonal, yMidDots[l + 1]);
+                }
+                for (int i = 0; i < y.length; ++i) {
+                    yMidDots[l + 1][i] *= getStepSize();
+                }
+
+                // compute centered differences to evaluate next derivatives
+                for (int j = (l + 1) / 2; j <= k; ++j) {
+                    for (int m = fk[j].length - 1; m >= 2 * (l + 1); --m) {
+                        for (int i = 0; i < y.length; ++i) {
+                            fk[j][m][i] -= fk[j][m - 2][i];
+                        }
+                    }
+                }
+
+            }
+
+            // state at end of step
+            final ODEStateAndDerivative stepEnd =
+                equations.getMapper().mapStateAndDerivative(nextT, y1, computeDerivatives(nextT, y1));
+
+            // set up interpolator covering the full step
+            interpolator = new GraggBulirschStoerStateInterpolator(forward,
+                    getStepStart(), stepEnd,
+                    getStepStart(), stepEnd,
+                    equations.getMapper(),
+                    yMidDots, mu);
+
+            if (mu >= 0 && useInterpolationError) {
+                // use the interpolation error to limit stepsize
+                final double interpError = interpolator.estimateError(scale);
+                hInt = FastMath.abs(getStepSize() /
+                        FastMath.max(FastMath.pow(interpError, 1.0 / (mu + 4)), 0.01));
+                if (interpError > 10.0) {
+                    hNew   = getStepSizeHelper().filterStep(hInt, forward, false);
+                    reject = true;
+                }
+            }
+
+        } else {
+            interpolator = null;
+        }
+
+        if (! reject) {
+
+            // Discrete events handling
+            setStepStart(acceptStep(interpolator, finalTime));
+
+            // prepare next step
+            // beware that y1 is not always valid anymore here,
+            // as some event may have triggered a reset
+            // so we need to copy the new step start set previously
+            y = getStepStart().getCompleteState();
+
+            int optimalIter;
+            if (k == 1) {
+                optimalIter = 2;
+                if (previousRejected) {
+                    optimalIter = 1;
+                }
+            } else if (k <= targetIter) {
+                optimalIter = k;
+                if (costPerTimeUnit[k - 1] < orderControl1 * costPerTimeUnit[k]) {
+                    optimalIter = k - 1;
+                } else if (costPerTimeUnit[k] < orderControl2 * costPerTimeUnit[k - 1]) {
+                    optimalIter = FastMath.min(k + 1, sequence.length - 2);
+                }
+            } else {
+                optimalIter = k - 1;
+                if ((k > 2) && (costPerTimeUnit[k - 2] < orderControl1 * costPerTimeUnit[k - 1])) {
+                    optimalIter = k - 2;
+                }
+                if (costPerTimeUnit[k] < orderControl2 * costPerTimeUnit[optimalIter]) {
+                    optimalIter = FastMath.min(k, sequence.length - 2);
+                }
+            }
+
+            if (previousRejected) {
+                // after a rejected step neither order nor stepsize
+                // should increase
+                targetIter = FastMath.min(optimalIter, k);
+                hNew = FastMath.min(FastMath.abs(getStepSize()), optimalStep[targetIter]);
+            } else {
+                // stepsize control
+                if (optimalIter <= k) {
+                    hNew = getStepSizeHelper().filterStep(optimalStep[optimalIter], forward, false);
+                } else {
+                    if ((k < targetIter) &&
+                            (costPerTimeUnit[k] < orderControl2 * costPerTimeUnit[k - 1])) {
+                        hNew = getStepSizeHelper().
+                            filterStep(optimalStep[k] * costPerStep[optimalIter + 1] / costPerStep[k], forward, false);
+                    } else {
+                        hNew = getStepSizeHelper().
+                            filterStep(optimalStep[k] * costPerStep[optimalIter] / costPerStep[k], forward, false);
+                    }
+                }
+
+                targetIter = optimalIter;
+
+            }
+
+            newStep = true;
+
+        }
+
+        hNew = FastMath.min(hNew, hInt);
+        if (! forward) {
+            hNew = -hNew;
+        }
+
+        firstTime = false;
+
+        if (reject) {
+            setIsLastStep(false);
+            previousRejected = true;
+        } else {
+            previousRejected = false;
+        }
+
+    } while (!isLastStep());
+
+    final ODEStateAndDerivative finalState = getStepStart();
+    resetInternalState();
+    return finalState;
+
+}
+
+}
 
 
 void reb_integrator_bs_part1(struct reb_simulation* r){
-	r->t+=r->dt/2.;
+    r->t+=r->dt/2.;
 }
 void reb_integrator_bs_part2(struct reb_simulation* r){
-	r->t+=r->dt/2.;
-	r->dt_last_done = r->dt;
+    r->t+=r->dt/2.;
+    r->dt_last_done = r->dt;
 }
-	
+
 void reb_integrator_bs_synchronize(struct reb_simulation* r){
-	// Do nothing.
+    // Do nothing.
 }
 
 void reb_integrator_bs_reset(struct reb_simulation* r){
-	// Do nothing.
+    // Do nothing.
 }
