@@ -272,8 +272,29 @@ void extrapolate(struct reb_simulation_integrator_bs* ri_bs, const int offset, c
     }
 }
 
-// TODO should return ODE STATE
-void integrate(const ExpandableODE equations, const ODEState initialState, const double finalTime){
+double ulp(double x){
+    return nextafter(x, INFINITY) - x;
+}
+
+
+struct ExpandableODE{
+
+};
+struct ODEState{
+    double t; // getTime()
+};
+
+void sanityChecks(const struct ODEState initialState, const double t) {
+
+    const double threshold = 1000 * ulp(MAX(fabs(initialState.t), fabs(t)));
+    const double dt = fabs(initialState.t - t);
+    if (dt <= threshold) {
+        printf("Error. Integration interval too small.");
+        exit(0);
+    }
+
+}
+struct ODEState integrate(const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
 
     sanityChecks(initialState, finalTime);
     setStepStart(initIntegration(equations, initialState, finalTime));
