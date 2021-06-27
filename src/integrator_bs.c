@@ -195,7 +195,7 @@ double* computeDerivatives(double t, double* const yEnd){
 }
 
 
-int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const double* y0, const int y0_length, const double step, const int k, const double* scale, const int scale_length, const double** f, double* const yMiddle, double* const yEnd) {
+int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const double* y0, const int y0_length, const double step, const int k, const double* scale, const int scale_length, double** const f, double* const yMiddle, double* const yEnd) {
 
     const int    n        = ri_bs->sequence[k];
     const double subStep  = step / n;
@@ -308,6 +308,26 @@ void rescale(struct reb_simulation_integrator_bs* ri_bs, double* const y1, doubl
     for (int i = 0; i < scale_length; ++i) {
         scale[i] = getTolerance(ri_bs, i, MAX(fabs(y1[i]), fabs(y2[i])));
     }
+} 
+double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, const int forward, const int acceptSmall){
+    double filteredH = h;
+    if (fabs(h) < ri_bs->minStep) {
+        if (acceptSmall) {
+            filteredH = forward ? ri_bs->minStep : -ri_bs->minStep;
+        } else {
+            printf("Error. Minimal stepsize reached during integration.");
+            exit(0);
+        }
+    }
+
+    if (filteredH > ri_bs->maxStep) {
+        filteredH = ri_bs->maxStep;
+    } else if (filteredH < -ri_bs->maxStep) {
+        filteredH = -ri_bs->maxStep;
+    }
+
+    return filteredH;
+
 }
 
 struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
@@ -407,7 +427,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                         (k == 0) ? y1 : y1Diag[k - 1])) {
 
                 // the stability check failed, we reduce the global step
-                hNew   = FastMath.abs(getStepSizeHelper().filterStep(getStepSize() * stabilityReduction, forward, false));
+                hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
                 reject = 1;
                 loop   = 0;
 
@@ -418,38 +438,38 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
                     // extrapolate the state at the end of the step
                     // using last iteration data
-                    extrapolate(0, k, y1Diag, y1);
-                    rescale(y, y1, scale);
+                    extrapolate(ri_bs, 0, k, y1Diag, y1, y_length);
+                    rescale(ri_bs, y, y1, scale, y_length);
 
                     // estimate the error at the end of the step.
                     error = 0;
                     for (int j = 0; j < mainSetDimension; ++j) {
-                        final double e = FastMath.abs(y1[j] - y1Diag[0][j]) / scale[j];
+                        const double e = fabs(y1[j] - y1Diag[0][j]) / scale[j];
                         error += e * e;
                     }
-                    error = FastMath.sqrt(error / mainSetDimension);
-                    if (Double.isNaN(error)) {
-                        throw new MathIllegalStateException(LocalizedODEFormats.NAN_APPEARING_DURING_INTEGRATION,
-                                nextT);
+                    error = sqrt(error / mainSetDimension);
+                    if (isnan(error)) {
+                        printf("Error. NaN appearing during integration.");
+                        exit(0);
                     }
 
                     if ((error > 1.0e15) || ((k > 1) && (error > maxError))) {
                         // error is too big, we reduce the global step
-                        hNew   = FastMath.abs(getStepSizeHelper().filterStep(getStepSize() * stabilityReduction, forward, false));
-                        reject = true;
-                        loop   = false;
+                        hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
+                        reject = 1;
+                        loop   = 0;
                     } else {
 
-                        maxError = FastMath.max(4 * error, 1.0);
+                        maxError = MAX(4 * error, 1.0);
 
                         // compute optimal stepsize for this order
-                        final double exp = 1.0 / (2 * k + 1);
-                        double fac = stepControl2 / FastMath.pow(error / stepControl1, exp);
-                        final double pow = FastMath.pow(stepControl3, exp);
-                        fac = FastMath.max(pow / stepControl4, FastMath.min(1 / pow, fac));
-                        final boolean acceptSmall = k < targetIter;
-                        optimalStep[k]     = FastMath.abs(getStepSizeHelper().filterStep(getStepSize() * fac, forward, acceptSmall));
-                        costPerTimeUnit[k] = costPerStep[k] / optimalStep[k];
+                        const double exp = 1.0 / (2 * k + 1);
+                        double fac = ri_bs->stepControl2 / pow(error / ri_bs->stepControl1, exp);
+                        const double power = pow(ri_bs->stepControl3, exp);
+                        fac = MAX(power / ri_bs->stepControl4, MIN(1. / power, fac));
+                        const int acceptSmall = k < targetIter;
+                        ri_bs->optimalStep[k]     = fabs(filterStep(ri_bs, ri_bs->stepSize * fac, forward, acceptSmall));
+                        ri_bs->costPerTimeUnit[k] = ri_bs->costPerStep[k] / ri_bs->optimalStep[k];
 
                         // check convergence
                         switch (k - targetIter) {
@@ -460,25 +480,24 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                                     // check if we can stop iterations now
                                     if (error <= 1.0) {
                                         // convergence have been reached just before targetIter
-                                        loop = false;
+                                        loop = 0;
                                     } else {
                                         // estimate if there is a chance convergence will
                                         // be reached on next iteration, using the
                                         // asymptotic evolution of error
-                                        final double ratio = ((double) sequence [targetIter] * sequence[targetIter + 1]) /
-                                            (sequence[0] * sequence[0]);
+                                        const double ratio = ((double) ri_bs->sequence[targetIter] * ri_bs->sequence[targetIter + 1]) / (ri_bs->sequence[0] * ri_bs->sequence[0]);
                                         if (error > ratio * ratio) {
                                             // we don't expect to converge on next iteration
                                             // we reject the step immediately and reduce order
-                                            reject = true;
-                                            loop   = false;
+                                            reject = 1;
+                                            loop   = 0;
                                             targetIter = k;
                                             if ((targetIter > 1) &&
-                                                    (costPerTimeUnit[targetIter - 1] <
-                                                     orderControl1 * costPerTimeUnit[targetIter])) {
+                                                    (ri_bs->costPerTimeUnit[targetIter - 1] <
+                                                     ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
                                                 --targetIter;
                                             }
-                                            hNew = getStepSizeHelper().filterStep(optimalStep[targetIter], forward, false);
+                                            hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                                         }
                                     }
                                 }
@@ -487,43 +506,43 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                             case 0:
                                 if (error <= 1.0) {
                                     // convergence has been reached exactly at targetIter
-                                    loop = false;
+                                    loop = 0;
                                 } else {
                                     // estimate if there is a chance convergence will
                                     // be reached on next iteration, using the
                                     // asymptotic evolution of error
-                                    final double ratio = ((double) sequence[k + 1]) / sequence[0];
+                                    const double ratio = ((double) ri_bs->sequence[k + 1]) / ri_bs->sequence[0];
                                     if (error > ratio * ratio) {
                                         // we don't expect to converge on next iteration
                                         // we reject the step immediately
-                                        reject = true;
-                                        loop = false;
+                                        reject = 1;
+                                        loop = 0;
                                         if ((targetIter > 1) &&
-                                                (costPerTimeUnit[targetIter - 1] <
-                                                 orderControl1 * costPerTimeUnit[targetIter])) {
+                                                (ri_bs->costPerTimeUnit[targetIter - 1] <
+                                                 ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
                                             --targetIter;
                                         }
-                                        hNew = getStepSizeHelper().filterStep(optimalStep[targetIter], forward, false);
+                                        hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                                     }
                                 }
                                 break;
 
                             case 1 :
                                 if (error > 1.0) {
-                                    reject = true;
+                                    reject = 1;
                                     if ((targetIter > 1) &&
-                                            (costPerTimeUnit[targetIter - 1] <
-                                             orderControl1 * costPerTimeUnit[targetIter])) {
+                                            (ri_bs->costPerTimeUnit[targetIter - 1] <
+                                             ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
                                         --targetIter;
                                     }
-                                    hNew = getStepSizeHelper().filterStep(optimalStep[targetIter], forward, false);
+                                    hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                                 }
-                                loop = false;
+                                loop = 0;
                                 break;
 
                             default :
-                                if ((firstTime || isLastStep()) && (error <= 1.0)) {
-                                    loop = false;
+                                if ((firstTime || ri_bs->isLastStep) && (error <= 1.0)) {
+                                    loop = 0;
                                 }
                                 break;
 
@@ -535,7 +554,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
         }
 
         // dense output handling
-        double hInt = getMaxStep();
+        double hInt = ri_bs->maxStep;
         final GraggBulirschStoerStateInterpolator interpolator;
         if (! reject) {
 
@@ -595,8 +614,8 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                 hInt = FastMath.abs(getStepSize() /
                         FastMath.max(FastMath.pow(interpError, 1.0 / (mu + 4)), 0.01));
                 if (interpError > 10.0) {
-                    hNew   = getStepSizeHelper().filterStep(hInt, forward, false);
-                    reject = true;
+                    hNew   = getStepSizeHelper().filterStep(hInt, forward, 0);
+                    reject = 1;
                 }
             }
 
@@ -646,15 +665,15 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             } else {
                 // stepsize control
                 if (optimalIter <= k) {
-                    hNew = getStepSizeHelper().filterStep(optimalStep[optimalIter], forward, false);
+                    hNew = getStepSizeHelper().filterStep(optimalStep[optimalIter], forward, 0);
                 } else {
                     if ((k < targetIter) &&
                             (costPerTimeUnit[k] < orderControl2 * costPerTimeUnit[k - 1])) {
                         hNew = getStepSizeHelper().
-                            filterStep(optimalStep[k] * costPerStep[optimalIter + 1] / costPerStep[k], forward, false);
+                            filterStep(optimalStep[k] * costPerStep[optimalIter + 1] / costPerStep[k], forward, 0);
                     } else {
                         hNew = getStepSizeHelper().
-                            filterStep(optimalStep[k] * costPerStep[optimalIter] / costPerStep[k], forward, false);
+                            filterStep(optimalStep[k] * costPerStep[optimalIter] / costPerStep[k], forward, 0);
                     }
                 }
 
@@ -662,7 +681,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
             }
 
-            newStep = true;
+            newStep = 1;
 
         }
 
@@ -671,13 +690,13 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             hNew = -hNew;
         }
 
-        firstTime = false;
+        firstTime = 0;
 
         if (reject) {
-            setIsLastStep(false);
-            previousRejected = true;
+            setIsLastStep(0);
+            previousRejected = 1;
         } else {
-            previousRejected = false;
+            previousRejected = 0;
         }
 
     } while (!isLastStep());
