@@ -56,9 +56,11 @@
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
+#include <float.h> // for DBL_MAX
 #include "rebound.h"
 #include "integrator_bs.h"
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 void setStabilityCheck(struct reb_simulation_integrator_bs* ri_bs, int performStabilityCheck, int maxNumIter, int maxNumChecks, double stepsizeReductionFactor) {
     ri_bs->performTest = performStabilityCheck;
@@ -282,72 +284,91 @@ struct ExpandableODE{
 };
 struct ODEState{
     double t; // getTime()
+    double* y; // primary state
+    int y_length;
+    double* yDot; // secondary state
 };
 
 void sanityChecks(const struct ODEState initialState, const double t) {
-
     const double threshold = 1000 * ulp(MAX(fabs(initialState.t), fabs(t)));
     const double dt = fabs(initialState.t - t);
     if (dt <= threshold) {
         printf("Error. Integration interval too small.");
         exit(0);
     }
+    // TODO set mainSetDimension
 
 }
-struct ODEState integrate(const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
+
+double getTolerance(struct reb_simulation_integrator_bs* ri_bs, int i, double scale){
+    return ri_bs->scalAbsoluteTolerance + ri_bs->scalRelativeTolerance * scale;
+}
+
+void rescale(struct reb_simulation_integrator_bs* ri_bs, double* const y1, double* const y2, double* const scale, int scale_length) {
+    for (int i = 0; i < scale_length; ++i) {
+        scale[i] = getTolerance(ri_bs, i, MAX(fabs(y1[i]), fabs(y2[i])));
+    }
+}
+
+
+struct ODEState integrate(struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
 
     sanityChecks(initialState, finalTime);
-    setStepStart(initIntegration(equations, initialState, finalTime));
-    final boolean forward = finalTime > initialState.getTime();
+    // TODO setStepStart 
+    const int forward = finalTime > initialState.t;
 
     // create some internal working arrays
-    double[]         y        = getStepStart().getCompleteState();
-    final double[]   y1       = new double[y.length];
-    final double[][] diagonal = new double[sequence.length - 1][];
-    final double[][] y1Diag   = new double[sequence.length - 1][];
-    for (int k = 0; k < sequence.length - 1; ++k) {
-        diagonal[k] = new double[y.length];
-        y1Diag[k]   = new double[y.length];
+    int y_length = initialState.y_length;
+    double*        y         = initialState.y;
+    double* const  y1        = malloc(sizeof(double)*y_length); // TODO free
+    double** const diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
+    double** const y1Diag    = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
+    for (int k = 0; k < ri_bs->sequence_length - 1; ++k) {
+        diagonal[k] = malloc(sizeof(double)*y_length); // TODO free
+        y1Diag[k]   = malloc(sizeof(double)*y_length); // TODO free
     }
 
-    final double[][][] fk = new double[sequence.length][][];
-    for (int k = 0; k < sequence.length; ++k) {
-        fk[k] = new double[sequence[k] + 1][];
+    double*** const fk = malloc(sizeof(double**)*ri_bs->sequence_length); // TODO free
+    for (int k = 0; k < ri_bs->sequence_length; ++k) {
+        fk[k] = malloc(sizeof(double*)*(ri_bs->sequence[k] + 1)); // TODO free
     }
 
     // scaled derivatives at the middle of the step $\tau$
     // (element k is $h^{k} d^{k}y(\tau)/dt^{k}$ where h is step size...)
-    final double[][] yMidDots = new double[1 + 2 * sequence.length][y.length];
+    double** const yMidDots = malloc(sizeof(double*)*(1 + 2 * ri_bs->sequence_length)); // TODO free
+    for (int k = 0; k < ri_bs->sequence_length; ++k) {
+        yMidDots[k] = malloc(sizeof(double*)*y_length); // TODO free
+    }
 
     // initial scaling
-    final int mainSetDimension = getStepSizeHelper().getMainSetDimension();
-    final double[] scale = new double[mainSetDimension];
-    rescale(y, y, scale);
+    const int mainSetDimension = y_length; 
+    double* const scale = malloc(sizeof(double)*mainSetDimension); // TODO free
+    rescale(ri_bs, y, y, scale, y_length);
 
     // initial order selection
-    final double tol    = getStepSizeHelper().getRelativeTolerance(0);
-    final double log10R = FastMath.log10(FastMath.max(1.0e-10, tol));
-    int targetIter = FastMath.max(1,
-            FastMath.min(sequence.length - 2,
-                (int) FastMath.floor(0.5 - 0.6 * log10R)));
+    const double tol    = ri_bs->scalRelativeTolerance;
+    const double log10R = log10(MAX(1.0e-10, tol));
+    int targetIter = MAX(1,
+            MIN(ri_bs->sequence_length - 2,
+                (int) floor(0.5 - 0.6 * log10R)));
 
     double  hNew                     = 0;
-    double  maxError                 = Double.MAX_VALUE;
-    boolean previousRejected         = false;
-    boolean firstTime                = true;
-    boolean newStep                  = true;
-    costPerTimeUnit[0] = 0;
-    setIsLastStep(false);
+    double  maxError                 = DBL_MAX;
+    int previousRejected         = 0;
+    int firstTime                = 1;
+    int newStep                  = 1;
+    ri_bs->costPerTimeUnit[0] = 0;
+    ri_bs->isLastStep = 0;
     do {
 
         double error;
-        boolean reject = false;
+        int reject = 0;
 
         if (newStep) {
 
             // first evaluation, at the beginning of the step
-            final double[] yDot0 = getStepStart().getCompleteDerivative();
-            for (int k = 0; k < sequence.length; ++k) {
+            double* const yDot0 = initialState.yDot;
+            for (int k = 0; k < sequence_length; ++k) {
                 // all sequences start from the same point, so we share the derivatives
                 fk[k][0] = yDot0;
             }
@@ -357,7 +378,7 @@ struct ODEState integrate(const struct ExpandableODE equations, const struct ODE
                         getStepStart(), equations.getMapper());
             }
 
-            newStep = false;
+            newStep = 0;
 
         }
 
