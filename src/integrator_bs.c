@@ -555,41 +555,44 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
         // dense output handling
         double hInt = ri_bs->maxStep;
-        final GraggBulirschStoerStateInterpolator interpolator;
+        const GraggBulirschStoerStateInterpolator interpolator;
         if (! reject) {
 
             // extrapolate state at middle point of the step
             for (int j = 1; j <= k; ++j) {
-                extrapolate(0, j, diagonal, yMidDots[0]);
+                extrapolate(ri_bs, 0, j, diagonal, yMidDots[0], y_length);
             }
 
-            final int mu = 2 * k - mudif + 3;
+            const int mu = 2 * k - ri_bs->mudif + 3;
 
             for (int l = 0; l < mu; ++l) {
 
                 // derivative at middle point of the step
-                final int l2 = l / 2;
-                double factor = FastMath.pow(0.5 * sequence[l2], l);
-                int middleIndex = fk[l2].length / 2;
-                for (int i = 0; i < y.length; ++i) {
+                const int l2 = l / 2;
+                double factor = pow(0.5 * ri_bs->sequence[l2], l);
+                int fk_l2_length = ri_bs->sequence[l2] + 1;
+                int middleIndex = fk_l2_length / 2;
+                for (int i = 0; i < y_length; ++i) {
                     yMidDots[l + 1][i] = factor * fk[l2][middleIndex + l][i];
                 }
                 for (int j = 1; j <= k - l2; ++j) {
-                    factor = FastMath.pow(0.5 * sequence[j + l2], l);
-                    middleIndex = fk[l2 + j].length / 2;
-                    for (int i = 0; i < y.length; ++i) {
+                    factor = pow(0.5 * ri_bs->sequence[j + l2], l);
+                    int fk_l2j_length = ri_bs->sequence[l2+j] + 1;
+                    middleIndex = fk_l2j_length / 2;
+                    for (int i = 0; i < y_length; ++i) {
                         diagonal[j - 1][i] = factor * fk[l2 + j][middleIndex + l][i];
                     }
-                    extrapolate(l2, j, diagonal, yMidDots[l + 1]);
+                    extrapolate(ri_bs, l2, j, diagonal, yMidDots[l + 1], y_length);
                 }
-                for (int i = 0; i < y.length; ++i) {
-                    yMidDots[l + 1][i] *= getStepSize();
+                for (int i = 0; i < y_length; ++i) {
+                    yMidDots[l + 1][i] *= ri_bs->stepSize;
                 }
 
                 // compute centered differences to evaluate next derivatives
                 for (int j = (l + 1) / 2; j <= k; ++j) {
-                    for (int m = fk[j].length - 1; m >= 2 * (l + 1); --m) {
-                        for (int i = 0; i < y.length; ++i) {
+                    int fk_j_length = ri_bs->sequence[j] + 1;
+                    for (int m = fk_j_length - 1; m >= 2 * (l + 1); --m) {
+                        for (int i = 0; i < y_length; ++i) {
                             fk[j][m][i] -= fk[j][m - 2][i];
                         }
                     }
@@ -598,7 +601,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             }
 
             // state at end of step
-            final ODEStateAndDerivative stepEnd =
+            const ODEStateAndDerivative stepEnd =
                 equations.getMapper().mapStateAndDerivative(nextT, y1, computeDerivatives(nextT, y1));
 
             // set up interpolator covering the full step
@@ -608,19 +611,19 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                     equations.getMapper(),
                     yMidDots, mu);
 
-            if (mu >= 0 && useInterpolationError) {
+            if (mu >= 0 && ri_bs->useInterpolationError) {
                 // use the interpolation error to limit stepsize
-                final double interpError = interpolator.estimateError(scale);
-                hInt = FastMath.abs(getStepSize() /
-                        FastMath.max(FastMath.pow(interpError, 1.0 / (mu + 4)), 0.01));
+                const double interpError = interpolator.estimateError(scale);
+                hInt = fabs(ri_bs->stepSize /
+                        MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
                 if (interpError > 10.0) {
-                    hNew   = getStepSizeHelper().filterStep(hInt, forward, 0);
+                    hNew   = filterStep(ri_bs, hInt, forward, 0);
                     reject = 1;
                 }
             }
 
         } else {
-            interpolator = null;
+            interpolator = NULL;
         }
 
         if (! reject) {
@@ -642,38 +645,36 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                 }
             } else if (k <= targetIter) {
                 optimalIter = k;
-                if (costPerTimeUnit[k - 1] < orderControl1 * costPerTimeUnit[k]) {
+                if (ri_bs->costPerTimeUnit[k - 1] < ri_bs->orderControl1 * ri_bs->costPerTimeUnit[k]) {
                     optimalIter = k - 1;
-                } else if (costPerTimeUnit[k] < orderControl2 * costPerTimeUnit[k - 1]) {
-                    optimalIter = FastMath.min(k + 1, sequence.length - 2);
+                } else if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1]) {
+                    optimalIter = MIN(k + 1, ri_bs->sequence_length - 2);
                 }
             } else {
                 optimalIter = k - 1;
-                if ((k > 2) && (costPerTimeUnit[k - 2] < orderControl1 * costPerTimeUnit[k - 1])) {
+                if ((k > 2) && (ri_bs->costPerTimeUnit[k - 2] < ri_bs->orderControl1 * ri_bs->costPerTimeUnit[k - 1])) {
                     optimalIter = k - 2;
                 }
-                if (costPerTimeUnit[k] < orderControl2 * costPerTimeUnit[optimalIter]) {
-                    optimalIter = FastMath.min(k, sequence.length - 2);
+                if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[optimalIter]) {
+                    optimalIter = MIN(k, ri_bs->sequence_length - 2);
                 }
             }
 
             if (previousRejected) {
                 // after a rejected step neither order nor stepsize
                 // should increase
-                targetIter = FastMath.min(optimalIter, k);
-                hNew = FastMath.min(FastMath.abs(getStepSize()), optimalStep[targetIter]);
+                targetIter = MIN(optimalIter, k);
+                hNew = MIN(fabs(ri_bs->stepSize), ri_bs->optimalStep[targetIter]);
             } else {
                 // stepsize control
                 if (optimalIter <= k) {
-                    hNew = getStepSizeHelper().filterStep(optimalStep[optimalIter], forward, 0);
+                    hNew = filterStep(ri_bs, ri_bs->optimalStep[optimalIter], forward, 0);
                 } else {
                     if ((k < targetIter) &&
-                            (costPerTimeUnit[k] < orderControl2 * costPerTimeUnit[k - 1])) {
-                        hNew = getStepSizeHelper().
-                            filterStep(optimalStep[k] * costPerStep[optimalIter + 1] / costPerStep[k], forward, 0);
+                            (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1])) {
+                        hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter + 1] / ri_bs->costPerStep[k], forward, 0);
                     } else {
-                        hNew = getStepSizeHelper().
-                            filterStep(optimalStep[k] * costPerStep[optimalIter] / costPerStep[k], forward, 0);
+                        hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter] / ri_bs->costPerStep[k], forward, 0);
                     }
                 }
 
@@ -685,7 +686,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
         }
 
-        hNew = FastMath.min(hNew, hInt);
+        hNew = MIN(hNew, hInt);
         if (! forward) {
             hNew = -hNew;
         }
@@ -693,7 +694,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
         firstTime = 0;
 
         if (reject) {
-            setIsLastStep(0);
+            ri_bs->isLastStep = 0;
             previousRejected = 1;
         } else {
             previousRejected = 0;
@@ -701,13 +702,12 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
     } while (!isLastStep());
 
-    final ODEStateAndDerivative finalState = getStepStart();
+    const ODEStateAndDerivative finalState = getStepStart();
     resetInternalState();
     return finalState;
 
 }
 
-}
 
 
 void reb_integrator_bs_part1(struct reb_simulation* r){
