@@ -245,6 +245,7 @@ struct reb_simulation_integrator_bs {
     double maxStep;
     // AbstractIntegrator
     int isLastStep;
+    double stepSize;
 
 
 };

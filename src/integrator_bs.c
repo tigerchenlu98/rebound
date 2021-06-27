@@ -310,8 +310,7 @@ void rescale(struct reb_simulation_integrator_bs* ri_bs, double* const y1, doubl
     }
 }
 
-
-struct ODEState integrate(struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
+struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
 
     sanityChecks(initialState, finalTime);
     // TODO setStepStart 
@@ -368,50 +367,49 @@ struct ODEState integrate(struct reb_simulation_integrator_bs* ri_bs, const stru
 
             // first evaluation, at the beginning of the step
             double* const yDot0 = initialState.yDot;
-            for (int k = 0; k < sequence_length; ++k) {
+            for (int k = 0; k < ri_bs->sequence_length; ++k) {
                 // all sequences start from the same point, so we share the derivatives
                 fk[k][0] = yDot0;
             }
 
             if (firstTime) {
-                hNew = initializeStep(forward, 2 * targetIter + 1, scale,
-                        getStepStart(), equations.getMapper());
+                hNew = r->dt; // Was able to guess step size: initializeStep(forward, 2 * targetIter + 1, scale, getStepStart(), equations.getMapper());
             }
 
             newStep = 0;
 
         }
 
-        setStepSize(hNew);
+        ri_bs->stepSize = hNew;
 
         // step adjustment near bounds
         if (forward) {
-            if (getStepStart().getTime() + getStepSize() >= finalTime) {
-                setStepSize(finalTime - getStepStart().getTime());
+            if (initialState.t + ri_bs->stepSize >= finalTime) {
+                ri_bs->stepSize = finalTime - initialState.t;
             }
         } else {
-            if (getStepStart().getTime() + getStepSize() <= finalTime) {
-                setStepSize(finalTime - getStepStart().getTime());
+            if (initialState.t + ri_bs->stepSize <= finalTime) {
+                ri_bs->stepSize = finalTime - initialState.t;
             }
         }
-        final double nextT = getStepStart().getTime() + getStepSize();
-        setIsLastStep(forward ? (nextT >= finalTime) : (nextT <= finalTime));
+        const double nextT = initialState.t + ri_bs->stepSize;
+        ri_bs->isLastStep = (forward ? (nextT >= finalTime) : (nextT <= finalTime));
 
         // iterate over several substep sizes
         int k = -1;
-        for (boolean loop = true; loop; ) {
+        for (int loop = 1; loop; ) {
 
             ++k;
 
             // modified midpoint integration with the current substep
-            if ( ! tryStep(getStepStart().getTime(), y, getStepSize(), k, scale, fk[k],
+            if ( ! tryStep(ri_bs, initialState.t, y, y_length, ri_bs->stepSize, k, scale, y_length, fk[k],
                         (k == 0) ? yMidDots[0] : diagonal[k - 1],
                         (k == 0) ? y1 : y1Diag[k - 1])) {
 
                 // the stability check failed, we reduce the global step
                 hNew   = FastMath.abs(getStepSizeHelper().filterStep(getStepSize() * stabilityReduction, forward, false));
-                reject = true;
-                loop   = false;
+                reject = 1;
+                loop   = 0;
 
             } else {
 
