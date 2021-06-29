@@ -331,6 +331,95 @@ double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, co
 }
 
 
+void computeCoefficients(final int mu) {
+
+    final double[] y0Dot = getGlobalPreviousState().getCompleteDerivative();
+    final double[] y1Dot = getGlobalCurrentState().getCompleteDerivative();
+    final double[] y1    = getGlobalCurrentState().getCompleteState();
+
+    final double[] previousState = getGlobalPreviousState().getCompleteState();
+    final double h = getGlobalCurrentState().getTime() - getGlobalPreviousState().getTime();
+    for (int i = 0; i < previousState.length; ++i) {
+
+        final double yp0   = h * y0Dot[i];
+        final double yp1   = h * y1Dot[i];
+        final double ydiff = y1[i] - previousState[i];
+        final double aspl  = ydiff - yp1;
+        final double bspl  = yp0 - ydiff;
+
+        polynomials[0][i] = previousState[i];
+        polynomials[1][i] = ydiff;
+        polynomials[2][i] = aspl;
+        polynomials[3][i] = bspl;
+
+        if (mu < 0) {
+            return;
+        }
+
+        // compute the remaining coefficients
+        final double ph0 = 0.5 * (previousState[i] + y1[i]) + 0.125 * (aspl + bspl);
+        polynomials[4][i] = 16 * (yMidDots[0][i] - ph0);
+
+        if (mu > 0) {
+            final double ph1 = ydiff + 0.25 * (aspl - bspl);
+            polynomials[5][i] = 16 * (yMidDots[1][i] - ph1);
+
+            if (mu > 1) {
+                final double ph2 = yp1 - yp0;
+                polynomials[6][i] = 16 * (yMidDots[2][i] - ph2 + polynomials[4][i]);
+
+                if (mu > 2) {
+                    final double ph3 = 6 * (bspl - aspl);
+                    polynomials[7][i] = 16 * (yMidDots[3][i] - ph3 + 3 * polynomials[5][i]);
+
+                    for (int j = 4; j <= mu; ++j) {
+                        final double fac1 = 0.5 * j * (j - 1);
+                        final double fac2 = 2 * fac1 * (j - 2) * (j - 3);
+                        polynomials[j+4][i] =
+                            16 * (yMidDots[j][i] + fac1 * polynomials[j+2][i] - fac2 * polynomials[j][i]);
+                    }
+
+                }
+            }
+        }
+    }
+
+}
+
+double estimateError(const double* scale) {
+    this.currentDegree = mu + 4;
+    this.polynomials   = new double[currentDegree + 1][getCurrentState().getCompleteStateDimension()];
+    // initialize the error factors array for interpolation
+        if (currentDegree <= 4) {
+            errfac = null;
+        } else {
+            errfac = new double[currentDegree - 4];
+            for (int i = 0; i < errfac.length; ++i) {
+                final int ip5 = i + 5;
+                errfac[i] = 1.0 / (ip5 * ip5);
+                final double e = 0.5 * FastMath.sqrt (((double) (i + 1)) / ip5);
+                for (int j = 0; j <= i; ++j) {
+                    errfac[i] *= e / (j + 1);
+                }
+            }
+        }
+
+        // compute the interpolation coefficients
+        computeCoefficients(mu);
+
+
+    double error = 0;
+    if (currentDegree >= 5) {
+        for (int i = 0; i < scale.length; ++i) {
+            final double e = polynomials[currentDegree][i] / scale[i];
+            error += e * e;
+        }
+        error = FastMath.sqrt(error / scale.length) * errfac[currentDegree - 5];
+    }
+    return error;
+}
+
+
 struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
 
     sanityChecks(initialState, finalTime);
@@ -605,26 +694,26 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             const ODEStateAndDerivative stepEnd =
                 equations.getMapper().mapStateAndDerivative(nextT, y1, computeDerivatives(nextT, y1));
 
-            /// Not IMPLEMENTED: // set up interpolator covering the full step
-            /// Not IMPLEMENTED: interpolator = new GraggBulirschStoerStateInterpolator(forward,
-            /// Not IMPLEMENTED:         getStepStart(), stepEnd,
-            /// Not IMPLEMENTED:         getStepStart(), stepEnd,
-            /// Not IMPLEMENTED:         equations.getMapper(),
-            /// Not IMPLEMENTED:         yMidDots, mu);
+            // set up interpolator covering the full step
+            interpolator = new GraggBulirschStoerStateInterpolator(forward,
+                    getStepStart(), stepEnd,
+                    getStepStart(), stepEnd,
+                    equations.getMapper(),
+                    yMidDots, mu);
 
-            /// Not IMPLEMENTED: if (mu >= 0 && ri_bs->useInterpolationError) {
-            /// Not IMPLEMENTED:     // use the interpolation error to limit stepsize
-            /// Not IMPLEMENTED:     const double interpError = interpolator.estimateError(scale);
-            /// Not IMPLEMENTED:     hInt = fabs(ri_bs->stepSize /
-            /// Not IMPLEMENTED:             MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
-            /// Not IMPLEMENTED:     if (interpError > 10.0) {
-            /// Not IMPLEMENTED:         hNew   = filterStep(ri_bs, hInt, forward, 0);
-            /// Not IMPLEMENTED:         reject = 1;
-            /// Not IMPLEMENTED:     }
-            /// Not IMPLEMENTED: }
+            if (mu >= 0 && ri_bs->useInterpolationError) {
+                // use the interpolation error to limit stepsize
+                const double interpError = estimateError(scale);
+                hInt = fabs(ri_bs->stepSize /
+                        MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
+                if (interpError > 10.0) {
+                    hNew   = filterStep(ri_bs, hInt, forward, 0);
+                    reject = 1;
+                }
+            }
 
         } else {
-            //interpolator = NULL;
+            interpolator = NULL;
         }
 
         if (! reject) {
