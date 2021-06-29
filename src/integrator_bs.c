@@ -330,6 +330,7 @@ double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, co
 
 }
 
+
 struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
 
     sanityChecks(initialState, finalTime);
@@ -555,7 +556,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
         // dense output handling
         double hInt = ri_bs->maxStep;
-        const GraggBulirschStoerStateInterpolator interpolator;
+        // NOT IMPLEMENTED: GraggBulirschStoerStateInterpolator interpolator;
         if (! reject) {
 
             // extrapolate state at middle point of the step
@@ -604,32 +605,37 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             const ODEStateAndDerivative stepEnd =
                 equations.getMapper().mapStateAndDerivative(nextT, y1, computeDerivatives(nextT, y1));
 
-            // set up interpolator covering the full step
-            interpolator = new GraggBulirschStoerStateInterpolator(forward,
-                    getStepStart(), stepEnd,
-                    getStepStart(), stepEnd,
-                    equations.getMapper(),
-                    yMidDots, mu);
+            /// Not IMPLEMENTED: // set up interpolator covering the full step
+            /// Not IMPLEMENTED: interpolator = new GraggBulirschStoerStateInterpolator(forward,
+            /// Not IMPLEMENTED:         getStepStart(), stepEnd,
+            /// Not IMPLEMENTED:         getStepStart(), stepEnd,
+            /// Not IMPLEMENTED:         equations.getMapper(),
+            /// Not IMPLEMENTED:         yMidDots, mu);
 
-            if (mu >= 0 && ri_bs->useInterpolationError) {
-                // use the interpolation error to limit stepsize
-                const double interpError = interpolator.estimateError(scale);
-                hInt = fabs(ri_bs->stepSize /
-                        MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
-                if (interpError > 10.0) {
-                    hNew   = filterStep(ri_bs, hInt, forward, 0);
-                    reject = 1;
-                }
-            }
+            /// Not IMPLEMENTED: if (mu >= 0 && ri_bs->useInterpolationError) {
+            /// Not IMPLEMENTED:     // use the interpolation error to limit stepsize
+            /// Not IMPLEMENTED:     const double interpError = interpolator.estimateError(scale);
+            /// Not IMPLEMENTED:     hInt = fabs(ri_bs->stepSize /
+            /// Not IMPLEMENTED:             MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
+            /// Not IMPLEMENTED:     if (interpError > 10.0) {
+            /// Not IMPLEMENTED:         hNew   = filterStep(ri_bs, hInt, forward, 0);
+            /// Not IMPLEMENTED:         reject = 1;
+            /// Not IMPLEMENTED:     }
+            /// Not IMPLEMENTED: }
 
         } else {
-            interpolator = NULL;
+            //interpolator = NULL;
         }
 
         if (! reject) {
 
             // Discrete events handling
-            setStepStart(acceptStep(interpolator, finalTime));
+
+
+            ri_bs->isLastStep = ri_bs->isLastStep || nextafter(fabs(currentState.getTime(),INFINITY)) >= fabs(finalTime);
+
+            ri_bs->stepStart = stepEnd;
+
 
             // prepare next step
             // beware that y1 is not always valid anymore here,
@@ -700,7 +706,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             previousRejected = 0;
         }
 
-    } while (!isLastStep());
+    } while (!ri_bs->isLastStep);
 
     const ODEStateAndDerivative finalState = getStepStart();
     resetInternalState();
