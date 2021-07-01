@@ -422,11 +422,19 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState
     return error;
 }
 
+void computeDerivates(struct ODEState state){
+    // TODO
+}
 
 struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
 
     sanityChecks(initialState, finalTime);
-    // TODO setStepStart 
+
+    struct ODEState stepStart;
+    // TODO TODO setStepStart 
+    // TODO TODO
+    // TODO TODO
+    // TODO TODO
     const int forward = finalTime > initialState.t;
 
     // create some internal working arrays
@@ -697,11 +705,11 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             stepEnd.t = nextT;
             stepEnd.y = y1;
             stepEnd.y_length = y_length;
-            stepEnd.yDot = computeDerivates(nextT, y1);
+            computeDerivates(stepEnd);
 
             if (mu >= 0 && ri_bs->useInterpolationError) {
                 // use the interpolation error to limit stepsize
-                const double interpError = estimateError(ri_bs, previous, current, scale, mu, yMidDots);
+                const double interpError = estimateError(ri_bs, stepStart, stepEnd, scale, mu, yMidDots);
                 hInt = fabs(ri_bs->stepSize /
                         MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
                 if (interpError > 10.0) {
@@ -717,16 +725,10 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             // Discrete events handling
 
 
-            ri_bs->isLastStep = ri_bs->isLastStep || nextafter(fabs(currentState.getTime(),INFINITY)) >= fabs(finalTime);
+            ri_bs->isLastStep = ri_bs->isLastStep || nextafter(fabs(stepEnd.t),INFINITY) >= fabs(finalTime);
 
-            ri_bs->stepStart = stepEnd;
-
-
-            // prepare next step
-            // beware that y1 is not always valid anymore here,
-            // as some event may have triggered a reset
-            // so we need to copy the new step start set previously
-            y = getStepStart().getCompleteState();
+            // TODO Use StepEnd to set particles
+            stepStart = stepEnd; // TODO Needs lots of memory cleanup!
 
             int optimalIter;
             if (k == 1) {
@@ -793,10 +795,9 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
     } while (!ri_bs->isLastStep);
 
-    const ODEStateAndDerivative finalState = getStepStart();
-    resetInternalState();
-    return finalState;
+    return stepStart;
 
+    // TODO : resetInternalState();
 }
 
 
