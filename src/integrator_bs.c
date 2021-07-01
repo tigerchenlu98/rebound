@@ -285,19 +285,17 @@ struct ExpandableODE{
 struct ODEState{
     double t; // getTime()
     double* y; // primary state
-    int y_length;
     double* yDot; // secondary state
+    int length; // number of components 
 };
 
-void sanityChecks(const struct ODEState initialState, const double t) {
-    const double threshold = 1000 * ulp(MAX(fabs(initialState.t), fabs(t)));
-    const double dt = fabs(initialState.t - t);
+void sanityChecks(const struct ODEState state, const double t) {
+    const double threshold = 1000 * ulp(MAX(fabs(state.t), fabs(t)));
+    const double dt = fabs(state.t - t);
     if (dt <= threshold) {
         printf("Error. Integration interval too small.");
         exit(0);
     }
-    // TODO set mainSetDimension
-
 }
 
 double getTolerance(struct reb_simulation_integrator_bs* ri_bs, int i, double scale){
@@ -333,7 +331,7 @@ double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, co
 
 double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState previous, struct ODEState current, const double* scale, const int mu, double** yMidDots) {
     const int currentDegree = mu + 4;
-    const int y0_length = previous.y_length;
+    const int y0_length = previous.length;
     double** polynomials   = malloc(sizeof(double*)*(currentDegree + 1));  // TODO Free
     for (int i = 0; i < currentDegree+1; ++i) {
         polynomials[i] = malloc(sizeof(double)*y0_length);  // TODO Free
@@ -422,23 +420,67 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState
     return error;
 }
 
-void computeDerivates(struct ODEState state){
-    // TODO
+void fromSimulationToState(struct reb_simulation* const r, struct ODEState* const state){
+    state->length = r->N*3*2;
+    if (state->y){
+        free(state->y);
+    }
+    if (state->yDot){
+        free(state->yDot);
+    }
+    state->y = malloc(sizeof(double)*state->length);
+    state->yDot = malloc(sizeof(double)*state->length);
+
+    state->t = r->t;
+    for (int i=0; i<r->N; i++){
+        const struct reb_particle p = r->particles[i];
+        state->y[i*6+0] = p.x;
+        state->y[i*6+1] = p.y;
+        state->y[i*6+2] = p.z;
+        state->y[i*6+3] = p.vx;
+        state->y[i*6+4] = p.vy;
+        state->y[i*6+5] = p.vz;
+    }
+}
+
+void fromStateToSimulation(struct reb_simulation* const r, struct ODEState* const state){
+    if (r->N*3*2 != state->length){
+        printf("Error. Size mismatch.");
+        return;
+    }
+    for (int i=0; i<r->N; i++){
+         struct reb_particle* const p = &(r->particles[i]);
+         p->x  = state->y[i*6+0];
+         p->y  = state->y[i*6+1];
+         p->z  = state->y[i*6+2];
+         p->vx = state->y[i*6+3];
+         p->vy = state->y[i*6+4];
+         p->vz = state->y[i*6+5];
+    }
+}
+
+void computeDerivates(struct reb_simulation* const r, struct ODEState* const state){
+    fromStateToSimulation(r, state);
+    reb_update_acceleration(r);
+    for (int i=0; i<r->N; i++){
+        const struct reb_particle p = r->particles[i];
+        state->yDot[i*6+0] = p.vx;
+        state->yDot[i*6+1] = p.vy;
+        state->yDot[i*6+2] = p.vz;
+        state->yDot[i*6+3] = p.ax;
+        state->yDot[i*6+4] = p.ay;
+        state->yDot[i*6+5] = p.az;
+    }
 }
 
 struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
 
     sanityChecks(initialState, finalTime);
 
-    struct ODEState stepStart;
-    // TODO TODO setStepStart 
-    // TODO TODO
-    // TODO TODO
-    // TODO TODO
     const int forward = finalTime > initialState.t;
 
     // create some internal working arrays
-    int y_length = initialState.y_length;
+    int y_length = initialState.length;
     double*        y         = initialState.y;
     double* const  y1        = malloc(sizeof(double)*y_length); // TODO free
     double** const diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
@@ -461,8 +503,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
     }
 
     // initial scaling
-    const int mainSetDimension = y_length; 
-    double* const scale = malloc(sizeof(double)*mainSetDimension); // TODO free
+    double* const scale = malloc(sizeof(double)*y_length); // TODO free
     rescale(ri_bs, y, y, scale, y_length);
 
     // initial order selection
@@ -544,11 +585,11 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
 
                     // estimate the error at the end of the step.
                     error = 0;
-                    for (int j = 0; j < mainSetDimension; ++j) {
+                    for (int j = 0; j < y_length; ++j) {
                         const double e = fabs(y1[j] - y1Diag[0][j]) / scale[j];
                         error += e * e;
                     }
-                    error = sqrt(error / mainSetDimension);
+                    error = sqrt(error / y_length);
                     if (isnan(error)) {
                         printf("Error. NaN appearing during integration.");
                         exit(0);
@@ -704,12 +745,12 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             // state at end of step
             stepEnd.t = nextT;
             stepEnd.y = y1;
-            stepEnd.y_length = y_length;
-            computeDerivates(stepEnd);
+            stepEnd.length = y_length;
+            computeDerivates(r, &stepEnd);
 
             if (mu >= 0 && ri_bs->useInterpolationError) {
                 // use the interpolation error to limit stepsize
-                const double interpError = estimateError(ri_bs, stepStart, stepEnd, scale, mu, yMidDots);
+                const double interpError = estimateError(ri_bs, initialState, stepEnd, scale, mu, yMidDots);
                 hInt = fabs(ri_bs->stepSize /
                         MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
                 if (interpError > 10.0) {
@@ -728,7 +769,7 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
             ri_bs->isLastStep = ri_bs->isLastStep || nextafter(fabs(stepEnd.t),INFINITY) >= fabs(finalTime);
 
             // TODO Use StepEnd to set particles
-            stepStart = stepEnd; // TODO Needs lots of memory cleanup!
+            initialState = stepEnd; // TODO Needs lots of memory cleanup!
 
             int optimalIter;
             if (k == 1) {
