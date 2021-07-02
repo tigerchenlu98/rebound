@@ -482,6 +482,13 @@ void prepare_memory(struct reb_simulation* r, struct reb_simulation_integrator_b
     ri_bs->scale = malloc(sizeof(double)*length); // TODO free
     rescale(ri_bs, ri_bs->y, ri_bs->y, ri_bs->scale, length);
 
+    ri_bs->firstTime                = 1;
+    ri_bs->newStep                  = 1;
+    ri_bs->costPerTimeUnit[0] = 0;
+}
+
+void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState initialState, const double finalTime){
+    
     // initial order selection
     const double tol    = ri_bs->scalRelativeTolerance;
     const double log10R = log10(MAX(1.0e-10, tol));
@@ -492,13 +499,9 @@ void prepare_memory(struct reb_simulation* r, struct reb_simulation_integrator_b
     double  hNew                     = 0;
     double  maxError                 = DBL_MAX;
     int previousRejected         = 0;
-    ri_bs->firstTime                = 1;
-    ri_bs->newStep                  = 1;
-    ri_bs->costPerTimeUnit[0] = 0;
-}
 
-void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState initialState, const double finalTime){
-
+    const int forward = r->dt >= 0.;
+    int y_length = initialState.length;
     double error;
     int reject = 0;
 
@@ -540,8 +543,8 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
         ++k;
 
         // modified midpoint integration with the current substep
-        if ( ! tryStep(ri_bs, initialState.t, y, y_length, ri_bs->stepSize, k, scale, y_length, ri_bs->fk[k],
-                    (k == 0) ? ri_bs->yMidDots[0] : diagonal[k - 1],
+        if ( ! tryStep(ri_bs, initialState.t, ri_bs->y, y_length, ri_bs->stepSize, k, ri_bs->scale, y_length, ri_bs->fk[k],
+                    (k == 0) ? ri_bs->yMidDots[0] : ri_bs->diagonal[k - 1],
                     (k == 0) ? ri_bs->y1 : ri_bs->y1Diag[k - 1])) {
 
             // the stability check failed, we reduce the global step
@@ -557,12 +560,12 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
                 // extrapolate the state at the end of the step
                 // using last iteration data
                 extrapolate(ri_bs, 0, k, ri_bs->y1Diag, ri_bs->y1, y_length);
-                rescale(ri_bs, y, ri_bs->y1, scale, y_length);
+                rescale(ri_bs, ri_bs->y, ri_bs->y1, ri_bs->scale, y_length);
 
                 // estimate the error at the end of the step.
                 error = 0;
                 for (int j = 0; j < y_length; ++j) {
-                    const double e = fabs(ri_bs->y1[j] - ri_bs->y1Diag[0][j]) / scale[j];
+                    const double e = fabs(ri_bs->y1[j] - ri_bs->y1Diag[0][j]) / ri_bs->scale[j];
                     error += e * e;
                 }
                 error = sqrt(error / y_length);
@@ -726,7 +729,7 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
 
         if (mu >= 0 && ri_bs->useInterpolationError) {
             // use the interpolation error to limit stepsize
-            const double interpError = estimateError(ri_bs, initialState, stepEnd, scale, mu, ri_bs->yMidDots);
+            const double interpError = estimateError(ri_bs, initialState, stepEnd, ri_bs->scale, mu, ri_bs->yMidDots);
             hInt = fabs(ri_bs->stepSize /
                     MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
             if (interpError > 10.0) {
