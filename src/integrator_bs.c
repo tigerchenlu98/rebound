@@ -278,26 +278,6 @@ double ulp(double x){
     return nextafter(x, INFINITY) - x;
 }
 
-
-struct ExpandableODE{
-
-};
-struct ODEState{
-    double t; // getTime()
-    double* y; // primary state
-    double* yDot; // secondary state
-    int length; // number of components 
-};
-
-void sanityChecks(const struct ODEState state, const double t) {
-    const double threshold = 1000 * ulp(MAX(fabs(state.t), fabs(t)));
-    const double dt = fabs(state.t - t);
-    if (dt <= threshold) {
-        printf("Error. Integration interval too small.");
-        exit(0);
-    }
-}
-
 double getTolerance(struct reb_simulation_integrator_bs* ri_bs, int i, double scale){
     return ri_bs->scalAbsoluteTolerance + ri_bs->scalRelativeTolerance * scale;
 }
@@ -473,38 +453,34 @@ void computeDerivates(struct reb_simulation* const r, struct ODEState* const sta
     }
 }
 
-struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const struct ExpandableODE equations, const struct ODEState initialState, const double finalTime){
-
-    sanityChecks(initialState, finalTime);
-
-    const int forward = finalTime > initialState.t;
+void prepare_memory(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const int length){
+    const int forward = r->dt >= 0.;
 
     // create some internal working arrays
-    int y_length = initialState.length;
-    double*        y         = initialState.y;
-    double* const  y1        = malloc(sizeof(double)*y_length); // TODO free
-    double** const diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
-    double** const y1Diag    = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
+    ri_bs->y         = initialState.y;
+    ri_bs->y1        = malloc(sizeof(double)*length); // TODO free
+    ri_bs->diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
+    ri_bs->y1Diag    = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
     for (int k = 0; k < ri_bs->sequence_length - 1; ++k) {
-        diagonal[k] = malloc(sizeof(double)*y_length); // TODO free
-        y1Diag[k]   = malloc(sizeof(double)*y_length); // TODO free
+        ri_bs->diagonal[k] = malloc(sizeof(double)*length); // TODO free
+        ri_bs->y1Diag[k]   = malloc(sizeof(double)*length); // TODO free
     }
 
-    double*** const fk = malloc(sizeof(double**)*ri_bs->sequence_length); // TODO free
+    ri_bs->fk = malloc(sizeof(double**)*ri_bs->sequence_length); // TODO free
     for (int k = 0; k < ri_bs->sequence_length; ++k) {
-        fk[k] = malloc(sizeof(double*)*(ri_bs->sequence[k] + 1)); // TODO free
+        ri_bs->fk[k] = malloc(sizeof(double*)*(ri_bs->sequence[k] + 1)); // TODO free
     }
 
     // scaled derivatives at the middle of the step $\tau$
     // (element k is $h^{k} d^{k}y(\tau)/dt^{k}$ where h is step size...)
-    double** const yMidDots = malloc(sizeof(double*)*(1 + 2 * ri_bs->sequence_length)); // TODO free
+    ri_bs->yMidDots = malloc(sizeof(double*)*(1 + 2 * ri_bs->sequence_length)); // TODO free
     for (int k = 0; k < ri_bs->sequence_length; ++k) {
-        yMidDots[k] = malloc(sizeof(double*)*y_length); // TODO free
+        ri_bs->yMidDots[k] = malloc(sizeof(double*)*length); // TODO free
     }
 
     // initial scaling
-    double* const scale = malloc(sizeof(double)*y_length); // TODO free
-    rescale(ri_bs, y, y, scale, y_length);
+    ri_bs->scale = malloc(sizeof(double)*length); // TODO free
+    rescale(ri_bs, ri_bs->y, ri_bs->y, ri_bs->scale, length);
 
     // initial order selection
     const double tol    = ri_bs->scalRelativeTolerance;
@@ -516,149 +492,124 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
     double  hNew                     = 0;
     double  maxError                 = DBL_MAX;
     int previousRejected         = 0;
-    int firstTime                = 1;
-    int newStep                  = 1;
+    ri_bs->firstTime                = 1;
+    ri_bs->newStep                  = 1;
     ri_bs->costPerTimeUnit[0] = 0;
-    ri_bs->isLastStep = 0;
-    do {
+}
 
-        double error;
-        int reject = 0;
+void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState initialState, const double finalTime){
 
-        if (newStep) {
+    double error;
+    int reject = 0;
 
-            // first evaluation, at the beginning of the step
-            double* const yDot0 = initialState.yDot;
-            for (int k = 0; k < ri_bs->sequence_length; ++k) {
-                // all sequences start from the same point, so we share the derivatives
-                fk[k][0] = yDot0;
-            }
+    if (ri_bs->newStep) {
 
-            if (firstTime) {
-                hNew = r->dt; // Was able to guess step size: initializeStep(forward, 2 * targetIter + 1, scale, getStepStart(), equations.getMapper());
-            }
-
-            newStep = 0;
-
+        // first evaluation, at the beginning of the step
+        double* const yDot0 = initialState.yDot;
+        for (int k = 0; k < ri_bs->sequence_length; ++k) {
+            // all sequences start from the same point, so we share the derivatives
+            ri_bs->fk[k][0] = yDot0;
         }
 
-        ri_bs->stepSize = hNew;
+        if (ri_bs->firstTime) {
+            hNew = r->dt; // Was able to guess step size: initializeStep(forward, 2 * targetIter + 1, scale, getStepStart(), equations.getMapper());
+        }
 
-        // step adjustment near bounds
-        if (forward) {
-            if (initialState.t + ri_bs->stepSize >= finalTime) {
-                ri_bs->stepSize = finalTime - initialState.t;
-            }
+        ri_bs->newStep = 0;
+
+    }
+
+    ri_bs->stepSize = hNew;
+
+    // step adjustment near bounds
+    if (forward) {
+        if (initialState.t + ri_bs->stepSize >= finalTime) {
+            ri_bs->stepSize = finalTime - initialState.t;
+        }
+    } else {
+        if (initialState.t + ri_bs->stepSize <= finalTime) {
+            ri_bs->stepSize = finalTime - initialState.t;
+        }
+    }
+    const double nextT = initialState.t + ri_bs->stepSize;
+
+    // iterate over several substep sizes
+    int k = -1;
+    for (int loop = 1; loop; ) {
+
+        ++k;
+
+        // modified midpoint integration with the current substep
+        if ( ! tryStep(ri_bs, initialState.t, y, y_length, ri_bs->stepSize, k, scale, y_length, ri_bs->fk[k],
+                    (k == 0) ? ri_bs->yMidDots[0] : diagonal[k - 1],
+                    (k == 0) ? ri_bs->y1 : ri_bs->y1Diag[k - 1])) {
+
+            // the stability check failed, we reduce the global step
+            hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
+            reject = 1;
+            loop   = 0;
+
         } else {
-            if (initialState.t + ri_bs->stepSize <= finalTime) {
-                ri_bs->stepSize = finalTime - initialState.t;
-            }
-        }
-        const double nextT = initialState.t + ri_bs->stepSize;
-        ri_bs->isLastStep = (forward ? (nextT >= finalTime) : (nextT <= finalTime));
 
-        // iterate over several substep sizes
-        int k = -1;
-        for (int loop = 1; loop; ) {
+            // the substep was computed successfully
+            if (k > 0) {
 
-            ++k;
+                // extrapolate the state at the end of the step
+                // using last iteration data
+                extrapolate(ri_bs, 0, k, ri_bs->y1Diag, ri_bs->y1, y_length);
+                rescale(ri_bs, y, ri_bs->y1, scale, y_length);
 
-            // modified midpoint integration with the current substep
-            if ( ! tryStep(ri_bs, initialState.t, y, y_length, ri_bs->stepSize, k, scale, y_length, fk[k],
-                        (k == 0) ? yMidDots[0] : diagonal[k - 1],
-                        (k == 0) ? y1 : y1Diag[k - 1])) {
+                // estimate the error at the end of the step.
+                error = 0;
+                for (int j = 0; j < y_length; ++j) {
+                    const double e = fabs(ri_bs->y1[j] - ri_bs->y1Diag[0][j]) / scale[j];
+                    error += e * e;
+                }
+                error = sqrt(error / y_length);
+                if (isnan(error)) {
+                    printf("Error. NaN appearing during integration.");
+                    exit(0);
+                }
 
-                // the stability check failed, we reduce the global step
-                hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
-                reject = 1;
-                loop   = 0;
+                if ((error > 1.0e15) || ((k > 1) && (error > maxError))) {
+                    // error is too big, we reduce the global step
+                    hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
+                    reject = 1;
+                    loop   = 0;
+                } else {
 
-            } else {
+                    maxError = MAX(4 * error, 1.0);
 
-                // the substep was computed successfully
-                if (k > 0) {
+                    // compute optimal stepsize for this order
+                    const double exp = 1.0 / (2 * k + 1);
+                    double fac = ri_bs->stepControl2 / pow(error / ri_bs->stepControl1, exp);
+                    const double power = pow(ri_bs->stepControl3, exp);
+                    fac = MAX(power / ri_bs->stepControl4, MIN(1. / power, fac));
+                    const int acceptSmall = k < targetIter;
+                    ri_bs->optimalStep[k]     = fabs(filterStep(ri_bs, ri_bs->stepSize * fac, forward, acceptSmall));
+                    ri_bs->costPerTimeUnit[k] = ri_bs->costPerStep[k] / ri_bs->optimalStep[k];
 
-                    // extrapolate the state at the end of the step
-                    // using last iteration data
-                    extrapolate(ri_bs, 0, k, y1Diag, y1, y_length);
-                    rescale(ri_bs, y, y1, scale, y_length);
+                    // check convergence
+                    switch (k - targetIter) {
 
-                    // estimate the error at the end of the step.
-                    error = 0;
-                    for (int j = 0; j < y_length; ++j) {
-                        const double e = fabs(y1[j] - y1Diag[0][j]) / scale[j];
-                        error += e * e;
-                    }
-                    error = sqrt(error / y_length);
-                    if (isnan(error)) {
-                        printf("Error. NaN appearing during integration.");
-                        exit(0);
-                    }
+                        case -1 :
+                            if ((targetIter > 1) && ! previousRejected) {
 
-                    if ((error > 1.0e15) || ((k > 1) && (error > maxError))) {
-                        // error is too big, we reduce the global step
-                        hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
-                        reject = 1;
-                        loop   = 0;
-                    } else {
-
-                        maxError = MAX(4 * error, 1.0);
-
-                        // compute optimal stepsize for this order
-                        const double exp = 1.0 / (2 * k + 1);
-                        double fac = ri_bs->stepControl2 / pow(error / ri_bs->stepControl1, exp);
-                        const double power = pow(ri_bs->stepControl3, exp);
-                        fac = MAX(power / ri_bs->stepControl4, MIN(1. / power, fac));
-                        const int acceptSmall = k < targetIter;
-                        ri_bs->optimalStep[k]     = fabs(filterStep(ri_bs, ri_bs->stepSize * fac, forward, acceptSmall));
-                        ri_bs->costPerTimeUnit[k] = ri_bs->costPerStep[k] / ri_bs->optimalStep[k];
-
-                        // check convergence
-                        switch (k - targetIter) {
-
-                            case -1 :
-                                if ((targetIter > 1) && ! previousRejected) {
-
-                                    // check if we can stop iterations now
-                                    if (error <= 1.0) {
-                                        // convergence have been reached just before targetIter
-                                        loop = 0;
-                                    } else {
-                                        // estimate if there is a chance convergence will
-                                        // be reached on next iteration, using the
-                                        // asymptotic evolution of error
-                                        const double ratio = ((double) ri_bs->sequence[targetIter] * ri_bs->sequence[targetIter + 1]) / (ri_bs->sequence[0] * ri_bs->sequence[0]);
-                                        if (error > ratio * ratio) {
-                                            // we don't expect to converge on next iteration
-                                            // we reject the step immediately and reduce order
-                                            reject = 1;
-                                            loop   = 0;
-                                            targetIter = k;
-                                            if ((targetIter > 1) &&
-                                                    (ri_bs->costPerTimeUnit[targetIter - 1] <
-                                                     ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
-                                                --targetIter;
-                                            }
-                                            hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
-                                        }
-                                    }
-                                }
-                                break;
-
-                            case 0:
+                                // check if we can stop iterations now
                                 if (error <= 1.0) {
-                                    // convergence has been reached exactly at targetIter
+                                    // convergence have been reached just before targetIter
                                     loop = 0;
                                 } else {
                                     // estimate if there is a chance convergence will
                                     // be reached on next iteration, using the
                                     // asymptotic evolution of error
-                                    const double ratio = ((double) ri_bs->sequence[k + 1]) / ri_bs->sequence[0];
+                                    const double ratio = ((double) ri_bs->sequence[targetIter] * ri_bs->sequence[targetIter + 1]) / (ri_bs->sequence[0] * ri_bs->sequence[0]);
                                     if (error > ratio * ratio) {
                                         // we don't expect to converge on next iteration
-                                        // we reject the step immediately
+                                        // we reject the step immediately and reduce order
                                         reject = 1;
-                                        loop = 0;
+                                        loop   = 0;
+                                        targetIter = k;
                                         if ((targetIter > 1) &&
                                                 (ri_bs->costPerTimeUnit[targetIter - 1] <
                                                  ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
@@ -667,11 +618,23 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                                         hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                                     }
                                 }
-                                break;
+                            }
+                            break;
 
-                            case 1 :
-                                if (error > 1.0) {
+                        case 0:
+                            if (error <= 1.0) {
+                                // convergence has been reached exactly at targetIter
+                                loop = 0;
+                            } else {
+                                // estimate if there is a chance convergence will
+                                // be reached on next iteration, using the
+                                // asymptotic evolution of error
+                                const double ratio = ((double) ri_bs->sequence[k + 1]) / ri_bs->sequence[0];
+                                if (error > ratio * ratio) {
+                                    // we don't expect to converge on next iteration
+                                    // we reject the step immediately
                                     reject = 1;
+                                    loop = 0;
                                     if ((targetIter > 1) &&
                                             (ri_bs->costPerTimeUnit[targetIter - 1] <
                                              ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
@@ -679,166 +642,166 @@ struct ODEState integrate(struct reb_simulation* r, struct reb_simulation_integr
                                     }
                                     hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                                 }
-                                loop = 0;
-                                break;
+                            }
+                            break;
 
-                            default :
-                                if ((firstTime || ri_bs->isLastStep) && (error <= 1.0)) {
-                                    loop = 0;
+                        case 1 :
+                            if (error > 1.0) {
+                                reject = 1;
+                                if ((targetIter > 1) &&
+                                        (ri_bs->costPerTimeUnit[targetIter - 1] <
+                                         ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
+                                    --targetIter;
                                 }
-                                break;
+                                hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
+                            }
+                            loop = 0;
+                            break;
 
-                        }
+                        default :
+                            if ((ri_bs->firstTime || r->status==REB_RUNNING_LAST_STEP) && (error <= 1.0)) {
+                                loop = 0;
+                            }
+                            break;
 
                     }
+
                 }
             }
         }
+    }
 
-        // dense output handling
-        double hInt = ri_bs->maxStep;
-        struct ODEState stepEnd;
-        if (! reject) {
+    // dense output handling
+    double hInt = ri_bs->maxStep;
+    struct ODEState stepEnd;
+    if (! reject) {
 
-            // extrapolate state at middle point of the step
-            for (int j = 1; j <= k; ++j) {
-                extrapolate(ri_bs, 0, j, diagonal, yMidDots[0], y_length);
+        // extrapolate state at middle point of the step
+        for (int j = 1; j <= k; ++j) {
+            extrapolate(ri_bs, 0, j, ri_bs->diagonal, ri_bs->yMidDots[0], y_length);
+        }
+
+        const int mu = 2 * k - ri_bs->mudif + 3;
+
+        for (int l = 0; l < mu; ++l) {
+
+            // derivative at middle point of the step
+            const int l2 = l / 2;
+            double factor = pow(0.5 * ri_bs->sequence[l2], l);
+            int fk_l2_length = ri_bs->sequence[l2] + 1;
+            int middleIndex = fk_l2_length / 2;
+            for (int i = 0; i < y_length; ++i) {
+                ri_bs->yMidDots[l + 1][i] = factor * ri_bs->fk[l2][middleIndex + l][i];
+            }
+            for (int j = 1; j <= k - l2; ++j) {
+                factor = pow(0.5 * ri_bs->sequence[j + l2], l);
+                int fk_l2j_length = ri_bs->sequence[l2+j] + 1;
+                middleIndex = fk_l2j_length / 2;
+                for (int i = 0; i < y_length; ++i) {
+                    ri_bs->diagonal[j - 1][i] = factor * ri_bs->fk[l2 + j][middleIndex + l][i];
+                }
+                extrapolate(ri_bs, l2, j, ri_bs->diagonal, ri_bs->yMidDots[l + 1], y_length);
+            }
+            for (int i = 0; i < y_length; ++i) {
+                ri_bs->yMidDots[l + 1][i] *= ri_bs->stepSize;
             }
 
-            const int mu = 2 * k - ri_bs->mudif + 3;
-
-            for (int l = 0; l < mu; ++l) {
-
-                // derivative at middle point of the step
-                const int l2 = l / 2;
-                double factor = pow(0.5 * ri_bs->sequence[l2], l);
-                int fk_l2_length = ri_bs->sequence[l2] + 1;
-                int middleIndex = fk_l2_length / 2;
-                for (int i = 0; i < y_length; ++i) {
-                    yMidDots[l + 1][i] = factor * fk[l2][middleIndex + l][i];
-                }
-                for (int j = 1; j <= k - l2; ++j) {
-                    factor = pow(0.5 * ri_bs->sequence[j + l2], l);
-                    int fk_l2j_length = ri_bs->sequence[l2+j] + 1;
-                    middleIndex = fk_l2j_length / 2;
+            // compute centered differences to evaluate next derivatives
+            for (int j = (l + 1) / 2; j <= k; ++j) {
+                int fk_j_length = ri_bs->sequence[j] + 1;
+                for (int m = fk_j_length - 1; m >= 2 * (l + 1); --m) {
                     for (int i = 0; i < y_length; ++i) {
-                        diagonal[j - 1][i] = factor * fk[l2 + j][middleIndex + l][i];
+                        ri_bs->fk[j][m][i] -= ri_bs->fk[j][m - 2][i];
                     }
-                    extrapolate(ri_bs, l2, j, diagonal, yMidDots[l + 1], y_length);
-                }
-                for (int i = 0; i < y_length; ++i) {
-                    yMidDots[l + 1][i] *= ri_bs->stepSize;
-                }
-
-                // compute centered differences to evaluate next derivatives
-                for (int j = (l + 1) / 2; j <= k; ++j) {
-                    int fk_j_length = ri_bs->sequence[j] + 1;
-                    for (int m = fk_j_length - 1; m >= 2 * (l + 1); --m) {
-                        for (int i = 0; i < y_length; ++i) {
-                            fk[j][m][i] -= fk[j][m - 2][i];
-                        }
-                    }
-                }
-
-            }
-
-            // state at end of step
-            stepEnd.t = nextT;
-            stepEnd.y = y1;
-            stepEnd.length = y_length;
-            computeDerivates(r, &stepEnd);
-
-            if (mu >= 0 && ri_bs->useInterpolationError) {
-                // use the interpolation error to limit stepsize
-                const double interpError = estimateError(ri_bs, initialState, stepEnd, scale, mu, yMidDots);
-                hInt = fabs(ri_bs->stepSize /
-                        MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
-                if (interpError > 10.0) {
-                    hNew   = filterStep(ri_bs, hInt, forward, 0);
-                    reject = 1;
                 }
             }
 
         }
 
-        if (! reject) {
+        // state at end of step
+        stepEnd.t = nextT;
+        stepEnd.y = ri_bs->y1;
+        stepEnd.length = y_length;
+        computeDerivates(r, &stepEnd);
 
-            // Discrete events handling
-
-
-            ri_bs->isLastStep = ri_bs->isLastStep || nextafter(fabs(stepEnd.t),INFINITY) >= fabs(finalTime);
-
-            // TODO Use StepEnd to set particles
-            initialState = stepEnd; // TODO Needs lots of memory cleanup!
-
-            int optimalIter;
-            if (k == 1) {
-                optimalIter = 2;
-                if (previousRejected) {
-                    optimalIter = 1;
-                }
-            } else if (k <= targetIter) {
-                optimalIter = k;
-                if (ri_bs->costPerTimeUnit[k - 1] < ri_bs->orderControl1 * ri_bs->costPerTimeUnit[k]) {
-                    optimalIter = k - 1;
-                } else if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1]) {
-                    optimalIter = MIN(k + 1, ri_bs->sequence_length - 2);
-                }
-            } else {
-                optimalIter = k - 1;
-                if ((k > 2) && (ri_bs->costPerTimeUnit[k - 2] < ri_bs->orderControl1 * ri_bs->costPerTimeUnit[k - 1])) {
-                    optimalIter = k - 2;
-                }
-                if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[optimalIter]) {
-                    optimalIter = MIN(k, ri_bs->sequence_length - 2);
-                }
+        if (mu >= 0 && ri_bs->useInterpolationError) {
+            // use the interpolation error to limit stepsize
+            const double interpError = estimateError(ri_bs, initialState, stepEnd, scale, mu, ri_bs->yMidDots);
+            hInt = fabs(ri_bs->stepSize /
+                    MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
+            if (interpError > 10.0) {
+                hNew   = filterStep(ri_bs, hInt, forward, 0);
+                reject = 1;
             }
+        }
 
+    }
+
+    if (! reject) {
+        // TODO Use StepEnd to set particles
+        initialState = stepEnd; // TODO Needs lots of memory cleanup!
+
+        int optimalIter;
+        if (k == 1) {
+            optimalIter = 2;
             if (previousRejected) {
-                // after a rejected step neither order nor stepsize
-                // should increase
-                targetIter = MIN(optimalIter, k);
-                hNew = MIN(fabs(ri_bs->stepSize), ri_bs->optimalStep[targetIter]);
+                optimalIter = 1;
+            }
+        } else if (k <= targetIter) {
+            optimalIter = k;
+            if (ri_bs->costPerTimeUnit[k - 1] < ri_bs->orderControl1 * ri_bs->costPerTimeUnit[k]) {
+                optimalIter = k - 1;
+            } else if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1]) {
+                optimalIter = MIN(k + 1, ri_bs->sequence_length - 2);
+            }
+        } else {
+            optimalIter = k - 1;
+            if ((k > 2) && (ri_bs->costPerTimeUnit[k - 2] < ri_bs->orderControl1 * ri_bs->costPerTimeUnit[k - 1])) {
+                optimalIter = k - 2;
+            }
+            if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[optimalIter]) {
+                optimalIter = MIN(k, ri_bs->sequence_length - 2);
+            }
+        }
+
+        if (previousRejected) {
+            // after a rejected step neither order nor stepsize
+            // should increase
+            targetIter = MIN(optimalIter, k);
+            hNew = MIN(fabs(ri_bs->stepSize), ri_bs->optimalStep[targetIter]);
+        } else {
+            // stepsize control
+            if (optimalIter <= k) {
+                hNew = filterStep(ri_bs, ri_bs->optimalStep[optimalIter], forward, 0);
             } else {
-                // stepsize control
-                if (optimalIter <= k) {
-                    hNew = filterStep(ri_bs, ri_bs->optimalStep[optimalIter], forward, 0);
+                if ((k < targetIter) &&
+                        (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1])) {
+                    hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter + 1] / ri_bs->costPerStep[k], forward, 0);
                 } else {
-                    if ((k < targetIter) &&
-                            (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1])) {
-                        hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter + 1] / ri_bs->costPerStep[k], forward, 0);
-                    } else {
-                        hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter] / ri_bs->costPerStep[k], forward, 0);
-                    }
+                    hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter] / ri_bs->costPerStep[k], forward, 0);
                 }
-
-                targetIter = optimalIter;
-
             }
 
-            newStep = 1;
+            targetIter = optimalIter;
 
         }
 
-        hNew = MIN(hNew, hInt);
-        if (! forward) {
-            hNew = -hNew;
-        }
+        ri_bs->newStep = 1;
 
-        firstTime = 0;
+    }
 
-        if (reject) {
-            ri_bs->isLastStep = 0;
-            previousRejected = 1;
-        } else {
-            previousRejected = 0;
-        }
+    hNew = MIN(hNew, hInt);
+    if (! forward) {
+        hNew = -hNew;
+    }
 
-    } while (!ri_bs->isLastStep);
+    ri_bs->firstTime = 0;
 
-    return stepStart;
-
-    // TODO : resetInternalState();
+    if (reject) {
+        previousRejected = 1;
+    } else {
+        previousRejected = 0;
+    }
 }
 
 

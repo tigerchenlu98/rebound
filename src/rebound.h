@@ -216,7 +216,23 @@ struct reb_simulation_integrator_whfast {
     unsigned int recalculate_coordinates_but_not_synchronized_warning;
 };
 
+struct ODEState{
+    double t; // getTime()
+    double* y; // primary state
+    double* yDot; // secondary state
+    int length; // number of components 
+};
+
+
 struct reb_simulation_integrator_bs {
+    struct ODEState initialState;
+    double* y;
+    double* y1;
+    double** diagonal;
+    double** y1Diag;
+    double** yMidDots;
+    double* scale;
+    double*** fk;
     int maxOrder; 
     int* sequence;      // stepsize sequence
     unsigned int sequence_length; 
@@ -243,8 +259,9 @@ struct reb_simulation_integrator_bs {
     double initialStep;
     double minStep;
     double maxStep;
+    int firstTime;
+    int newStep;
     // AbstractIntegrator
-    int isLastStep;
     double stepSize;
 
 
