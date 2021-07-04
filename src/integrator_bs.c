@@ -275,6 +275,7 @@ double getTolerance(struct reb_simulation_integrator_bs* ri_bs, int i, double sc
 void rescale(struct reb_simulation_integrator_bs* ri_bs, double* const y1, double* const y2, double* const scale, int scale_length) {
     for (int i = 0; i < scale_length; ++i) {
         scale[i] = getTolerance(ri_bs, i, MAX(fabs(y1[i]), fabs(y2[i])));
+        scale[i] = 1.; // TODO
     }
 } 
 double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, const int forward, const int acceptSmall){
@@ -384,6 +385,7 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState
         for (int i = 0; i < y0_length; ++i) {
             const double e = polynomials[currentDegree][i] / scale[i];
             error += e * e;
+            printf("error eeee %e\n",e);
         }
         error = sqrt(error / y0_length) * errfac[currentDegree - 5];
     }
@@ -736,6 +738,10 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
         stepEnd.y = ri_bs->y1;
         stepEnd.length = y_length;
         ri_bs->computeDerivatives(ri_bs, stepEnd.yDot, stepEnd.t, stepEnd.y);
+        for (int i=0;i<y_length; i++){
+            printf("   %e %e \n",ri_bs->initialState.yDot[i],stepEnd.yDot[i]);
+
+        }
 
         if (mu >= 0 && ri_bs->useInterpolationError) {
             // use the interpolation error to limit stepsize
@@ -831,8 +837,8 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     ri_bs->computeDerivatives       = computeDerivativesGravity;
     ri_bs->ref    = r;
     ri_bs->hNew   = r->dt;
-    ri_bs->scalAbsoluteTolerance = 1e-8;
-    ri_bs->scalRelativeTolerance = 1e-8;
+    ri_bs->scalAbsoluteTolerance = 1e-12;
+    ri_bs->scalRelativeTolerance = 1e-12;
     ri_bs->maxStep = 10;
     ri_bs->minStep = 1e-5;
 
