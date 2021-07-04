@@ -431,6 +431,7 @@ void fromStateToSimulation(struct reb_simulation* const r, struct ODEState* cons
          p->vy = state->y[i*6+4];
          p->vz = state->y[i*6+5];
     }
+    r->t = state->t;
 }
 
 void computeDerivativesGravity(struct reb_simulation_integrator_bs* const ri_bs, double* const yDot, double const t, const double* const y){
@@ -484,7 +485,6 @@ void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length
     ri_bs->scale = malloc(sizeof(double)*length); // TODO free
     rescale(ri_bs, ri_bs->y, ri_bs->y, ri_bs->scale, length);
 
-    ri_bs->newStep                  = 1;
     ri_bs->costPerTimeUnit[0]       = 0;
 }
 
@@ -505,17 +505,11 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     double error;
     int reject = 0;
 
-    if (ri_bs->newStep) {
-
-        // first evaluation, at the beginning of the step
-        double* const yDot0 = ri_bs->initialState.yDot;
-        for (int k = 0; k < ri_bs->sequence_length; ++k) {
-            // all sequences start from the same point, so we share the derivatives
-            ri_bs->fk[k][0] = yDot0;
-        }
-
-        ri_bs->newStep = 0;
-
+    // first evaluation, at the beginning of the step
+    double* const yDot0 = ri_bs->initialState.yDot;
+    for (int k = 0; k < ri_bs->sequence_length; ++k) {
+        // all sequences start from the same point, so we share the derivatives
+        ri_bs->fk[k][0] = yDot0;
     }
 
     ri_bs->stepSize = ri_bs->hNew;
@@ -774,9 +768,6 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
             targetIter = optimalIter;
 
         }
-
-        ri_bs->newStep = 1;
-
     }
 
     ri_bs->hNew = MIN(ri_bs->hNew, hInt);
@@ -796,22 +787,29 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
 void reb_integrator_bs_part1(struct reb_simulation* r){
 }
 void reb_integrator_bs_part2(struct reb_simulation* r){
+    double t_initial = r->t;
+
     struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
     const int length = r->N*3*2;
-    prepare_memory(ri_bs, length);
+    int firstStep = 0;
+    if (ri_bs->y==NULL){
+        prepare_memory(ri_bs, length);
+        firstStep = 1;
+    }
     ri_bs->computeDerivatives       = computeDerivativesGravity;
     ri_bs->ref    = r;
     ri_bs->hNew   = r->dt;
 
-    r->t+=r->dt;
-    r->dt_last_done = r->dt;
-
     fromSimulationToState(r, &ri_bs->initialState);
 
-    int firstStep = 1;
-    singleStep(ri_bs, (firstStep || r->status==REB_RUNNING_LAST_STEP));
+    ri_bs->computeDerivatives(ri_bs, ri_bs->initialState.yDot, r->t, ri_bs->initialState.y);
+    singleStep(ri_bs, firstStep || r->status==REB_RUNNING_LAST_STEP);
 
     fromStateToSimulation(r, &ri_bs->initialState);
+    
+    r->dt = ri_bs->hNew;
+    r->dt_last_done = t_initial - r->t;
+
 
 }
 
