@@ -111,6 +111,7 @@ void initializeArrays(struct reb_simulation_integrator_bs* ri_bs) {
         ri_bs->sequence        = realloc(ri_bs->sequence,sizeof(int)*size);
         ri_bs->costPerStep     = realloc(ri_bs->costPerStep,sizeof(int)*size);
         ri_bs->coeff           = realloc(ri_bs->coeff,sizeof(double*)*size);
+        ri_bs->sequence_length = size;
         for (int k = ri_bs->sequence_length; k < size; ++k) {
             ri_bs->coeff[k] = NULL;
         }
@@ -132,7 +133,7 @@ void initializeArrays(struct reb_simulation_integrator_bs* ri_bs) {
 
     // initialize the extrapolation tables
     for (int k = 1; k < size; ++k) {
-        ri_bs->coeff[k] = realloc(ri_bs->coeff[k],sizeof(double)*k);
+        ri_bs->coeff[k] = malloc(sizeof(double)*k);
         for (int l = 0; l < k; ++l) {
             double ratio = ((double) ri_bs->sequence[k]) / ri_bs->sequence[k - l - 1];
             ri_bs->coeff[k][l] = 1.0 / (ratio * ratio - 1.0);
@@ -178,18 +179,8 @@ void setOrderControl(struct reb_simulation_integrator_bs* ri_bs, int maximalOrde
 
 }
 
-void bs_constructor(struct reb_simulation* r){
-    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
-    ri_bs->minStep = fabs(ri_bs->minStep);
-    ri_bs->maxStep = fabs(ri_bs->maxStep);
-    ri_bs->initialStep = -1;
-    setStabilityCheck(ri_bs, 1, -1, -1, -1);
-    setControlFactors(ri_bs, -1, -1, -1, -1);
-    setOrderControl(ri_bs, -1, -1, -1);
-    setInterpolationControl(ri_bs, 1, -1);
-}
 
-int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const double* y0, const int y0_length, const double step, const int k, const double* scale, const int scale_length, double** const f, double* const yMiddle, double* const yEnd) {
+int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const double* y0, const int y0_length, const double step, const int k, const double* scale, double** const f, double* const yMiddle, double* const yEnd) {
 
     const int    n        = ri_bs->sequence[k];
     const double subStep  = step / n;
@@ -201,6 +192,9 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
         yEnd[i] = y0[i] + subStep * f[0][i];
     }
     ri_bs->computeDerivatives(ri_bs, f[1], t, yEnd);
+    //for (int i = 0; i < y0_length; ++i) {
+    //    printf("%e             %e       \n", f[1][i], f[0][i]);
+    //}
 
     // other substeps
     double* const yTmp = malloc(sizeof(double)*y0_length); // IMPROVE: should allocate this only once
@@ -225,15 +219,16 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
         // stability check
         if (ri_bs->performTest && (j <= ri_bs->maxChecks) && (k < ri_bs->maxIter)) {
             double initialNorm = 0.0;
-            for (int l = 0; l < scale_length; ++l) {
+            for (int l = 0; l < y0_length; ++l) {
                 const double ratio = f[0][l] / scale[l];
                 initialNorm += ratio * ratio;
             }
             double deltaNorm = 0.0;
-            for (int l = 0; l < scale_length; ++l) {
+            for (int l = 0; l < y0_length; ++l) {
                 const double ratio = (f[j + 1][l] - f[0][l]) / scale[l];
                 deltaNorm += ratio * ratio;
             }
+            //printf("iii   %e %e\n",initialNorm, deltaNorm);
             if (deltaNorm > 4 * MAX(1.0e-15, initialNorm)) {
                 return 0;
             }
@@ -459,11 +454,19 @@ void computeDerivativesGravity(struct reb_simulation_integrator_bs* const ri_bs,
 
 void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length){
 
+    ri_bs->minStep = fabs(ri_bs->minStep);
+    ri_bs->maxStep = fabs(ri_bs->maxStep);
+    setStabilityCheck(ri_bs, 1, -1, -1, -1);
+    setControlFactors(ri_bs, -1, -1, -1, -1);
+    setOrderControl(ri_bs, -1, -1, -1);
+    setInterpolationControl(ri_bs, 1, -1);
+
     // create some internal working arrays
     ri_bs->y         = malloc(sizeof(double)*length); // TODO free
     ri_bs->y1        = malloc(sizeof(double)*length); // TODO free
     ri_bs->diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
     ri_bs->y1Diag    = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
+
     for (int k = 0; k < ri_bs->sequence_length - 1; ++k) {
         ri_bs->diagonal[k] = malloc(sizeof(double)*length); // TODO free
         ri_bs->y1Diag[k]   = malloc(sizeof(double)*length); // TODO free
@@ -481,9 +484,7 @@ void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length
         ri_bs->yMidDots[k] = malloc(sizeof(double*)*length); // TODO free
     }
 
-    // initial scaling
     ri_bs->scale = malloc(sizeof(double)*length); // TODO free
-    rescale(ri_bs, ri_bs->y, ri_bs->y, ri_bs->scale, length);
 
     ri_bs->costPerTimeUnit[0]       = 0;
 }
@@ -505,11 +506,18 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     double error;
     int reject = 0;
 
+    for (int i=0; i<y_length; i++){
+        ri_bs->y[i] = ri_bs->initialState.y[i];
+    }
+
     // first evaluation, at the beginning of the step
     double* const yDot0 = ri_bs->initialState.yDot;
     for (int k = 0; k < ri_bs->sequence_length; ++k) {
         // all sequences start from the same point, so we share the derivatives
         ri_bs->fk[k][0] = yDot0;
+        for(int i=1; i<ri_bs->sequence[k] + 1; i++){
+            ri_bs->fk[k][i] = malloc(sizeof(double)*y_length); // TODO free
+        }
     }
 
     ri_bs->stepSize = ri_bs->hNew;
@@ -521,14 +529,18 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     for (int loop = 1; loop; ) {
 
         ++k;
+        
+        printf("loop k=%d\n",k);
 
         // modified midpoint integration with the current substep
-        if ( ! tryStep(ri_bs, ri_bs->initialState.t, ri_bs->y, y_length, ri_bs->stepSize, k, ri_bs->scale, y_length, ri_bs->fk[k],
+        if ( ! tryStep(ri_bs, ri_bs->initialState.t, ri_bs->y, y_length, ri_bs->stepSize, k, ri_bs->scale, ri_bs->fk[k],
                     (k == 0) ? ri_bs->yMidDots[0] : ri_bs->diagonal[k - 1],
                     (k == 0) ? ri_bs->y1 : ri_bs->y1Diag[k - 1])) {
 
             // the stability check failed, we reduce the global step
+            printf("old step  %e\n",ri_bs->hNew);
             ri_bs->hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
+            printf("new step  %e\n",ri_bs->hNew);
             reject = 1;
             loop   = 0;
 
@@ -553,10 +565,13 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                     printf("Error. NaN appearing during integration.");
                     exit(0);
                 }
+                printf("error = %e\n", error);
 
                 if ((error > 1.0e15) || ((k > 1) && (error > maxError))) {
                     // error is too big, we reduce the global step
+                    printf("old step  %e\n",ri_bs->hNew);
                     ri_bs->hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
+                    printf("new step  %e\n",ri_bs->hNew);
                     reject = 1;
                     loop   = 0;
                 } else {
@@ -598,7 +613,9 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                                                  ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
                                             --targetIter;
                                         }
+                                        printf("old step  %e\n",ri_bs->hNew);
                                         ri_bs->hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
+                                        printf("new step  %e\n",ri_bs->hNew);
                                     }
                                 }
                             }
@@ -777,6 +794,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
 
     if (reject) {
         previousRejected = 1;
+        printf("Step rejected\n");
     } else {
         previousRejected = 0;
     }
@@ -799,9 +817,15 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     ri_bs->computeDerivatives       = computeDerivativesGravity;
     ri_bs->ref    = r;
     ri_bs->hNew   = r->dt;
+    ri_bs->scalAbsoluteTolerance = 1e-14;
+    ri_bs->scalRelativeTolerance = 1e-14;
+    ri_bs->maxStep = 10;
+    ri_bs->minStep = 1e-5;
 
     fromSimulationToState(r, &ri_bs->initialState);
 
+    // initial scaling
+    rescale(ri_bs, ri_bs->initialState.y, ri_bs->initialState.y, ri_bs->scale, length);
     ri_bs->computeDerivatives(ri_bs, ri_bs->initialState.yDot, r->t, ri_bs->initialState.y);
     singleStep(ri_bs, firstStep || r->status==REB_RUNNING_LAST_STEP);
 
