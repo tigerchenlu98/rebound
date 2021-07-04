@@ -687,7 +687,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
 
     // dense output handling
     double hInt = ri_bs->maxStep;
-    struct ODEState stepEnd;
+    struct ODEState stepEnd = {0};
     stepEnd.length = y_length;
     allocateState(&stepEnd); // TODO Free
     if (! reject) {
