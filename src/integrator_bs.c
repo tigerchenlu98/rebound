@@ -260,6 +260,7 @@ void extrapolate(struct reb_simulation_integrator_bs* ri_bs, const int offset, c
     for (int i = 0; i < last_length; ++i) {
         // Aitken-Neville's recursive formula
         last[i] = diag[0][i] + ri_bs->coeff[k + offset][k - 1] * (diag[0][i] - last[i]);
+        //printf("last = %e\n", last[i]);
     }
 }
 
@@ -389,8 +390,10 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState
     return error;
 }
 
-void fromSimulationToState(struct reb_simulation* const r, struct ODEState* const state){
-    state->length = r->N*3*2;
+void allocateState(struct ODEState* const state){
+    if (!state->length){
+        return;
+    }
     if (state->y){
         free(state->y);
     }
@@ -399,6 +402,12 @@ void fromSimulationToState(struct reb_simulation* const r, struct ODEState* cons
     }
     state->y = malloc(sizeof(double)*state->length);
     state->yDot = malloc(sizeof(double)*state->length);
+}
+
+
+void fromSimulationToState(struct reb_simulation* const r, struct ODEState* const state){
+    state->length = r->N*3*2;
+    allocateState(state);
 
     state->t = r->t;
     for (int i=0; i<r->N; i++){
@@ -480,8 +489,8 @@ void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length
     // scaled derivatives at the middle of the step $\tau$
     // (element k is $h^{k} d^{k}y(\tau)/dt^{k}$ where h is step size...)
     ri_bs->yMidDots = malloc(sizeof(double*)*(1 + 2 * ri_bs->sequence_length)); // TODO free
-    for (int k = 0; k < ri_bs->sequence_length; ++k) {
-        ri_bs->yMidDots[k] = malloc(sizeof(double*)*length); // TODO free
+    for (int k = 0; k < 1+2*ri_bs->sequence_length; ++k) {
+        ri_bs->yMidDots[k] = malloc(sizeof(double)*length); // TODO free
     }
 
     ri_bs->scale = malloc(sizeof(double)*length); // TODO free
@@ -558,6 +567,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                 error = 0;
                 for (int j = 0; j < y_length; ++j) {
                     const double e = fabs(ri_bs->y1[j] - ri_bs->y1Diag[0][j]) / ri_bs->scale[j];
+                    //printf("error %e   %e\n",ri_bs->y1[j] , ri_bs->y1Diag[0][j]);
                     error += e * e;
                 }
                 error = sqrt(error / y_length);
@@ -633,6 +643,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                                 if (error > ratio * ratio) {
                                     // we don't expect to converge on next iteration
                                     // we reject the step immediately
+                                    printf("rejected no conv expected\n");
                                     reject = 1;
                                     loop = 0;
                                     if ((targetIter > 1) &&
@@ -647,6 +658,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
 
                         case 1 :
                             if (error > 1.0) {
+                                printf("rejected large error\n");
                                 reject = 1;
                                 if ((targetIter > 1) &&
                                         (ri_bs->costPerTimeUnit[targetIter - 1] <
@@ -674,6 +686,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     // dense output handling
     double hInt = ri_bs->maxStep;
     struct ODEState stepEnd;
+    allocateState(&stepEnd); // TODO Free
     if (! reject) {
 
         // extrapolate state at middle point of the step
@@ -731,6 +744,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                     MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
             if (interpError > 10.0) {
                 ri_bs->hNew   = filterStep(ri_bs, hInt, forward, 0);
+                printf("rejected large interpolation error\n");
                 reject = 1;
             }
         }
@@ -817,8 +831,8 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     ri_bs->computeDerivatives       = computeDerivativesGravity;
     ri_bs->ref    = r;
     ri_bs->hNew   = r->dt;
-    ri_bs->scalAbsoluteTolerance = 1e-14;
-    ri_bs->scalRelativeTolerance = 1e-14;
+    ri_bs->scalAbsoluteTolerance = 1e-8;
+    ri_bs->scalRelativeTolerance = 1e-8;
     ri_bs->maxStep = 10;
     ri_bs->minStep = 1e-5;
 
