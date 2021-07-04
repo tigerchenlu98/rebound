@@ -189,12 +189,6 @@ void bs_constructor(struct reb_simulation* r){
     setInterpolationControl(ri_bs, 1, -1);
 }
 
-double* computeDerivatives(double t, double* const yEnd){
-    // DUMMY
-    return 0; // TODO 
-}
-
-
 int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const double* y0, const int y0_length, const double step, const int k, const double* scale, const int scale_length, double** const f, double* const yMiddle, double* const yEnd) {
 
     const int    n        = ri_bs->sequence[k];
@@ -206,7 +200,7 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
     for (int i = 0; i < y0_length; ++i) {
         yEnd[i] = y0[i] + subStep * f[0][i];
     }
-    f[1] = computeDerivatives(t, yEnd);
+    ri_bs->computeDerivatives(ri_bs, f[1], t, yEnd);
 
     // other substeps
     double* const yTmp = malloc(sizeof(double)*y0_length); // IMPROVE: should allocate this only once
@@ -226,7 +220,7 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
             yTmp[i]       = middle;
         }
 
-        f[j + 1] = computeDerivatives(t, yEnd);
+        ri_bs->computeDerivatives(ri_bs, f[j + 1], t, yEnd);
 
         // stability check
         if (ri_bs->performTest && (j <= ri_bs->maxChecks) && (k < ri_bs->maxIter)) {
@@ -439,17 +433,26 @@ void fromStateToSimulation(struct reb_simulation* const r, struct ODEState* cons
     }
 }
 
-void computeDerivates(struct reb_simulation* const r, struct ODEState* const state){
-    fromStateToSimulation(r, state);
+void computeDerivativesGravity(struct reb_simulation_integrator_bs* const ri_bs, double* const yDot, double const t, const double* const y){
+    struct reb_simulation* const r = (struct reb_simulation* const)ri_bs->ref;
+    for (int i=0; i<r->N; i++){
+         struct reb_particle* const p = &(r->particles[i]);
+         p->x  = y[i*6+0];
+         p->y  = y[i*6+1];
+         p->z  = y[i*6+2];
+         p->vx = y[i*6+3];
+         p->vy = y[i*6+4];
+         p->vz = y[i*6+5];
+    }
     reb_update_acceleration(r);
     for (int i=0; i<r->N; i++){
         const struct reb_particle p = r->particles[i];
-        state->yDot[i*6+0] = p.vx;
-        state->yDot[i*6+1] = p.vy;
-        state->yDot[i*6+2] = p.vz;
-        state->yDot[i*6+3] = p.ax;
-        state->yDot[i*6+4] = p.ay;
-        state->yDot[i*6+5] = p.az;
+        yDot[i*6+0] = p.vx;
+        yDot[i*6+1] = p.vy;
+        yDot[i*6+2] = p.vz;
+        yDot[i*6+3] = p.ax;
+        yDot[i*6+4] = p.ay;
+        yDot[i*6+5] = p.az;
     }
 }
 
@@ -485,6 +488,8 @@ void prepare_memory(struct reb_simulation* r, struct reb_simulation_integrator_b
     ri_bs->firstTime                = 1;
     ri_bs->newStep                  = 1;
     ri_bs->costPerTimeUnit[0] = 0;
+    ri_bs->computeDerivatives = computeDerivativesGravity;
+    ri_bs->ref = r;
 }
 
 void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState initialState, const double finalTime){
@@ -725,7 +730,7 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
         stepEnd.t = nextT;
         stepEnd.y = ri_bs->y1;
         stepEnd.length = y_length;
-        computeDerivates(r, &stepEnd);
+        ri_bs->computeDerivatives(ri_bs, stepEnd.yDot, stepEnd.t, stepEnd.y);
 
         if (mu >= 0 && ri_bs->useInterpolationError) {
             // use the interpolation error to limit stepsize
