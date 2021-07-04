@@ -263,6 +263,7 @@ struct reb_simulation_integrator_bs {
     int newStep;
     // AbstractIntegrator
     double stepSize;
+    double hNew;
 
     void (*computeDerivatives)(struct reb_simulation_integrator_bs* const ri_bs, double* const yDot, double const t, const double* const y); 
     void* ref; // reference to any additional data needed in computeDerivatives, i.e. simulation struct

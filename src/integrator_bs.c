@@ -456,11 +456,10 @@ void computeDerivativesGravity(struct reb_simulation_integrator_bs* const ri_bs,
     }
 }
 
-void prepare_memory(struct reb_simulation* r, struct reb_simulation_integrator_bs* ri_bs, const int length){
-    const int forward = r->dt >= 0.;
+void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length){
 
     // create some internal working arrays
-    ri_bs->y         = initialState.y;
+    ri_bs->y         = malloc(sizeof(double)*length); // TODO free
     ri_bs->y1        = malloc(sizeof(double)*length); // TODO free
     ri_bs->diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
     ri_bs->y1Diag    = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
@@ -485,14 +484,11 @@ void prepare_memory(struct reb_simulation* r, struct reb_simulation_integrator_b
     ri_bs->scale = malloc(sizeof(double)*length); // TODO free
     rescale(ri_bs, ri_bs->y, ri_bs->y, ri_bs->scale, length);
 
-    ri_bs->firstTime                = 1;
     ri_bs->newStep                  = 1;
-    ri_bs->costPerTimeUnit[0] = 0;
-    ri_bs->computeDerivatives = computeDerivativesGravity;
-    ri_bs->ref = r;
+    ri_bs->costPerTimeUnit[0]       = 0;
 }
 
-void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState initialState, const double finalTime){
+void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLastStep){
     
     // initial order selection
     const double tol    = ri_bs->scalRelativeTolerance;
@@ -501,45 +497,30 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
             MIN(ri_bs->sequence_length - 2,
                 (int) floor(0.5 - 0.6 * log10R)));
 
-    double  hNew                     = 0;
     double  maxError                 = DBL_MAX;
     int previousRejected         = 0;
 
-    const int forward = r->dt >= 0.;
-    int y_length = initialState.length;
+    const int forward = ri_bs->hNew >= 0.;
+    int y_length = ri_bs->initialState.length;
     double error;
     int reject = 0;
 
     if (ri_bs->newStep) {
 
         // first evaluation, at the beginning of the step
-        double* const yDot0 = initialState.yDot;
+        double* const yDot0 = ri_bs->initialState.yDot;
         for (int k = 0; k < ri_bs->sequence_length; ++k) {
             // all sequences start from the same point, so we share the derivatives
             ri_bs->fk[k][0] = yDot0;
-        }
-
-        if (ri_bs->firstTime) {
-            hNew = r->dt; // Was able to guess step size: initializeStep(forward, 2 * targetIter + 1, scale, getStepStart(), equations.getMapper());
         }
 
         ri_bs->newStep = 0;
 
     }
 
-    ri_bs->stepSize = hNew;
+    ri_bs->stepSize = ri_bs->hNew;
 
-    // step adjustment near bounds
-    if (forward) {
-        if (initialState.t + ri_bs->stepSize >= finalTime) {
-            ri_bs->stepSize = finalTime - initialState.t;
-        }
-    } else {
-        if (initialState.t + ri_bs->stepSize <= finalTime) {
-            ri_bs->stepSize = finalTime - initialState.t;
-        }
-    }
-    const double nextT = initialState.t + ri_bs->stepSize;
+    const double nextT = ri_bs->initialState.t + ri_bs->stepSize;
 
     // iterate over several substep sizes
     int k = -1;
@@ -548,12 +529,12 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
         ++k;
 
         // modified midpoint integration with the current substep
-        if ( ! tryStep(ri_bs, initialState.t, ri_bs->y, y_length, ri_bs->stepSize, k, ri_bs->scale, y_length, ri_bs->fk[k],
+        if ( ! tryStep(ri_bs, ri_bs->initialState.t, ri_bs->y, y_length, ri_bs->stepSize, k, ri_bs->scale, y_length, ri_bs->fk[k],
                     (k == 0) ? ri_bs->yMidDots[0] : ri_bs->diagonal[k - 1],
                     (k == 0) ? ri_bs->y1 : ri_bs->y1Diag[k - 1])) {
 
             // the stability check failed, we reduce the global step
-            hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
+            ri_bs->hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
             reject = 1;
             loop   = 0;
 
@@ -581,7 +562,7 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
 
                 if ((error > 1.0e15) || ((k > 1) && (error > maxError))) {
                     // error is too big, we reduce the global step
-                    hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
+                    ri_bs->hNew   = fabs(filterStep(ri_bs, ri_bs->stepSize * ri_bs->stabilityReduction, forward, 0));
                     reject = 1;
                     loop   = 0;
                 } else {
@@ -623,7 +604,7 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
                                                  ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
                                             --targetIter;
                                         }
-                                        hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
+                                        ri_bs->hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                                     }
                                 }
                             }
@@ -648,7 +629,7 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
                                              ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
                                         --targetIter;
                                     }
-                                    hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
+                                    ri_bs->hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                                 }
                             }
                             break;
@@ -661,13 +642,13 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
                                          ri_bs->orderControl1 * ri_bs->costPerTimeUnit[targetIter])) {
                                     --targetIter;
                                 }
-                                hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
+                                ri_bs->hNew = filterStep(ri_bs, ri_bs->optimalStep[targetIter], forward, 0);
                             }
                             loop = 0;
                             break;
 
                         default :
-                            if ((ri_bs->firstTime || r->status==REB_RUNNING_LAST_STEP) && (error <= 1.0)) {
+                            if (firstOrLastStep && (error <= 1.0)) {
                                 loop = 0;
                             }
                             break;
@@ -734,11 +715,11 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
 
         if (mu >= 0 && ri_bs->useInterpolationError) {
             // use the interpolation error to limit stepsize
-            const double interpError = estimateError(ri_bs, initialState, stepEnd, ri_bs->scale, mu, ri_bs->yMidDots);
+            const double interpError = estimateError(ri_bs, ri_bs->initialState, stepEnd, ri_bs->scale, mu, ri_bs->yMidDots);
             hInt = fabs(ri_bs->stepSize /
                     MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
             if (interpError > 10.0) {
-                hNew   = filterStep(ri_bs, hInt, forward, 0);
+                ri_bs->hNew   = filterStep(ri_bs, hInt, forward, 0);
                 reject = 1;
             }
         }
@@ -747,7 +728,7 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
 
     if (! reject) {
         // TODO Use StepEnd to set particles
-        initialState = stepEnd; // TODO Needs lots of memory cleanup!
+        ri_bs->initialState = stepEnd; // TODO Needs lots of memory cleanup!
 
         int optimalIter;
         if (k == 1) {
@@ -776,17 +757,17 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
             // after a rejected step neither order nor stepsize
             // should increase
             targetIter = MIN(optimalIter, k);
-            hNew = MIN(fabs(ri_bs->stepSize), ri_bs->optimalStep[targetIter]);
+            ri_bs->hNew = MIN(fabs(ri_bs->stepSize), ri_bs->optimalStep[targetIter]);
         } else {
             // stepsize control
             if (optimalIter <= k) {
-                hNew = filterStep(ri_bs, ri_bs->optimalStep[optimalIter], forward, 0);
+                ri_bs->hNew = filterStep(ri_bs, ri_bs->optimalStep[optimalIter], forward, 0);
             } else {
                 if ((k < targetIter) &&
                         (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1])) {
-                    hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter + 1] / ri_bs->costPerStep[k], forward, 0);
+                    ri_bs->hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter + 1] / ri_bs->costPerStep[k], forward, 0);
                 } else {
-                    hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter] / ri_bs->costPerStep[k], forward, 0);
+                    ri_bs->hNew = filterStep(ri_bs, ri_bs->optimalStep[k] * ri_bs->costPerStep[optimalIter] / ri_bs->costPerStep[k], forward, 0);
                 }
             }
 
@@ -798,12 +779,10 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
 
     }
 
-    hNew = MIN(hNew, hInt);
+    ri_bs->hNew = MIN(ri_bs->hNew, hInt);
     if (! forward) {
-        hNew = -hNew;
+        ri_bs->hNew = -ri_bs->hNew;
     }
-
-    ri_bs->firstTime = 0;
 
     if (reject) {
         previousRejected = 1;
@@ -815,11 +794,25 @@ void step(struct reb_simulation_integrator_bs* ri_bs, const struct ODEState init
 
 
 void reb_integrator_bs_part1(struct reb_simulation* r){
-    r->t+=r->dt/2.;
 }
 void reb_integrator_bs_part2(struct reb_simulation* r){
-    r->t+=r->dt/2.;
+    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
+    const int length = r->N*3*2;
+    prepare_memory(ri_bs, length);
+    ri_bs->computeDerivatives       = computeDerivativesGravity;
+    ri_bs->ref    = r;
+    ri_bs->hNew   = r->dt;
+
+    r->t+=r->dt;
     r->dt_last_done = r->dt;
+
+    fromSimulationToState(r, &ri_bs->initialState);
+
+    int firstStep = 1;
+    singleStep(ri_bs, (firstStep || r->status==REB_RUNNING_LAST_STEP));
+
+    fromStateToSimulation(r, &ri_bs->initialState);
+
 }
 
 void reb_integrator_bs_synchronize(struct reb_simulation* r){
