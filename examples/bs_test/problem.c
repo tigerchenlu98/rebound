@@ -19,10 +19,17 @@ int main(int argc, char* argv[]) {
     r->integrator = REB_INTEGRATOR_BS;
     r->dt = 1e-4;
 
+    printf("==============================\n");
     reb_step(r);
+    printf("==============================\n");
+    reb_step(r);
+    printf("==============================\n");
+    reb_step(r);
+    printf("==============================\n");
 
     double E1 = reb_tools_energy(r);
-    printf("t = %9.4f     DE/E = %.3e\n",r->t, fabs((E1-E0)/E0));
+    printf("t  = %20.16f     DE/E = %.3e\n",r->t, fabs((E1-E0)/E0));
+    printf("dt = %20.16f  \n",r->dt);
     reb_free_simulation(r);
 }
 

@@ -274,8 +274,8 @@ double getTolerance(struct reb_simulation_integrator_bs* ri_bs, int i, double sc
 
 void rescale(struct reb_simulation_integrator_bs* ri_bs, double* const y1, double* const y2, double* const scale, int scale_length) {
     for (int i = 0; i < scale_length; ++i) {
-        scale[i] = getTolerance(ri_bs, i, MAX(fabs(y1[i]), fabs(y2[i])));
-        scale[i] = 1.; // TODO
+        //scale[i] = getTolerance(ri_bs, i, MAX(fabs(y1[i]), fabs(y2[i])));  //TODO
+        scale[i] = getTolerance(ri_bs, i, 1.);
     }
 } 
 double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, const int forward, const int acceptSmall){
@@ -368,8 +368,7 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState
                     for (int j = 4; j <= mu; ++j) {
                         const double fac1 = 0.5 * j * (j - 1);
                         const double fac2 = 2 * fac1 * (j - 2) * (j - 3);
-                        polynomials[j+4][i] =
-                            16 * (yMidDots[j][i] + fac1 * polynomials[j+2][i] - fac2 * polynomials[j][i]);
+                        polynomials[j+4][i] = 16 * (yMidDots[j][i] + fac1 * polynomials[j+2][i] - fac2 * polynomials[j][i]);
                     }
 
                 }
@@ -385,7 +384,7 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState
         for (int i = 0; i < y0_length; ++i) {
             const double e = polynomials[currentDegree][i] / scale[i];
             error += e * e;
-            printf("error eeee %e\n",e);
+            //printf("error eeee %e\n",e);
         }
         error = sqrt(error / y0_length) * errfac[currentDegree - 5];
     }
@@ -541,7 +540,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
 
         ++k;
         
-        printf("loop k=%d\n",k);
+        //printf("loop k=%d\n",k);
 
         // modified midpoint integration with the current substep
         if ( ! tryStep(ri_bs, ri_bs->initialState.t, ri_bs->y, y_length, ri_bs->stepSize, k, ri_bs->scale, ri_bs->fk[k],
@@ -577,7 +576,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                     printf("Error. NaN appearing during integration.");
                     exit(0);
                 }
-                printf("error = %e\n", error);
+                printf("(k=%d) error = %e\n",k, error);
 
                 if ((error > 1.0e15) || ((k > 1) && (error > maxError))) {
                     // error is too big, we reduce the global step
@@ -687,9 +686,6 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
 
     // dense output handling
     double hInt = ri_bs->maxStep;
-    struct ODEState stepEnd = {0};
-    stepEnd.length = y_length;
-    allocateState(&stepEnd); // TODO Free
     if (! reject) {
 
         // extrapolate state at middle point of the step
@@ -735,22 +731,19 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
         }
 
         // state at end of step
-        stepEnd.t = nextT;
-        stepEnd.y = ri_bs->y1;
-        stepEnd.length = y_length;
-        ri_bs->computeDerivatives(ri_bs, stepEnd.yDot, stepEnd.t, stepEnd.y);
-        for (int i=0;i<y_length; i++){
-            printf("   %e %e \n",ri_bs->initialState.yDot[i],stepEnd.yDot[i]);
-
-        }
+        ri_bs->finalState.t = nextT;
+        ri_bs->finalState.y = ri_bs->y1;
+        ri_bs->finalState.length = y_length;
+        ri_bs->computeDerivatives(ri_bs, ri_bs->finalState.yDot, ri_bs->finalState.t, ri_bs->finalState.y);
 
         if (mu >= 0 && ri_bs->useInterpolationError) {
             // use the interpolation error to limit stepsize
-            const double interpError = estimateError(ri_bs, ri_bs->initialState, stepEnd, ri_bs->scale, mu, ri_bs->yMidDots);
-            hInt = fabs(ri_bs->stepSize /
-                    MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
+            const double interpError = estimateError(ri_bs, ri_bs->initialState, ri_bs->finalState, ri_bs->scale, mu, ri_bs->yMidDots);
+            hInt = fabs(ri_bs->stepSize / MAX(pow(interpError, 1.0 / (mu + 4)), 0.01));
             if (interpError > 10.0) {
+                printf("old step  %e\n",ri_bs->hNew);
                 ri_bs->hNew   = filterStep(ri_bs, hInt, forward, 0);
+                printf("new step  %e\n",ri_bs->hNew);
                 printf("rejected large interpolation error\n");
                 reject = 1;
             }
@@ -759,8 +752,10 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     }
 
     if (! reject) {
-        // TODO Use StepEnd to set particles
-        ri_bs->initialState = stepEnd; // TODO Needs lots of memory cleanup!
+        struct ODEState tmp;
+        tmp = ri_bs->initialState;
+        ri_bs->initialState = ri_bs->finalState; 
+        ri_bs->finalState = tmp;
 
         int optimalIter;
         if (k == 1) {
@@ -838,12 +833,14 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     ri_bs->computeDerivatives       = computeDerivativesGravity;
     ri_bs->ref    = r;
     ri_bs->hNew   = r->dt;
-    ri_bs->scalAbsoluteTolerance = 1e-12;
-    ri_bs->scalRelativeTolerance = 1e-12;
+    ri_bs->scalAbsoluteTolerance = 1e-5;
+    ri_bs->scalRelativeTolerance = 1e-5;
     ri_bs->maxStep = 10;
     ri_bs->minStep = 1e-5;
 
     fromSimulationToState(r, &ri_bs->initialState);
+    ri_bs->finalState.length = r->N*3*2;
+    allocateState(&ri_bs->finalState);
 
     // initial scaling
     rescale(ri_bs, ri_bs->initialState.y, ri_bs->initialState.y, ri_bs->scale, length);
