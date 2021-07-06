@@ -227,6 +227,7 @@ struct ODEState{
 struct reb_simulation_integrator_bs {
     struct ODEState initialState;
     struct ODEState finalState;
+    unsigned int allocatedN;
     double* y;
     double* y1;
     double** diagonal;

@@ -102,45 +102,7 @@ void setControlFactors(struct reb_simulation_integrator_bs* ri_bs, double contro
 
 }
 
-void initializeArrays(struct reb_simulation_integrator_bs* ri_bs) {
 
-    int size = ri_bs->maxOrder / 2;
-
-    if ((ri_bs->sequence == NULL) || (ri_bs->sequence_length != size)) {
-        // all arrays should be reallocated with the right size
-        ri_bs->sequence        = realloc(ri_bs->sequence,sizeof(int)*size);
-        ri_bs->costPerStep     = realloc(ri_bs->costPerStep,sizeof(int)*size);
-        ri_bs->coeff           = realloc(ri_bs->coeff,sizeof(double*)*size);
-        ri_bs->sequence_length = size;
-        for (int k = ri_bs->sequence_length; k < size; ++k) {
-            ri_bs->coeff[k] = NULL;
-        }
-        ri_bs->costPerTimeUnit = realloc(ri_bs->costPerTimeUnit,sizeof(double)*size);
-        ri_bs->optimalStep     = realloc(ri_bs->optimalStep,sizeof(double)*size);
-    }
-
-    // step size sequence: 2, 6, 10, 14, ...
-    for (int k = 0; k < size; ++k) {
-        ri_bs->sequence[k] = 4 * k + 2;
-    }
-
-    // initialize the order selection cost array
-    // (number of function calls for each column of the extrapolation table)
-    ri_bs->costPerStep[0] = ri_bs->sequence[0] + 1;
-    for (int k = 1; k < size; ++k) {
-        ri_bs->costPerStep[k] = ri_bs->costPerStep[k - 1] + ri_bs->sequence[k];
-    }
-
-    // initialize the extrapolation tables
-    for (int k = 1; k < size; ++k) {
-        ri_bs->coeff[k] = malloc(sizeof(double)*k);
-        for (int l = 0; l < k; ++l) {
-            double ratio = ((double) ri_bs->sequence[k]) / ri_bs->sequence[k - l - 1];
-            ri_bs->coeff[k][l] = 1.0 / (ratio * ratio - 1.0);
-        }
-    }
-
-}
 
 void setInterpolationControl(struct reb_simulation_integrator_bs* ri_bs, int useInterpolationErrorForControl, int mudifControlParameter) {
 
@@ -173,9 +135,6 @@ void setOrderControl(struct reb_simulation_integrator_bs* ri_bs, int maximalOrde
     } else {
         ri_bs->orderControl2 = control2;
     }
-
-    // reinitialize the arrays
-    initializeArrays(ri_bs);
 
 }
 
@@ -462,39 +421,81 @@ void computeDerivativesGravity(struct reb_simulation_integrator_bs* const ri_bs,
     }
 }
 
-void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length){
+void reb_integrator_bs_reset(struct reb_simulation* r){
+    // Do nothing.
+}
 
-    ri_bs->minStep = fabs(ri_bs->minStep);
-    ri_bs->maxStep = fabs(ri_bs->maxStep);
-    setStabilityCheck(ri_bs, 1, -1, -1, -1);
-    setControlFactors(ri_bs, -1, -1, -1, -1);
-    setOrderControl(ri_bs, -1, -1, -1);
+void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length){
+    // reinitialize the arrays
+    int sequence_length = ri_bs->maxOrder / 2;
+
+    if ((ri_bs->sequence == NULL) || (ri_bs->sequence_length != sequence_length)) {
+        // all arrays should be reallocated with the right size
+        ri_bs->sequence        = realloc(ri_bs->sequence,sizeof(int)*sequence_length);
+        ri_bs->costPerStep     = realloc(ri_bs->costPerStep,sizeof(int)*sequence_length);
+        ri_bs->coeff           = realloc(ri_bs->coeff,sizeof(double*)*sequence_length);
+        ri_bs->sequence_length = sequence_length;
+        for (int k = ri_bs->sequence_length; k < sequence_length; ++k) {
+            ri_bs->coeff[k] = NULL;
+        }
+        ri_bs->costPerTimeUnit = realloc(ri_bs->costPerTimeUnit,sizeof(double)*sequence_length);
+        ri_bs->optimalStep     = realloc(ri_bs->optimalStep,sizeof(double)*sequence_length);
+    }
+
+    // step size sequence: 2, 6, 10, 14, ...
+    for (int k = 0; k < sequence_length; ++k) {
+        ri_bs->sequence[k] = 4 * k + 2;
+    }
+
+    // initialize the order selection cost array
+    // (number of function calls for each column of the extrapolation table)
+    ri_bs->costPerStep[0] = ri_bs->sequence[0] + 1;
+    for (int k = 1; k < sequence_length; ++k) {
+        ri_bs->costPerStep[k] = ri_bs->costPerStep[k - 1] + ri_bs->sequence[k];
+    }
+
+    // initialize the extrapolation tables
+    for (int k = 1; k < sequence_length; ++k) {
+        ri_bs->coeff[k] = malloc(sizeof(double)*k);
+        for (int l = 0; l < k; ++l) {
+            double ratio = ((double) ri_bs->sequence[k]) / ri_bs->sequence[k - l - 1];
+            ri_bs->coeff[k][l] = 1.0 / (ratio * ratio - 1.0);
+        }
+    }
+
+
     setInterpolationControl(ri_bs, 1, -1);
 
-    // create some internal working arrays
-    ri_bs->y         = malloc(sizeof(double)*length); // TODO free
-    ri_bs->y1        = malloc(sizeof(double)*length); // TODO free
-    ri_bs->diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
-    ri_bs->y1Diag    = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
+    if (length>ri_bs->allocatedN){
+        // create some internal working arrays
+        ri_bs->y         = malloc(sizeof(double)*length); // TODO free
+        ri_bs->y1        = malloc(sizeof(double)*length); // TODO free
+        ri_bs->diagonal  = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
+        ri_bs->y1Diag    = malloc(sizeof(double*)*(ri_bs->sequence_length - 1)); // TODO free
 
-    for (int k = 0; k < ri_bs->sequence_length - 1; ++k) {
-        ri_bs->diagonal[k] = malloc(sizeof(double)*length); // TODO free
-        ri_bs->y1Diag[k]   = malloc(sizeof(double)*length); // TODO free
+        for (int k = 0; k < ri_bs->sequence_length - 1; ++k) {
+            ri_bs->diagonal[k] = malloc(sizeof(double)*length); // TODO free
+            ri_bs->y1Diag[k]   = malloc(sizeof(double)*length); // TODO free
+        }
+
+        ri_bs->fk = malloc(sizeof(double**)*ri_bs->sequence_length); // TODO free
+        for (int k = 0; k < ri_bs->sequence_length; ++k) {
+            ri_bs->fk[k] = malloc(sizeof(double*)*(ri_bs->sequence[k] + 1)); // TODO free
+            // Note: memory at i=0 is shared with initial state (setup later)
+            for(int i=1; i<ri_bs->sequence[k] + 1; i++){
+                ri_bs->fk[k][i] = malloc(sizeof(double)*length); // TODO free
+            }
+        }
+
+        // scaled derivatives at the middle of the step $\tau$
+        // (element k is $h^{k} d^{k}y(\tau)/dt^{k}$ where h is step size...)
+        ri_bs->yMidDots = malloc(sizeof(double*)*(1 + 2 * ri_bs->sequence_length)); // TODO free
+        for (int k = 0; k < 1+2*ri_bs->sequence_length; ++k) {
+            ri_bs->yMidDots[k] = malloc(sizeof(double)*length); // TODO free
+        }
+
+        ri_bs->scale = malloc(sizeof(double)*length); // TODO free
     }
-
-    ri_bs->fk = malloc(sizeof(double**)*ri_bs->sequence_length); // TODO free
-    for (int k = 0; k < ri_bs->sequence_length; ++k) {
-        ri_bs->fk[k] = malloc(sizeof(double*)*(ri_bs->sequence[k] + 1)); // TODO free
-    }
-
-    // scaled derivatives at the middle of the step $\tau$
-    // (element k is $h^{k} d^{k}y(\tau)/dt^{k}$ where h is step size...)
-    ri_bs->yMidDots = malloc(sizeof(double*)*(1 + 2 * ri_bs->sequence_length)); // TODO free
-    for (int k = 0; k < 1+2*ri_bs->sequence_length; ++k) {
-        ri_bs->yMidDots[k] = malloc(sizeof(double)*length); // TODO free
-    }
-
-    ri_bs->scale = malloc(sizeof(double)*length); // TODO free
 
     ri_bs->costPerTimeUnit[0]       = 0;
 }
@@ -504,9 +505,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     // initial order selection
     const double tol    = ri_bs->scalRelativeTolerance;
     const double log10R = log10(MAX(1.0e-10, tol));
-    int targetIter = MAX(1,
-            MIN(ri_bs->sequence_length - 2,
-                (int) floor(0.5 - 0.6 * log10R)));
+    int targetIter = MAX(1, MIN(ri_bs->sequence_length - 2, (int) floor(0.5 - 0.6 * log10R)));
 
     double  maxError                 = DBL_MAX;
     int previousRejected         = 0;
@@ -520,14 +519,10 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
         ri_bs->y[i] = ri_bs->initialState.y[i];
     }
 
-    // first evaluation, at the beginning of the step
-    double* const yDot0 = ri_bs->initialState.yDot;
     for (int k = 0; k < ri_bs->sequence_length; ++k) {
+        // first evaluation, at the beginning of the step
         // all sequences start from the same point, so we share the derivatives
-        ri_bs->fk[k][0] = yDot0;
-        for(int i=1; i<ri_bs->sequence[k] + 1; i++){
-            ri_bs->fk[k][i] = malloc(sizeof(double)*y_length); // TODO free
-        }
+        ri_bs->fk[k][0] = ri_bs->initialState.yDot;
     }
 
     ri_bs->stepSize = ri_bs->hNew;
@@ -825,6 +820,13 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
     const int length = r->N*3*2;
+
+    ri_bs->minStep = fabs(ri_bs->minStep);
+    ri_bs->maxStep = fabs(ri_bs->maxStep);
+    setStabilityCheck(ri_bs, 1, -1, -1, -1);
+    setControlFactors(ri_bs, -1, -1, -1, -1);
+    setOrderControl(ri_bs, -1, -1, -1);
+    
     int firstStep = 0;
     if (ri_bs->y==NULL){
         prepare_memory(ri_bs, length);
@@ -859,6 +861,3 @@ void reb_integrator_bs_synchronize(struct reb_simulation* r){
     // Do nothing.
 }
 
-void reb_integrator_bs_reset(struct reb_simulation* r){
-    // Do nothing.
-}
