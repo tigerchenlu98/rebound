@@ -819,7 +819,11 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     double t_initial = r->t;
 
     struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
-    const int length = r->N*3*2;
+
+    ri_bs->scalAbsoluteTolerance = 1e-5;
+    ri_bs->scalRelativeTolerance = 1e-5;
+    ri_bs->maxStep = 10;
+    ri_bs->minStep = 1e-5;
 
     ri_bs->minStep = fabs(ri_bs->minStep);
     ri_bs->maxStep = fabs(ri_bs->maxStep);
@@ -828,6 +832,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     setOrderControl(ri_bs, -1, -1, -1);
     
     int firstStep = 0;
+    const int length = r->N*3*2;
     if (ri_bs->y==NULL){
         prepare_memory(ri_bs, length);
         firstStep = 1;
@@ -835,13 +840,9 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     ri_bs->computeDerivatives       = computeDerivativesGravity;
     ri_bs->ref    = r;
     ri_bs->hNew   = r->dt;
-    ri_bs->scalAbsoluteTolerance = 1e-5;
-    ri_bs->scalRelativeTolerance = 1e-5;
-    ri_bs->maxStep = 10;
-    ri_bs->minStep = 1e-5;
 
     fromSimulationToState(r, &ri_bs->initialState);
-    ri_bs->finalState.length = r->N*3*2;
+    ri_bs->finalState.length = length;
     allocateState(&ri_bs->finalState);
 
     // initial scaling
