@@ -74,36 +74,6 @@ void setStabilityCheck(struct reb_simulation_integrator_bs* ri_bs, int performSt
     }
 }
 
-void setControlFactors(struct reb_simulation_integrator_bs* ri_bs, double control1, double control2, double control3, double control4) {
-
-    if ((control1 < 0.0001) || (control1 > 0.9999)) {
-        ri_bs->stepControl1 = 0.65;
-    } else {
-        ri_bs->stepControl1 = control1;
-    }
-
-    if ((control2 < 0.0001) || (control2 > 0.9999)) {
-        ri_bs->stepControl2 = 0.94;
-    } else {
-        ri_bs->stepControl2 = control2;
-    }
-
-    if ((control3 < 0.0001) || (control3 > 0.9999)) {
-        ri_bs->stepControl3 = 0.02;
-    } else {
-        ri_bs->stepControl3 = control3;
-    }
-
-    if ((control4 < 1.0001) || (control4 > 999.9)) {
-        ri_bs->stepControl4 = 4.0;
-    } else {
-        ri_bs->stepControl4 = control4;
-    }
-
-}
-
-
-
 void setInterpolationControl(struct reb_simulation_integrator_bs* ri_bs, int useInterpolationErrorForControl, int mudifControlParameter) {
 
     ri_bs->useInterpolationError = useInterpolationErrorForControl;
@@ -112,28 +82,6 @@ void setInterpolationControl(struct reb_simulation_integrator_bs* ri_bs, int use
         ri_bs->mudif = 4;
     } else {
         ri_bs->mudif = mudifControlParameter;
-    }
-
-}
-
-void setOrderControl(struct reb_simulation_integrator_bs* ri_bs, int maximalOrder, double control1, double control2) {
-
-    if (maximalOrder > 6 && maximalOrder % 2 == 0) {
-        ri_bs->maxOrder = maximalOrder;
-    } else {
-        ri_bs->maxOrder = 18;
-    }
-
-    if ((control1 < 0.0001) || (control1 > 0.9999)) {
-        ri_bs->orderControl1 = 0.8;
-    } else {
-        ri_bs->orderControl1 = control1;
-    }
-
-    if ((control2 < 0.0001) || (control2 > 0.9999)) {
-        ri_bs->orderControl2 = 0.9;
-    } else {
-        ri_bs->orderControl2 = control2;
     }
 
 }
@@ -434,7 +382,8 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
 
 void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length){
     // reinitialize the arrays
-    int sequence_length = ri_bs->maxOrder / 2;
+    int maxOrder = 18;
+    int sequence_length = maxOrder / 2;
 
     if ((ri_bs->sequence == NULL) || (ri_bs->sequence_length != sequence_length)) {
         // all arrays should be reallocated with the right size
@@ -835,9 +784,14 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     ri_bs->minStep = fabs(ri_bs->minStep);
     ri_bs->maxStep = fabs(ri_bs->maxStep);
     setStabilityCheck(ri_bs, 1, -1, -1, -1);
-    setControlFactors(ri_bs, -1, -1, -1, -1);
-    setOrderControl(ri_bs, -1, -1, -1);
-    
+    // Defaul control factors
+    ri_bs->stepControl1 = 0.65;
+    ri_bs->stepControl2 = 0.94;
+    ri_bs->stepControl3 = 0.02;
+    ri_bs->stepControl4 = 4.0;
+    ri_bs->orderControl1 = 0.8;
+    ri_bs->orderControl2 = 0.9;
+
     int firstStep = 0;
     const int length = r->N*3*2;
     if (ri_bs->y==NULL){
