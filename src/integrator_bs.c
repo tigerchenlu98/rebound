@@ -262,16 +262,16 @@ double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, co
 double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState previous, struct ODEState current, const double* scale, const int mu, double** yMidDots) {
     const int currentDegree = mu + 4;
     const int y0_length = previous.length;
-    double** polynomials   = malloc(sizeof(double*)*(currentDegree + 1));  // TODO Free
+    double** polynomials   = malloc(sizeof(double*)*(currentDegree + 1)); 
     for (int i = 0; i < currentDegree+1; ++i) {
-        polynomials[i] = malloc(sizeof(double)*y0_length);  // TODO Free
+        polynomials[i] = malloc(sizeof(double)*y0_length); 
     }
     // initialize the error factors array for interpolation
     double* errfac = NULL;
     if (currentDegree <= 4) {
         errfac = NULL;
     } else {
-        errfac = malloc(sizeof(double)*(currentDegree - 4)); // TODO Free
+        errfac = malloc(sizeof(double)*(currentDegree - 4)); 
         for (int i = 0; i < currentDegree-4; ++i) {
             const int ip5 = i + 5;
             errfac[i] = 1.0 / (ip5 * ip5);
@@ -347,6 +347,13 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, struct ODEState
         }
         error = sqrt(error / y0_length) * errfac[currentDegree - 5];
     }
+
+    for (int i = 0; i < currentDegree+1; ++i) {
+        free(polynomials[i]);
+    }
+    free(polynomials);
+    free(errfac);
+
     return error;
 }
 
