@@ -241,7 +241,7 @@ struct reb_simulation_integrator_bs {
     double* costPerTimeUnit; // cost per unit step.
     double* optimalStep; // optimal steps for each order. 
     double** coeff;    // extrapolation coefficients.
-    int performTest; // stability check enabling parameter
+    int performStabilityCheck; // stability check enabling parameter
     int maxChecks;  // maximal number of checks for each iteration. 
     int maxIter;    // maximal number of iterations for which checks are performed.
     double stabilityReduction; // stepsize reduction factor in case of stability check failure.

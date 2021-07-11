@@ -62,18 +62,6 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-void setStabilityCheck(struct reb_simulation_integrator_bs* ri_bs, int performStabilityCheck, int maxNumIter, int maxNumChecks, double stepsizeReductionFactor) {
-    ri_bs->performTest = performStabilityCheck;
-    ri_bs->maxIter     = (maxNumIter   <= 0) ? 2 : maxNumIter;
-    ri_bs->maxChecks   = (maxNumChecks <= 0) ? 1 : maxNumChecks;
-
-    if ((stepsizeReductionFactor < 0.0001) || (stepsizeReductionFactor > 0.9999)) {
-        ri_bs->stabilityReduction = 0.5;
-    } else {
-        ri_bs->stabilityReduction = stepsizeReductionFactor;
-    }
-}
-
 void setInterpolationControl(struct reb_simulation_integrator_bs* ri_bs, int useInterpolationErrorForControl, int mudifControlParameter) {
 
     ri_bs->useInterpolationError = useInterpolationErrorForControl;
@@ -124,7 +112,7 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
         ri_bs->computeDerivatives(ri_bs, f[j + 1], t, yEnd);
 
         // stability check
-        if (ri_bs->performTest && (j <= ri_bs->maxChecks) && (k < ri_bs->maxIter)) {
+        if (ri_bs->performStabilityCheck && (j <= ri_bs->maxChecks) && (k < ri_bs->maxIter)) {
             double initialNorm = 0.0;
             for (int l = 0; l < y0_length; ++l) {
                 const double ratio = f[0][l] / scale[l];
@@ -778,19 +766,20 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     ri_bs->scalAbsoluteTolerance = 1e-5;
     ri_bs->scalRelativeTolerance = 1e-5;
-    ri_bs->maxStep = 10;
-    ri_bs->minStep = 1e-5;
 
-    ri_bs->minStep = fabs(ri_bs->minStep);
-    ri_bs->maxStep = fabs(ri_bs->maxStep);
-    setStabilityCheck(ri_bs, 1, -1, -1, -1);
-    // Defaul control factors
-    ri_bs->stepControl1 = 0.65;
-    ri_bs->stepControl2 = 0.94;
-    ri_bs->stepControl3 = 0.02;
-    ri_bs->stepControl4 = 4.0;
-    ri_bs->orderControl1 = 0.8;
-    ri_bs->orderControl2 = 0.9;
+    // Defaul settings
+    ri_bs->maxStep              = 10; // Note: always positive
+    ri_bs->minStep              = 1e-5; // Note: always positive
+    ri_bs->performStabilityCheck= 1;
+    ri_bs->maxIter              = 2;
+    ri_bs->maxChecks            = 1;
+    ri_bs->stabilityReduction   = 0.5;
+    ri_bs->stepControl1         = 0.65;
+    ri_bs->stepControl2         = 0.94;
+    ri_bs->stepControl3         = 0.02;
+    ri_bs->stepControl4         = 4.0;
+    ri_bs->orderControl1        = 0.8;
+    ri_bs->orderControl2        = 0.9;
 
     int firstStep = 0;
     const int length = r->N*3*2;
