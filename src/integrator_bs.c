@@ -364,10 +364,6 @@ void computeDerivativesGravity(struct reb_simulation_integrator_bs* const ri_bs,
     }
 }
 
-void reb_integrator_bs_reset(struct reb_simulation* r){
-    // Do nothing.
-}
-
 void prepare_memory(struct reb_simulation_integrator_bs* ri_bs, const int length){
     // reinitialize the arrays
     int maxOrder = 18;
@@ -764,23 +760,6 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
 
-    ri_bs->scalAbsoluteTolerance = 1e-5;
-    ri_bs->scalRelativeTolerance = 1e-5;
-
-    // Defaul settings
-    ri_bs->maxStep              = 10; // Note: always positive
-    ri_bs->minStep              = 1e-5; // Note: always positive
-    ri_bs->performStabilityCheck= 1;
-    ri_bs->maxIter              = 2;
-    ri_bs->maxChecks            = 1;
-    ri_bs->stabilityReduction   = 0.5;
-    ri_bs->stepControl1         = 0.65;
-    ri_bs->stepControl2         = 0.94;
-    ri_bs->stepControl3         = 0.02;
-    ri_bs->stepControl4         = 4.0;
-    ri_bs->orderControl1        = 0.8;
-    ri_bs->orderControl2        = 0.9;
-
     int firstStep = 0;
     const int length = r->N*3*2;
     if (ri_bs->y==NULL){
@@ -810,5 +789,26 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
 void reb_integrator_bs_synchronize(struct reb_simulation* r){
     // Do nothing.
+}
+
+
+void reb_integrator_bs_reset(struct reb_simulation* r){
+    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
+    // Defaul settings
+    ri_bs->scalAbsoluteTolerance= 1e-5;
+    ri_bs->scalRelativeTolerance= 1e-5;
+    ri_bs->maxStep              = 10; // Note: always positive
+    ri_bs->minStep              = 1e-5; // Note: always positive
+    ri_bs->performStabilityCheck= 1;
+    ri_bs->maxIter              = 2;
+    ri_bs->maxChecks            = 1;
+    ri_bs->stabilityReduction   = 0.5;
+    ri_bs->stepControl1         = 0.65;
+    ri_bs->stepControl2         = 0.94;
+    ri_bs->stepControl3         = 0.02;
+    ri_bs->stepControl4         = 4.0;
+    ri_bs->orderControl1        = 0.8;
+    ri_bs->orderControl2        = 0.9;
+
 }
 
