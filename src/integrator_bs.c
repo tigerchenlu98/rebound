@@ -285,14 +285,12 @@ void allocateState(struct ODEState* const state){
     if (!state->length){
         return;
     }
-    if (state->y){
-        free(state->y);
+    if (!state->y){
+        state->y = malloc(sizeof(double)*state->length);
     }
-    if (state->yDot){
-        free(state->yDot);
+    if (!state->yDot){
+        state->yDot = malloc(sizeof(double)*state->length);
     }
-    state->y = malloc(sizeof(double)*state->length);
-    state->yDot = malloc(sizeof(double)*state->length);
 }
 
 
@@ -360,7 +358,6 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     int targetIter = MAX(1, MIN(ri_bs->sequence_length - 2, (int) floor(0.5 - 0.6 * log10R)));
 
     double  maxError                 = DBL_MAX;
-    int previousRejected         = 0;
 
     const int forward = ri_bs->hNew >= 0.;
     int y_length = ri_bs->initialState.length;
@@ -449,7 +446,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                     switch (k - targetIter) {
 
                         case -1 :
-                            if ((targetIter > 1) && ! previousRejected) {
+                            if ((targetIter > 1) && ! ri_bs->previousRejected) {
 
                                 // check if we can stop iterations now
                                 if (error <= 1.0) {
@@ -607,7 +604,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
         int optimalIter;
         if (k == 1) {
             optimalIter = 2;
-            if (previousRejected) {
+            if (ri_bs->previousRejected) {
                 optimalIter = 1;
             }
         } else if (k <= targetIter) {
@@ -627,7 +624,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
             }
         }
 
-        if (previousRejected) {
+        if (ri_bs->previousRejected) {
             // after a rejected step neither order nor stepsize
             // should increase
             targetIter = MIN(optimalIter, k);
@@ -656,10 +653,11 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     }
 
     if (reject) {
-        previousRejected = 1;
+        ri_bs->previousRejected = 1;
         printf("Step rejected\n");
     } else {
-        previousRejected = 0;
+        ri_bs->previousRejected = 0;
+        ri_bs->firstStep = 0;
     }
 }
 
@@ -755,36 +753,38 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
 
+    // Setup integrator for N-body
+    fromSimulationToState(r, &ri_bs->initialState);
+    ri_bs->computeDerivatives  = computeDerivativesGravity;
+    ri_bs->ref    = r;
+    ri_bs->hNew   = r->dt;
+
+
+    // Generic integrator stuff
     if (ri_bs->sequence==NULL){
         allocate_sequence_arrays(ri_bs);
     }
 
-    const int length = r->N*3*2;
-    if (length>ri_bs->allocatedN){
-        allocate_data_arrays(ri_bs, length);
-        ri_bs->allocatedN = length;
+    if (ri_bs->initialState.length>ri_bs->allocatedN){
+        allocate_data_arrays(ri_bs, ri_bs->initialState.length);
+        ri_bs->allocatedN = ri_bs->initialState.length;
         ri_bs->firstStep = 1;
     }
-    ri_bs->computeDerivatives       = computeDerivativesGravity;
-    ri_bs->ref    = r;
-    ri_bs->hNew   = r->dt;
 
-    fromSimulationToState(r, &ri_bs->initialState);
-    ri_bs->finalState.length = length;
+    ri_bs->finalState.length = ri_bs->initialState.length;
     allocateState(&ri_bs->finalState);
 
-    // initial scaling
-    rescale(ri_bs, ri_bs->initialState.y, ri_bs->initialState.y, ri_bs->scale, length);
+    rescale(ri_bs, ri_bs->initialState.y, ri_bs->initialState.y, ri_bs->scale, ri_bs->initialState.length); // initial scaling
+
     ri_bs->computeDerivatives(ri_bs, ri_bs->initialState.yDot, r->t, ri_bs->initialState.y);
     singleStep(ri_bs, ri_bs->firstStep || r->status==REB_RUNNING_LAST_STEP);
 
-    fromStateToSimulation(r, &ri_bs->initialState);
     
+    // End Generic integrator.
+    // N-body specific:
+    fromStateToSimulation(r, &ri_bs->initialState);
     r->dt = ri_bs->hNew;
     r->dt_last_done = t_initial - r->t;
-    ri_bs->firstStep = 0;
-
-
 }
 
 void reb_integrator_bs_synchronize(struct reb_simulation* r){
@@ -794,20 +794,8 @@ void reb_integrator_bs_synchronize(struct reb_simulation* r){
 
 void reb_integrator_bs_reset(struct reb_simulation* r){
     struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
-    if (ri_bs->coeff){
-        for (int k = 1; k < ri_bs->sequence_length; ++k) {
-            free(ri_bs->coeff[k]);
-        }
-        free(ri_bs->coeff);
-        ri_bs->coeff = NULL;
-    }
-    free(ri_bs->costPerStep);
-    ri_bs->costPerStep = NULL;
-    free(ri_bs->costPerTimeUnit);
-    ri_bs->costPerTimeUnit = NULL;
-    free(ri_bs->optimalStep);
-    ri_bs->optimalStep = NULL;
-    // Data array
+
+    // Free data array
     free(ri_bs->y);
     ri_bs->y = NULL;
     free(ri_bs->y1);
@@ -846,8 +834,24 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
         free(ri_bs->fk);
         ri_bs->fk = NULL;
     }
+
+    // Free sequence arrays
     free(ri_bs->sequence);
     ri_bs->sequence = NULL;
+    
+    if (ri_bs->coeff){
+        for (int k = 1; k < ri_bs->sequence_length; ++k) {
+            free(ri_bs->coeff[k]);
+        }
+        free(ri_bs->coeff);
+        ri_bs->coeff = NULL;
+    }
+    free(ri_bs->costPerStep);
+    ri_bs->costPerStep = NULL;
+    free(ri_bs->costPerTimeUnit);
+    ri_bs->costPerTimeUnit = NULL;
+    free(ri_bs->optimalStep);
+    ri_bs->optimalStep = NULL;
     
     
     // Default settings
@@ -868,6 +872,7 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
     ri_bs->useInterpolationError= 1;
     ri_bs->mudif                = 4;
     ri_bs->firstStep            = 1;
+    ri_bs->previousRejected     = 0;
         
     const int maxOrder = 18;
     ri_bs->sequence_length      = maxOrder / 2;

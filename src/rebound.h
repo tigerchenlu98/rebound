@@ -260,6 +260,7 @@ struct reb_simulation_integrator_bs {
     double minStep;
     double maxStep;
     int firstStep;
+    int previousRejected;
     // AbstractIntegrator
     double stepSize;
     double hNew;
