@@ -74,10 +74,7 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
     for (int i = 0; i < y0_length; ++i) {
         yEnd[i] = y0[i] + subStep * f[0][i];
     }
-    ri_bs->computeDerivatives(ri_bs->ref, f[1], t, yEnd);
-    //for (int i = 0; i < y0_length; ++i) {
-    //    printf("%e             %e       \n", f[1][i], f[0][i]);
-    //}
+    ri_bs->computeDerivatives(f[1], yEnd, t, ri_bs->ref);
 
     // other substeps
     double* const yTmp = malloc(sizeof(double)*y0_length); // IMPROVE: should allocate this only once
@@ -97,7 +94,7 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
             yTmp[i]       = middle;
         }
 
-        ri_bs->computeDerivatives(ri_bs->ref, f[j + 1], t, yEnd);
+        ri_bs->computeDerivatives(f[j + 1], yEnd, t, ri_bs->ref);
 
         // stability check
         if (ri_bs->performStabilityCheck && (j <= ri_bs->maxChecks) && (k < ri_bs->maxIter)) {
@@ -310,7 +307,7 @@ void fromStateToSimulation(struct reb_simulation* const r, struct ODEState* cons
     r->t = state->t;
 }
 
-void computeDerivativesGravity(void * ref, double* const yDot, double const t, const double* const y){
+void computeDerivativesGravity(double* const yDot, const double* const y, double const t, void * ref){
     struct reb_simulation* const r = (struct reb_simulation* const)ref;
     for (int i=0; i<r->N; i++){
          struct reb_particle* const p = &(r->particles[i]);
@@ -561,7 +558,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
         //ri_bs->finalState.t = nextT;
         //ri_bs->finalState.y = ri_bs->y1;
         //ri_bs->finalState.length = y_length;
-        ri_bs->computeDerivatives(ri_bs->ref, ri_bs->y1Dot, nextT, ri_bs->y1);
+        ri_bs->computeDerivatives(ri_bs->y1Dot, ri_bs->y1, nextT, ri_bs->ref);
 
         if (mu >= 0 && ri_bs->useInterpolationError) {
             // use the interpolation error to limit stepsize
@@ -759,7 +756,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     rescale(ri_bs, ri_bs->initialState.y, ri_bs->initialState.y, ri_bs->scale, ri_bs->initialState.length); // initial scaling
 
-    ri_bs->computeDerivatives(ri_bs->ref, ri_bs->y0Dot, r->t, ri_bs->initialState.y);
+    ri_bs->computeDerivatives(ri_bs->y0Dot, ri_bs->initialState.y, r->t, ri_bs->ref);
     singleStep(ri_bs, ri_bs->firstStep || r->status==REB_RUNNING_LAST_STEP);
 
     
