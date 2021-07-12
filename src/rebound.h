@@ -219,17 +219,17 @@ struct reb_simulation_integrator_whfast {
 struct ODEState{
     double t; // getTime()
     double* y; // primary state
-    double* yDot; // secondary state
     int length; // number of components 
 };
 
 
 struct reb_simulation_integrator_bs {
     struct ODEState initialState;
-    struct ODEState finalState;
     unsigned int allocatedN;
     double* y;
+    double* y0Dot;  // derivate at initial time
     double* y1;
+    double* y1Dot;
     double** diagonal;
     double** y1Diag;
     double** yMidDots;
