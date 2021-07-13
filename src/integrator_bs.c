@@ -78,6 +78,10 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
 
     // other substeps
     double* const yTmp = malloc(sizeof(double)*y0_length); // IMPROVE: should allocate this only once
+    for (int i = 0; i < y0_length; ++i) {
+        yTmp[i] = y0[i];
+    }
+
     for (int j = 1; j < n; ++j) {
 
         if (2 * j == n) {
@@ -90,7 +94,7 @@ int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const d
         t += subStep;
         for (int i = 0; i < y0_length; ++i) {
             const double middle = yEnd[i];
-            yEnd[i]       = y0[i] + subStep2 * f[j][i];
+            yEnd[i]       = yTmp[i] + subStep2 * f[j][i];
             yTmp[i]       = middle;
         }
 
