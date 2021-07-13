@@ -11,7 +11,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-void computeDerivatives_ho(double* const yDot, const double* const y, double const t, void * ref){
+void derivatives_ho(double* const yDot, const double* const y, double const t, void * ref){
     yDot[0] = y[1];
     yDot[1] = -y[0];
 }
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     ri_bs.state.length = 2;
     ri_bs.hNew = 1e-3;
 
-    ri_bs.state.derivatives = computeDerivatives_ho;
+    ri_bs.state.derivatives = derivatives_ho;
     FILE* f = fopen("output.txt", "w");
     for(int i=0;i<100;i++){
         double t = ri_bs.state.t;

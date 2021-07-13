@@ -277,7 +277,7 @@ double estimateError(struct reb_simulation_integrator_bs* ri_bs, const int lengt
 }
 
 
-void computeDerivativesGravity(double* const yDot, const double* const y, double const t, void * ref){
+static void combinded_derivatives(double* const yDot, const double* const y, double const t, void * ref){
     struct reb_simulation* const r = (struct reb_simulation* const)ref;
     for (int i=0; i<r->N; i++){
          struct reb_particle* const p = &(r->particles[i]);
@@ -289,6 +289,7 @@ void computeDerivativesGravity(double* const yDot, const double* const y, double
          p->vz = y[i*6+5];
     }
     reb_update_acceleration(r);
+
     for (int i=0; i<r->N; i++){
         const struct reb_particle p = r->particles[i];
         yDot[i*6+0] = p.vx;
@@ -298,6 +299,11 @@ void computeDerivativesGravity(double* const yDot, const double* const y, double
         yDot[i*6+4] = p.ay;
         yDot[i*6+5] = p.az;
     }
+    if (r->ri_bs.state_user.derivatives){
+        const int nbody_length = r->N*3*2;
+        r->ri_bs.state_user.derivatives(yDot+nbody_length, y+nbody_length, t, r->ri_bs.state_user.ref);
+    }
+
 }
 
 void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLastStep){
@@ -748,7 +754,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
         y[nbody_length+i] = user_y[i];
     }
 
-    ri_bs->state.derivatives  = computeDerivativesGravity;
+    ri_bs->state.derivatives  = combinded_derivatives;
     ri_bs->state.ref    = r;
     ri_bs->hNew   = r->dt;
     if (r->status==REB_RUNNING_LAST_STEP){
