@@ -731,19 +731,7 @@ static void allocate_data_arrays(struct reb_simulation_integrator_bs* ri_bs, con
 }
 
 
-void reb_integrator_bs_part2(struct reb_simulation* r){
-    double t_initial = r->t;
-
-    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
-
-    // Setup integrator for N-body
-    fromSimulationToState(r, &ri_bs->initialState);
-    ri_bs->computeDerivatives  = computeDerivativesGravity;
-    ri_bs->ref    = r;
-    ri_bs->hNew   = r->dt;
-
-
-    // Generic integrator stuff
+void reb_integrator_bs_step(struct reb_simulation_integrator_bs* ri_bs){
     if (ri_bs->sequence==NULL){
         allocate_sequence_arrays(ri_bs);
     }
@@ -756,11 +744,27 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     rescale(ri_bs, ri_bs->initialState.y, ri_bs->initialState.y, ri_bs->scale, ri_bs->initialState.length); // initial scaling
 
-    ri_bs->computeDerivatives(ri_bs->y0Dot, ri_bs->initialState.y, r->t, ri_bs->ref);
-    singleStep(ri_bs, ri_bs->firstStep || r->status==REB_RUNNING_LAST_STEP);
+    ri_bs->computeDerivatives(ri_bs->y0Dot, ri_bs->initialState.y, ri_bs->initialState.t, ri_bs->ref);
+    singleStep(ri_bs, ri_bs->firstStep);
+}
 
-    
-    // End Generic integrator.
+void reb_integrator_bs_part2(struct reb_simulation* r){
+    double t_initial = r->t;
+
+    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
+
+    // Setup integrator for N-body
+    fromSimulationToState(r, &ri_bs->initialState);
+    ri_bs->computeDerivatives  = computeDerivativesGravity;
+    ri_bs->ref    = r;
+    ri_bs->hNew   = r->dt;
+    if (r->status==REB_RUNNING_LAST_STEP){
+        ri_bs->firstStep = 1;
+    }
+
+    // Generic integrator stuff
+    reb_integrator_bs_step(ri_bs);
+
     // N-body specific:
     fromStateToSimulation(r, &ri_bs->initialState);
     r->dt = ri_bs->hNew;
@@ -772,8 +776,7 @@ void reb_integrator_bs_synchronize(struct reb_simulation* r){
 }
 
 
-void reb_integrator_bs_reset(struct reb_simulation* r){
-    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
+void reb_integrator_bs_reset_struct(struct reb_simulation_integrator_bs* ri_bs){
 
     // Free data array
     free(ri_bs->y);
@@ -862,3 +865,7 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
     ri_bs->sequence_length      = maxOrder / 2;
 }
 
+void reb_integrator_bs_reset(struct reb_simulation* r){
+    struct reb_simulation_integrator_bs* ri_bs = &(r->ri_bs);
+    reb_integrator_bs_reset_struct(ri_bs);
+}
