@@ -216,15 +216,18 @@ struct reb_simulation_integrator_whfast {
     unsigned int recalculate_coordinates_but_not_synchronized_warning;
 };
 
-struct ODEState{
-    double t; // getTime()
-    double* y; // primary state
-    int length; // number of components 
+struct reb_ode_state{ // defines an ODE state
+    int length; // number of components / dimenion
+    double t;   // time
+    double* y;  // state 
+    void (*derivatives)(double* const yDot, const double* const y, double const t, void * ref); // right hand side 
+    void* ref;  // pointer to any additional data needed for derivatives
 };
 
 
 struct reb_simulation_integrator_bs {
-    struct ODEState initialState;
+    struct reb_ode_state state;  // combined state, nbody+user
+    struct reb_ode_state state_user;
     unsigned int allocatedN;
     double* y;
     double* y0Dot;  // derivate at initial time
@@ -265,8 +268,6 @@ struct reb_simulation_integrator_bs {
     double stepSize;
     double hNew;
 
-    void (*computeDerivatives)(double* const yDot, const double* const y, double const t, void * ref); 
-    void* ref; // reference to any additional data needed in computeDerivatives, i.e. simulation struct
 
 };
 
