@@ -40,6 +40,7 @@
 #include "integrator_whfast.h"
 #include "integrator_ias15.h"
 #include "integrator_mercurius.h"
+#include "integrator_bs.h"
 #include "boundary.h"
 #include "gravity.h"
 #include "collision.h"
@@ -64,7 +65,7 @@
 const int reb_max_messages_length = 1024;   // needs to be constant expression for array size
 const int reb_max_messages_N = 10;
 const char* reb_build_str = __DATE__ " " __TIME__;  // Date and time build string. 
-const char* reb_version_str = "3.17.2";         // **VERSIONLINE** This line gets updated automatically. Do not edit manually.
+const char* reb_version_str = "3.17.4";         // **VERSIONLINE** This line gets updated automatically. Do not edit manually.
 const char* reb_githash_str = STRINGIFY(GITHASH);             // This line gets updated automatically. Do not edit manually.
 
 static int reb_error_message_waiting(struct reb_simulation* const r);
@@ -314,6 +315,7 @@ void reb_free_pointers(struct reb_simulation* const r){
     reb_integrator_whfast_reset(r);
     reb_integrator_ias15_reset(r);
     reb_integrator_mercurius_reset(r);
+    reb_integrator_bs_reset(r);
     if(r->free_particle_ap){
         for(int i=0; i<r->N; i++){
             r->free_particle_ap(&r->particles[i]);
@@ -587,6 +589,10 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_eos.phi1 = REB_EOS_LF;
     r->ri_eos.safe_mode = 1;
     r->ri_eos.is_synchronized = 1;
+    
+    
+    // ********** NS
+    reb_integrator_bs_reset(r);
 
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;

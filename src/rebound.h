@@ -218,6 +218,61 @@ struct reb_simulation_integrator_whfast {
     unsigned int recalculate_coordinates_but_not_synchronized_warning;
 };
 
+struct reb_ode_state{ // defines an ODE state
+    int length; // number of components / dimenion
+    double t;   // time
+    double* y;  // state 
+    void (*derivatives)(double* const yDot, const double* const y, double const t, void * ref); // right hand side 
+    void* ref;  // pointer to any additional data needed for derivatives
+};
+
+
+struct reb_simulation_integrator_bs {
+    struct reb_ode_state state;  // combined state, nbody+user
+    struct reb_ode_state state_user;
+    unsigned int allocatedN;
+    double* y;
+    double* y0Dot;  // derivate at initial time
+    double* y1;
+    double* y1Dot;
+    double** diagonal;
+    double** y1Diag;
+    double** yMidDots;
+    double* scale;
+    double*** fk;
+    int* sequence;      // stepsize sequence
+    unsigned int sequence_length; 
+    int* costPerStep;   // overall cost of applying step reduction up to iteration k + 1, in number of calls.
+    double* costPerTimeUnit; // cost per unit step.
+    double* optimalStep; // optimal steps for each order. 
+    double** coeff;    // extrapolation coefficients.
+    int performStabilityCheck; // stability check enabling parameter
+    int maxChecks;  // maximal number of checks for each iteration. 
+    int maxIter;    // maximal number of iterations for which checks are performed.
+    double stabilityReduction; // stepsize reduction factor in case of stability check failure.
+    double stepControl1; 
+    double stepControl2; 
+    double stepControl3; 
+    double stepControl4; 
+    double orderControl1;
+    double orderControl2;
+    int useInterpolationError; // use interpolation error in stepsize control.
+    int mudif; // interpolation order control parameter.
+    // StepsizeHelper
+    double scalAbsoluteTolerance; // Allowed absolute scalar error.
+    double scalRelativeTolerance; // Allowed relative scalar error.
+    int mainSetDimension;
+    double minStep;
+    double maxStep;
+    int firstStep;
+    int previousRejected;
+    // AbstractIntegrator
+    double stepSize;
+    double hNew;
+
+
+};
+
 enum REB_EOS_TYPE {
     REB_EOS_LF = 0x00, 
     REB_EOS_LF4 = 0x01,
@@ -559,6 +614,7 @@ struct reb_simulation {
         REB_INTEGRATOR_MERCURIUS = 9,// MERCURIUS integrator 
         REB_INTEGRATOR_SABA = 10,    // SABA integrator family (Laskar and Robutel 2001)
         REB_INTEGRATOR_EOS = 11,     // Embedded Operator Splitting (EOS) integrator family (Rein 2019)
+        REB_INTEGRATOR_BS = 12,      // Gragg-Bulirsch-Stoer 
         } integrator;
     enum {
         REB_BOUNDARY_NONE = 0,      // Do not check for anything (default)
@@ -583,6 +639,7 @@ struct reb_simulation {
     struct reb_simulation_integrator_mercurius ri_mercurius;// The MERCURIUS struct
     struct reb_simulation_integrator_janus ri_janus;        // The JANUS struct 
     struct reb_simulation_integrator_eos ri_eos;            // The EOS struct 
+    struct reb_simulation_integrator_bs ri_bs;              // The BS struct
 
      // Callback functions
     void (*additional_forces) (struct reb_simulation* const r);
