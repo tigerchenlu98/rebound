@@ -61,6 +61,10 @@
 #include "integrator_bs.h"
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+    
+
+static const int maxOrder = 18;
+static const int sequence_length = maxOrder / 2;
 
 
 int tryStep(struct reb_simulation_integrator_bs* ri_bs, const double t0, const double* y0, const int y0_length, const double step, const int k, const double* scale, double** const f, double* const yMiddle, double* const yEnd) {
@@ -158,8 +162,7 @@ double getTolerance(struct reb_simulation_integrator_bs* ri_bs, int i, double sc
 
 void rescale(struct reb_simulation_integrator_bs* ri_bs, double* const y1, double* const y2, double* const scale, int scale_length) {
     for (int i = 0; i < scale_length; ++i) {
-        //scale[i] = getTolerance(ri_bs, i, MAX(fabs(y1[i]), fabs(y2[i])));  //TODO
-        scale[i] = getTolerance(ri_bs, i, 1.);
+        scale[i] = getTolerance(ri_bs, i, MAX(fabs(y1[i]), fabs(y2[i])));  
     }
 } 
 double filterStep(struct reb_simulation_integrator_bs* ri_bs, const double h, const int forward, const int acceptSmall){
@@ -311,7 +314,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
     // initial order selection
     const double tol    = ri_bs->scalRelativeTolerance;
     const double log10R = log10(MAX(1.0e-10, tol));
-    int targetIter = MAX(1, MIN(ri_bs->sequence_length - 2, (int) floor(0.5 - 0.6 * log10R)));
+    int targetIter = MAX(1, MIN(sequence_length - 2, (int) floor(0.5 - 0.6 * log10R)));
 
     double  maxError                 = DBL_MAX;
 
@@ -324,7 +327,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
         ri_bs->y[i] = ri_bs->state.y[i];
     }
 
-    for (int k = 0; k < ri_bs->sequence_length; ++k) {
+    for (int k = 0; k < sequence_length; ++k) {
         // first evaluation, at the beginning of the step
         // all sequences start from the same point, so we share the derivatives
         ri_bs->fk[k][0] = ri_bs->y0Dot;
@@ -569,7 +572,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
             if (ri_bs->costPerTimeUnit[k - 1] < ri_bs->orderControl1 * ri_bs->costPerTimeUnit[k]) {
                 optimalIter = k - 1;
             } else if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[k - 1]) {
-                optimalIter = MIN(k + 1, ri_bs->sequence_length - 2);
+                optimalIter = MIN(k + 1, sequence_length - 2);
             }
         } else {
             optimalIter = k - 1;
@@ -577,7 +580,7 @@ void singleStep(struct reb_simulation_integrator_bs* ri_bs, const int firstOrLas
                 optimalIter = k - 2;
             }
             if (ri_bs->costPerTimeUnit[k] < ri_bs->orderControl2 * ri_bs->costPerTimeUnit[optimalIter]) {
-                optimalIter = MIN(k, ri_bs->sequence_length - 2);
+                optimalIter = MIN(k, sequence_length - 2);
             }
         }
 
@@ -624,12 +627,10 @@ void reb_integrator_bs_part1(struct reb_simulation* r){
 }
 
 static void allocate_sequence_arrays(struct reb_simulation_integrator_bs* ri_bs){
-    int sequence_length = ri_bs->sequence_length;
-
     ri_bs->sequence        = malloc(sizeof(int)*sequence_length);
     ri_bs->costPerStep     = malloc(sizeof(int)*sequence_length);
     ri_bs->coeff           = malloc(sizeof(double*)*sequence_length);
-    for (int k = ri_bs->sequence_length; k < sequence_length; ++k) {
+    for (int k = sequence_length; k < sequence_length; ++k) {
         ri_bs->coeff[k] = NULL;
     }
     ri_bs->costPerTimeUnit = malloc(sizeof(double)*sequence_length);
@@ -677,7 +678,6 @@ static void allocate_sequence_arrays(struct reb_simulation_integrator_bs* ri_bs)
 }
 
 static void allocate_data_arrays(struct reb_simulation_integrator_bs* ri_bs, const int length){
-    int sequence_length = ri_bs->sequence_length;
     ri_bs->y         = realloc(ri_bs->y, sizeof(double)*length);
     ri_bs->y0Dot     = realloc(ri_bs->y0Dot, sizeof(double)*length);
     ri_bs->y1        = realloc(ri_bs->y1, sizeof(double)*length);
@@ -803,28 +803,28 @@ void reb_integrator_bs_reset_struct(struct reb_simulation_integrator_bs* ri_bs){
     ri_bs->scale = NULL;
     
     if (ri_bs->diagonal){
-        for (int k = 0; k < ri_bs->sequence_length - 1; ++k) {
+        for (int k = 0; k < sequence_length - 1; ++k) {
             ri_bs->diagonal[k] = NULL;
         }
         free(ri_bs->diagonal);
         ri_bs->diagonal = NULL;
     }
     if (ri_bs->y1Diag){
-        for (int k = 0; k < ri_bs->sequence_length - 1; ++k) {
+        for (int k = 0; k < sequence_length - 1; ++k) {
             ri_bs->y1Diag[k] = NULL;
         }
         free(ri_bs->y1Diag);
         ri_bs->y1Diag = NULL;
     }
     if (ri_bs->yMidDots){
-        for (int k = 0; k < 1+2*ri_bs->sequence_length; ++k) {
+        for (int k = 0; k < 1+2*sequence_length; ++k) {
             ri_bs->yMidDots[k] = NULL;
         }
         free(ri_bs->yMidDots);
         ri_bs->yMidDots = NULL;
     }
     if (ri_bs->fk){
-        for (int k = 0; k < ri_bs->sequence_length; ++k) {
+        for (int k = 0; k < sequence_length; ++k) {
             for(int i = 1; i<ri_bs->sequence[k] + 1; i++){
                 free(ri_bs->fk[k][i]);
             }
@@ -839,7 +839,7 @@ void reb_integrator_bs_reset_struct(struct reb_simulation_integrator_bs* ri_bs){
     ri_bs->sequence = NULL;
     
     if (ri_bs->coeff){
-        for (int k = 1; k < ri_bs->sequence_length; ++k) {
+        for (int k = 1; k < sequence_length; ++k) {
             free(ri_bs->coeff[k]);
         }
         free(ri_bs->coeff);
@@ -873,8 +873,6 @@ void reb_integrator_bs_reset_struct(struct reb_simulation_integrator_bs* ri_bs){
     ri_bs->firstStep            = 1;
     ri_bs->previousRejected     = 0;
         
-    const int maxOrder = 18;
-    ri_bs->sequence_length      = maxOrder / 2;
 }
 
 void reb_integrator_bs_reset(struct reb_simulation* r){

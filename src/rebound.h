@@ -239,7 +239,6 @@ struct reb_simulation_integrator_bs {
     double* scale;
     double*** fk;
     int* sequence;      // stepsize sequence
-    unsigned int sequence_length; 
     int* costPerStep;   // overall cost of applying step reduction up to iteration k + 1, in number of calls.
     double* costPerTimeUnit; // cost per unit step.
     double* optimalStep; // optimal steps for each order. 
