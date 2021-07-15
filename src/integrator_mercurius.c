@@ -265,6 +265,27 @@ void reb_integrator_mercurius_interaction_step(struct reb_simulation* const r, d
     }
 }
 
+static double F_sun(struct reb_simulation* const r){
+    // Assume coordinates in dh
+    struct reb_simulation_integrator_mercurius* rim = &(r->ri_mercurius);
+    if (rim->R1<=0. || rim->R2<=0.){ 
+        return 0.;
+    }
+    double prod = 1.;
+    for (int i=1;i<N;i++){
+        double x = r->particles[i].x;
+        double y = r->particles[i].y;
+        double z = r->particles[i].z;
+        double d = sqrt(x*x + y*y + z*z);
+        // Not quite right 
+        prod *= 1.-rim->L(r, d+(R2-10.*R1)/9. , 10./9.*(R2-R1)); 
+    }
+    return 1.-prod;
+
+
+
+}
+
 void reb_integrator_mercurius_jump_step(struct reb_simulation* const r, double dt){
     struct reb_particle* restrict const particles = r->particles;
     const int N_active = r->N_active==-1?r->N:r->N_active;
