@@ -272,13 +272,14 @@ static double F_sun(struct reb_simulation* const r){
         return 0.;
     }
     double prod = 1.;
-    for (int i=1;i<N;i++){
+    const double R1 = r->ri_mercurius.R1;
+    const double R2 = r->ri_mercurius.R2;
+    for (int i=1;i<r->N;i++){
         double x = r->particles[i].x;
         double y = r->particles[i].y;
         double z = r->particles[i].z;
         double d = sqrt(x*x + y*y + z*z);
-        // Not quite right 
-        prod *= 1.-rim->L(r, d+(R2-10.*R1)/9. , 10./9.*(R2-R1)); 
+        prod *= 1.-rim->L(r, (R1-0.9*d -R2 * 0.1)*R2/(R1-R2) , R2); 
     }
     return 1.-prod;
 
