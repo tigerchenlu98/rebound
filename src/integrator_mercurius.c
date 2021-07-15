@@ -335,8 +335,24 @@ void reb_integrator_mercurius_com_step(struct reb_simulation* const r, double dt
 void reb_integrator_mercurius_kepler_step(struct reb_simulation* const r, double dt){
     struct reb_particle* restrict const particles = r->particles;
     const int N = r->N;
-    for (int i=1;i<N;i++){
-        reb_whfast_kepler_solver(r,particles,r->G*particles[0].m,i,dt); // in dh
+    double F = F_sun(r);
+    if (F<=0.){
+        // Probably no need for BS
+        for (int i=1;i<N;i++){
+            reb_whfast_kepler_solver(r,particles,r->G*particles[0].m,i,dt); // in dh
+        }
+        F = F_sun(r);
+        if (F>0.){
+            // Need BS after all. This should be rare. 
+            // Undo Kepler update.
+            for (int i=1;i<N;i++){
+                reb_whfast_kepler_solver(r,particles,r->G*particles[0].m,i,-dt); // in dh
+            }
+        }
+    }
+    if (F>0.){
+        // Need BS Update.
+        printf("Need BS Kepler.\n");
     }
 }
 
