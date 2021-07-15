@@ -21,9 +21,11 @@ double E0;
 int main(int argc, char* argv[]){
     struct reb_simulation* r = reb_create_simulation();
     r->dt         = 0.01*2.*M_PI;        // initial timestep
-    r->integrator     = REB_INTEGRATOR_IAS15;
+    r->integrator     = REB_INTEGRATOR_MERCURIUS;
     r->ri_bs.scalAbsoluteTolerance = 1e-14;
     r->ri_bs.scalRelativeTolerance = 1e-14;
+    r->ri_mercurius.R1= 0.5;
+    r->ri_mercurius.R2= 1.5;
     r->heartbeat      = heartbeat;
     r->usleep    = 10000;        // Slow down integration (for visualization only)
 
@@ -49,7 +51,7 @@ int main(int argc, char* argv[]){
 }
 
 void heartbeat(struct reb_simulation* r){
-    if (reb_output_check(r, 10.*2.*M_PI)){  
+    if (reb_output_check(r, 1.*2.*M_PI)){  
         reb_output_timing(r, 0);
         double E1 = reb_tools_energy(r);
         printf("\n===\nE= %.4e\n ", fabs((E0-E1)/E0));

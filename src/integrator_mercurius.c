@@ -279,7 +279,7 @@ static double F_sun(struct reb_simulation* const r){
         double y = r->particles[i].y;
         double z = r->particles[i].z;
         double d = sqrt(x*x + y*y + z*z);
-        prod *= 1.-rim->L(r, (R1-0.9*d -R2 * 0.1)*R2/(R1-R2) , R2); 
+        prod *= rim->L(r, (R1-0.9*d -R2 * 0.1)*R2/(R1-R2) , R2); // Not L is 1-f from DL2000 
     }
     return 1.-prod;
 
@@ -289,21 +289,40 @@ static double F_sun(struct reb_simulation* const r){
 
 void reb_integrator_mercurius_jump_step(struct reb_simulation* const r, double dt){
     struct reb_particle* restrict const particles = r->particles;
-    const int N_active = r->N_active==-1?r->N:r->N_active;
-    const int N = r->testparticle_type==0 ? N_active: r->N;
-    double px=0., py=0., pz=0.;
-    for (int i=1;i<N;i++){
-        px += r->particles[i].vx*r->particles[i].m; // in dh
-        py += r->particles[i].vy*r->particles[i].m; 
-        pz += r->particles[i].vz*r->particles[i].m;
+
+    double F = F_sun(r);
+    if (F<=0.){
+        // Probably no need for BS
+        const int N_active = r->N_active==-1?r->N:r->N_active;
+        const int N = r->testparticle_type==0 ? N_active: r->N;
+        double px=0., py=0., pz=0.;
+        for (int i=1;i<N;i++){
+            px += r->particles[i].vx*r->particles[i].m; // in dh
+            py += r->particles[i].vy*r->particles[i].m; 
+            pz += r->particles[i].vz*r->particles[i].m;
+        }
+        px /= r->particles[0].m;
+        py /= r->particles[0].m;
+        pz /= r->particles[0].m;
+        for (int i=1;i<N;i++){
+            particles[i].x += dt*px;
+            particles[i].y += dt*py;
+            particles[i].z += dt*pz;
+        }
+        F = F_sun(r);
+        if (F>0.){
+            // Need BS after all. This should be rare. 
+            // Undo simple update.
+            for (int i=1;i<N;i++){
+                particles[i].x -= dt*px;
+                particles[i].y -= dt*py;
+                particles[i].z -= dt*pz;
+            }
+        }
     }
-    px /= r->particles[0].m;
-    py /= r->particles[0].m;
-    pz /= r->particles[0].m;
-    for (int i=1;i<N;i++){
-        particles[i].x += dt*px;
-        particles[i].y += dt*py;
-        particles[i].z += dt*pz;
+    if (F>0.){
+        // Need BS Update.
+        printf("Need BS Jump.\n");
     }
 }
 
