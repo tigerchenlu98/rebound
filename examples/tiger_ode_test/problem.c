@@ -5,7 +5,7 @@
 #include <time.h>
 
 #define PI 3.14159265
-
+double threshold = 0.0;
 
 double vis_viva(struct reb_simulation* sim, struct reb_particle* const pi, struct reb_particle* const source){
     // Returns semimajor axis via the vis-viva equation
@@ -124,15 +124,22 @@ struct reb_vec3d reb_calculate_quad(struct reb_simulation* sim, struct reb_parti
 
 
     // acceleration on i due to quadrupole of j
-    double quad_prefactor = (pow(ri, 5) * (1 + (mj / mi)) * (loves[i] / 1.)) / pow(dist, 4);
+    double quad_prefactor = (pow(ri, 5) * (1 + (mj / mi)) * (loves[i] / 2.)) / pow(dist, 4);
     double omega_dot_rhat = sx * dx_hat + sy * dy_hat + sz * dz_hat;
     double omega_squared = sx * sx + sy * sy + sz * sz;
-
-    double qx = quad_prefactor * ((5 * pow(omega_dot_rhat, 2) - omega_squared - (12. * sim->G * mj / pow(dist, 3))) * dx_hat - (2 * omega_dot_rhat * sx));
-    double qy = quad_prefactor * ((5 * pow(omega_dot_rhat, 2) - omega_squared - (12. * sim->G * mj / pow(dist, 3))) * dy_hat - (2 * omega_dot_rhat * sy));
-    double qz = quad_prefactor * ((5 * pow(omega_dot_rhat, 2) - omega_squared - (12. * sim->G * mj / pow(dist, 3))) * dz_hat - (2 * omega_dot_rhat * sz));
+    double t1 = 5 * pow(omega_dot_rhat, 2) - omega_squared - (12. * sim->G * mj / pow(dist, 3)); 
     
+    double qx = quad_prefactor * (t1 * dx_hat - (2 * omega_dot_rhat * sx));
+    double qy = quad_prefactor * (t1 * dy_hat - (2 * omega_dot_rhat * sy));
+    double qz = quad_prefactor * (t1 * dz_hat - (2 * omega_dot_rhat * sz));
+    
+ //   double t2 = 2 * omega_dot_rhat * sz;
     //printf("%d %d %f\n", i, j, 12. * sim->G * mj / pow(dist, 3));
+    
+//    if (sim->t / (2 * PI) > threshold && j == 0 && i == 2){
+//    	printf("%f,%0.15f,%0.15f,%0.15f,%0.15f\n", sim->t / (2 * PI), quad_prefactor, t1 * dz_hat, t2, dz_hat);
+//	threshold += 10.0;
+//    }
     
     tot_force.x = qx;
     tot_force.y = qy;
@@ -226,7 +233,7 @@ struct reb_vec3d reb_calculate_tidal(struct reb_simulation* sim, struct reb_part
     double vec1_z = 3 * rhat_dot_vel * dz_hat;
 
     // Tidal damping on i due to j
-    double prefactor = -((6 * n * loves[i]) / tidals[i]) * (mj / mi) * pow((ri / a), 5) * pow((a / dist), 8);
+    double prefactor = -((3. * n * loves[i]) / tidals[i]) * (mj / mi) * pow((ri / a), 5) * pow((a / dist), 8);
 
     // Build vector 2 - this is the parenthesis term in (4)
     double temp_x = rhat_cross_v_x - dist * sx;
@@ -267,14 +274,16 @@ void additional_forces(struct reb_simulation* sim){
         double mi = pi->m;
         double mj = pj->m;
 
-        struct reb_vec3d quad = reb_calculate_quad(sim, pi, i, pj, j);
-        struct reb_vec3d tidal = reb_calculate_tidal(sim, pi, i, pj, j);
-     /*   
-        if (sim->t < 0.1){
-            printf("Quad: t = %f, %d %d %0.15f %0.15f %0.15f\n",sim->t, i, j, quad.x / pow(2 * PI, 1.33333), quad.y / pow(2 * PI, 1.333333), quad.z / pow(2 * PI, 1.33333333));     
-     //       printf("Tidal: t = %f, %d %d %0.15f %0.15f %0.15f\n",sim->t, i, j, tidal.x, tidal.y, tidal.z);     
-        }
-*/
+        struct reb_vec3d quad = {0};
+        struct reb_vec3d tidal = {0};
+	
+	if (j == 0){
+            quad = reb_calculate_quad(sim, pi, i, pj, j);
+	    tidal = reb_calculate_tidal(sim, pi, i, pj, j);
+            }
+	
+      
+
         pi->ax -= ((mj / (mi + mj)) * (quad.x + tidal.x));
         pi->ay -= ((mj / (mi + mj)) * (quad.y + tidal.y));
         pi->az -= ((mj / (mi + mj)) * (quad.z + tidal.z));
@@ -333,11 +342,14 @@ void derivatives(struct reb_ode* ode, double* const yDot, const double* const y,
     yDot[6] = 0;
     yDot[7] = 0;
     yDot[8] = 0;
+    yDot[9] = 0;
+    yDot[10] = 0;
 
     for (int i = 0; i < nb; i++){
       for (int j = 0; j < nb; j++){
           if (i != j){
-            struct reb_particle* pi = &(sim->particles[i]);
+            // all this lookup can be made more efficient
+	    struct reb_particle* pi = &(sim->particles[i]);
             struct reb_particle* pj = &(sim->particles[j]);
 
             double dx = pj->x - pi->x;
@@ -358,7 +370,11 @@ void derivatives(struct reb_ode* ode, double* const yDot, const double* const y,
             }
 
             struct reb_vec3d quad = reb_calculate_quad(sim, pi, i, pj, j); // Swapped for spin EOM
-            struct reb_vec3d tidal = reb_calculate_tidal(sim, pi, i, pj, j);
+            struct reb_vec3d tidal = {0};
+//
+	    if (j == 0){
+	        tidal = reb_calculate_tidal(sim, pi, i, pj, j);
+	    }
 
             double tot_x = quad.x + tidal.x;
             double tot_y = quad.y + tidal.y;
@@ -367,10 +383,25 @@ void derivatives(struct reb_ode* ode, double* const yDot, const double* const y,
 
             yDot[i * 3] += ((dy * tot_z - dz * tot_y) * (mu_ij / moi_i));
             yDot[i * 3 + 1] += ((dz * tot_x - dx * tot_z) * (mu_ij / moi_i));
-            yDot[i * 3 + 2] += ((dx * tot_y - dy * tot_x) * (mu_ij / moi_i));
+	    yDot[i * 3 + 2] += ((dx * tot_y - dy * tot_x) * (mu_ij / moi_i));
           }
       }
+      // Track spin of the planet
+ //     if (i != 0){
+//	int index = 2 - i;
+//	double result = (sqrt(ode->y[i*3] * ode->y[i*3] + ode->y[i*3+1] * ode->y[i*3+1] + ode->y[i*3+2] * ode->y[i*3+2]));
+//	if (result > 2. * PI){
+//	    result = fmod(result, 2. * PI);
+//	}
+
+//	yDot[10 - index] = result;
+//      }
     }
+
+ //   if (sim->t / (2 * PI) > threshold){
+ //   	printf("%f,%0.15f,%0.15f,%0.15f\n", sim->t / (2 * PI), yDot[6], yDot[7], yDot[8]);
+//	threshold += 10.0;
+//    }
     
 }
 
@@ -378,18 +409,19 @@ int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
 
     reb_add_fmt(r, "m r", 1., 0.00465);                // Central object
-    reb_add_fmt(r, "m a e r inc Omega pomega l", 5. * 3.0e-6, 0.175, 0.01, 2.5 * 4.26e-5, 1. * (PI / 180.), 40. * (PI / 180.), 60. * (PI / 180.), 45. * (PI / 180.)); // Planet 1
-    reb_add_fmt(r, "m a e r inc Omega pomega l", 5.5 * 3.0e-6, 0.235, 0.01, 2.5 * 4.26e-5, 1. * (PI / 180.), 210. * (PI / 180.), 120. * (PI / 180.), 90. * (PI / 180.));
+    reb_add_fmt(r, "m a e r inc Omega pomega M", 5. * 3.0e-6, 0.175, 0.01, 2.5 * 4.26e-5, 0.5 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.)); // Planet 1
+    reb_add_fmt(r, "m a e r inc Omega pomega M", 5. * 3.0e-6, 0.235, 0.01, 2.5 * 4.26e-5, -0.4310 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.));
     reb_move_to_com(r);
     r->N_active = 3;
 
     r->additional_forces = additional_forces;
     r->integrator = REB_INTEGRATOR_WHFAST;  // Bulirsch-Stoer integrator
-    //r->ri_bs.eps_rel = 1e-8;            // Relative tolerance
-    //r->ri_bs.eps_abs = 1e-8;            // Absolute tolerance
+  //  r->ri_bs.eps_rel = 1e-8;            // Relative tolerance
+  //  r->ri_bs.eps_abs = 1e-8;            // Absolute tolerance
 //    r->ri_whfast.safe_mode = 0; 
     r->dt = 1e-2;
     r->force_is_velocity_dependent = 1;
+    
 
     // Here we define the spins of the three bodies
     struct reb_vec3d solar_sv = {0};
@@ -397,21 +429,23 @@ int main(int argc, char* argv[]) {
     double solar_spin = (2 * PI) / solar_spin_period;
     double obliquity_solar = 0. * (PI / 180.);
     double res_angle_solar = 60. * (PI / 180.);
-    solar_sv.x = solar_spin * sin(obliquity_solar) * cos(res_angle_solar);
-    solar_sv.y = solar_spin * sin(obliquity_solar) * sin(res_angle_solar);
-    solar_sv.z = solar_spin * cos(obliquity_solar);
+    double solar_c = 1;
+    solar_sv.x = solar_c * solar_spin * 0.0; //sin(obliquity_solar) * cos(res_angle_solar);
+    solar_sv.y = solar_c * solar_spin * 0.0; //sin(obliquity_solar) * sin(res_angle_solar);
+    solar_sv.z = solar_c * solar_spin * 1.0; //cos(obliquity_solar);
 //    printf("%f\n", solar_spin);
     //printf("%f %f %f\n", solar_sv.x, solar_sv.y, solar_sv.z);
-
+    
+    double planet_c = 1;
     struct reb_vec3d p1_sv_p = {0};
     double spin_period_1 = 5 * 2 * PI / 365; // 5 days in reb years
     double spin_1 = (2 * PI) / spin_period_1; // magnitude of spin vector is spin PERIOD in rad/reb years
     double obliquity_1 = 1. * (PI / 180.);
     double res_angle_1 = 120. * (PI / 180.);
-    p1_sv_p.x = spin_1 * sin(obliquity_1) * cos(res_angle_1);
-    p1_sv_p.y = spin_1 * sin(obliquity_1) * sin(res_angle_1);
-    p1_sv_p.z = spin_1 * cos(obliquity_1);
- //   struct reb_vec3d p1_spin = inverse_transform(1. * (PI / 180.), 40. * (PI / 180), p1_sv_p);
+    p1_sv_p.x = planet_c * spin_1 * 0.0; //sin(obliquity_1) * cos(res_angle_1);
+    p1_sv_p.y = planet_c * spin_1 * -0.0261769; //sin(obliquity_1) * sin(res_angle_1);
+    p1_sv_p.z = planet_c * spin_1 * 0.99965732; // cos(obliquity_1);
+    struct reb_vec3d p1_spin = {p1_sv_p.x, p1_sv_p.y, p1_sv_p.z}; // inverse_transform(1. * (PI / 180.), 40. * (PI / 180), p1_sv_p);
 //    printf("%f %f %f\n", p1_spin.x * 2 * PI, p1_spin.y * 2 * PI, p1_spin.z * 2 * PI);
     
 
@@ -420,50 +454,77 @@ int main(int argc, char* argv[]) {
     double spin_2 = (2 * PI) / spin_period_2; // magnitude of spin vector is spin PERIOD in rad/reb years
     double obliquity_2 = 1. * (PI / 180.);
     double res_angle_2 = 180. * (PI / 180.);
-    p2_sv_p.x = spin_2 * sin(obliquity_2) * cos(res_angle_2);
-    p2_sv_p.y = spin_2 * sin(obliquity_2) * sin(res_angle_2);
-    p2_sv_p.z = spin_2 * cos(obliquity_2);
-//    struct reb_vec3d p2_spin = inverse_transform(1. * (PI / 180.), 210. * (PI / 180), p2_sv_p);
+    p2_sv_p.x = planet_c * spin_2 * 0.0; // sin(obliquity_2) * cos(res_angle_2);
+    p2_sv_p.y = planet_c * spin_2 * 0.0249736; // sin(obliquity_2) * sin(res_angle_2);
+    p2_sv_p.z = planet_c * spin_2 * 0.99968811; // cos(obliquity_2);
+    struct reb_vec3d p2_spin = {p2_sv_p.x, p2_sv_p.y, p2_sv_p.z}; //inverse_transform(1. * (PI / 180.), 210. * (PI / 180), p2_sv_p);
 //    printf("%f %f %f\n", p2_spin.x * 2 * PI, p2_spin.y * 2 * PI, p2_spin.z * 2 * PI);
-
-    struct reb_ode* spin_eom = reb_create_ode(r,9);   // Add an ODE with 2 dimensions
+    
+    struct reb_ode* spin_eom = reb_create_ode(r,11);   // Add an ODE with 9 dimensions. 3 for each body's spin axis. 2 more (temp) to track rotation angle
     spin_eom->derivatives = derivatives;              // Right hand side of the ODE
     spin_eom->y[0] = solar_sv.x;                               // Initial conditions
     spin_eom->y[1] = solar_sv.y;
     spin_eom->y[2] = solar_sv.z;
 
-    spin_eom->y[3] = p1_sv_p.x;                               // Initial conditions
-    spin_eom->y[4] = p1_sv_p.y;
-    spin_eom->y[5] = p1_sv_p.z;
+    spin_eom->y[3] = p1_spin.x;                               // Initial conditions
+    spin_eom->y[4] = p1_spin.y;
+    spin_eom->y[5] = p1_spin.z;
 
-    spin_eom->y[6] = p2_sv_p.x;                               // Initial conditions
-    spin_eom->y[7] = p2_sv_p.y;
-    spin_eom->y[8] = p2_sv_p.z;
+    spin_eom->y[6] = p2_spin.x;                               // Initial conditions
+    spin_eom->y[7] = p2_spin.y;
+    spin_eom->y[8] = p2_spin.z;
+
+    spin_eom->y[9] = 0.0; // Initial spin configuration psi = 0
+    spin_eom->y[10] = 0.0;
 
     r->odes = &spin_eom;
-    clock_t start, end;
-    double cpu_time_used;
+    //clock_t start, end;
+    //double cpu_time_used;
 
-   FILE* f = fopen("2_19_a_out.txt","w");
-   fprintf(f, "t, a1, a2, o1, o2");
-    start = clock();
-    for (int i=0; i<10000; i++){
+   FILE* f = fopen("6_29_exact_sm19_except_a.txt","w");
+   fprintf(f, "t,a1,i1,e1,sx1,sy1,sz1,S1,omega1,Omega1,f1,psi1,x1,y1,z1,a2,i2,e2,sx2,sy2,sz2,S2,omega2,Omega2,f2,psi2,x2,y2,z2\n");
+   //fprintf(f, "t,a1,a2\n");
 
+//   FILE* star_f1 = fopen("4_21_forces_star_on_p1_no_dsz.txt", "w");
+//   fprintf(star_f1, "t,qx,qy,qz,tx,ty,tz,x,y,z\n");
+   
+//   FILE* star_f2 = fopen("4_21_forces_star_on_p2_no_dsz.txt", "w");
+//   fprintf(star_f2, "t,qx,qy,qz,tx,ty,tz,x,y,z\n");
+   
+//   FILE* p1_f = fopen("4_21_forces_p2_on_p1_no_dsz.txt", "w");
+//   fprintf(p1_f, "t,qx,qy,qz,x,y,z\n");
+   
+//   FILE* p2_f = fopen("4_21_forces_p1_on_p2_no_dsz.txt", "w");
+//   fprintf(p2_f, "t,qx,qy,qz,x,y,z\n");
+
+    //start = clock();
+    for (int i=0; i<100000; i++){
+	
         struct reb_particle sun = r->particles[0];
         struct reb_particle p1 = r->particles[1];
         struct reb_particle p2 = r->particles[2];
 
         struct reb_orbit o1 = reb_tools_particle_to_orbit(r->G, p1, sun);
         double a1 = o1.a;//vis_viva(r, &p1, &sun);
+	double O1 = o1.Omega;
+	double i1 = o1.inc;
+	double pom1 = o1.pomega;
+	double f1 = o1.f;
+	double e1 = o1.e;
 
         struct reb_orbit o2 = reb_tools_particle_to_orbit(r->G, p2, sun);
         double a2 = o2.a;//vis_viva(r, &p2, &sun);
+	double O2 = o2.Omega;
+	double i2 = o2.inc;
+	double pom2 = o2.pomega;
+	double f2 = o2.f;
+	double e2 = o2.e;
 
-        struct reb_vec3d s1 = {spin_eom->y[3], spin_eom->y[4], spin_eom->y[5]};
-        struct reb_vec3d s2 = {spin_eom->y[6], spin_eom->y[7], spin_eom->y[8]};
+        struct reb_vec3d s1_inv = {spin_eom->y[3], spin_eom->y[4], spin_eom->y[5]};
+        struct reb_vec3d s2_inv = {spin_eom->y[6], spin_eom->y[7], spin_eom->y[8]};
 
-        //struct reb_vec3d s1 = transform(i1, omega1, s1_inv);
-        //struct reb_vec3d s2 = transform(i2, omega2, s2_inv);
+        struct reb_vec3d s1 = transform(i1, O1, s1_inv);
+        struct reb_vec3d s2 = transform(i2, O2, s2_inv);
 
         // Interpret in the planet frame
         double mag1 = sqrt(s1.x * s1.x + s1.y * s1.y + s1.z * s1.z);
@@ -471,26 +532,50 @@ int main(int argc, char* argv[]) {
         double mag2 = sqrt(s2.x * s2.x + s2.y * s2.y + s2.z * s2.z);
         double ob2 = acos(s2.z / mag2) * (180 / PI);
         
+//	double dx_1 = sun.x - p1.x;
+//        double dy_1 = sun.y - p1.y;
+//        double dz_1 = sun.z - p1.z;
+	
+//	double dx_2 = sun.x - p2.x;
+//        double dy_2 = sun.y - p2.y;
+//        double dz_2 = sun.z - p2.z;
+
+//	double dx_pp = p1.x - p2.x;
+//        double dy_pp = p1.y - p2.y;
+//        double dz_pp = p1.z - p2.z;
+
+        
 //        double a1_v = vis_viva(r, &p1, &sun);
 //        double a2_v = vis_viva(r, &p2, &sun);
          
         if (i % 100 == 0){
-            end = clock();
-            cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-            printf("%d iterations complete in %f seconds\n", i, cpu_time_used);
             printf("t=%f\t a1=%.6f\t a2=%.6f\t o1=%0.5f\t o2=%0.5f\n", r->t / (2 * PI), a1, a2, ob1, ob2);
-            start = clock();
+	    //printf("%f\n", r->t / (2 * PI));
         }
         //printf("t = %f\t a1 = %.10f\t a1v = %0.10f\t dif_1 = %0.5f\t a2 = %0.10f\t a2v = %0.10f\t dif_2 = %0.5f\n", r->t / (2 * PI), a1, a1_v, (a1_v - a1) / a1 * 100.0, a2, a2_v, (a2_v - a2) / a2 * 100.0);
-        fprintf(f, "t=%f\t a1=%.6f\t a2=%.6f\t o1=%0.5f\t o2=%0.5f\n", r->t / (2 * PI), a1, a2, ob1, ob2);
+        fprintf(f, "%f,%f,%f,%f,%0.10f,%0.10f,%0.10f,%0.10f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%0.10f,%0.10f,%0.10f,%0.10f,%f,%f,%f,%f,%f,%f,%f\n", r->t / (2 * PI), a1, i1, e1, s1_inv.x, s1_inv.y, s1_inv.z, mag1, pom1, O1, f1, spin_eom->y[9], p1.x,p1.y,p1.z,a2, i2, e2, s2_inv.x, s2_inv.y, s2_inv.z, mag2, pom2, O2, f2, spin_eom->y[10], p2.x,p2.y,p2.z);
+	//fprintf(f, "%f,%f,%f\n", r->t / (2 * PI), a1, a2);
         //printf("t=%f\t %0.2f\t %0.2f\t %0.2f\n", r->t, spin_eom->y[3], spin_eom->y[4], spin_eom->y[5]);
 
+  //      struct reb_vec3d quad_s_2 = reb_calculate_quad(r, &p2, 2, &sun, 0);
+//	struct reb_vec3d tidal_s_2 = reb_calculate_tidal(r, &p2, 2, &sun, 0);
+        
+//	struct reb_vec3d quad_s_1 = reb_calculate_quad(r, &p1, 1, &sun, 0);
+//	struct reb_vec3d tidal_s_1 = reb_calculate_tidal(r, &p1, 1, &sun, 0);
+        
+//	struct reb_vec3d quad_p1_on_p2 = reb_calculate_quad(r, &p2, 2, &p1, 1);
+//	struct reb_vec3d quad_p2_on_p1 = reb_calculate_quad(r, &p1, 1, &p2, 2);
+
+	//fprintf(star_f1, "%f,%0.15f,%0.15f,%0.15f,%0.15f,%0.15f,%0.15f,%f,%f,%f\n", r->t / (2 * PI), quad_s_1.x, quad_s_1.y, quad_s_1.z, tidal_s_1.x, tidal_s_1.y, tidal_s_1.z, dx_1, dy_1, dz_1);
+	//fprintf(star_f2, "%f,%0.15f,%0.15f,%0.15f,%0.15f,%0.15f,%0.15f,%f,%f,%f\n", r->t / (2 * PI), quad_s_2.x, quad_s_2.y, quad_s_2.z, tidal_s_2.x, tidal_s_2.y, tidal_s_2.z, dx_2, dy_2, dz_2);
+	//fprintf(p1_f, "%f,%0.15f,%0.15f,%0.15f,%f,%f,%f\n", r->t / (2 * PI), quad_p2_on_p1.x, quad_p2_on_p1.y, quad_p2_on_p1.z, -dx_pp, -dy_pp, -dz_pp);
+	//fprintf(p2_f, "%f,%0.15f,%0.15f,%0.15f,%f,%f,%f\n", r->t / (2 * PI), quad_p1_on_p2.x, quad_p1_on_p2.y, quad_p1_on_p2.z, dx_pp, dy_pp, dz_pp);
         //fprintf(f, "%.4f %.10f %.10f %.10f %.10f\n", r->t, o.a, torb, o.e, obliquity);
-        start = clock();
-        reb_integrate(r,r->t+(500 * 2 * PI));
+        reb_integrate(r,r->t+(40 * 2 * PI));
     }
 
     fclose(f);
     reb_free_ode(spin_eom);
     reb_free_simulation(r);
+    printf("SUCCESS\n");
 }
