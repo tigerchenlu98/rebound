@@ -409,8 +409,8 @@ int main(int argc, char* argv[]) {
     struct reb_simulation* r = reb_create_simulation();
 
     reb_add_fmt(r, "m r", 1., 0.00465);                // Central object
-    reb_add_fmt(r, "m a e r inc Omega pomega M", 5. * 3.0e-6, 0.175, 0.01, 2.5 * 4.26e-5, 0.5 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.)); // Planet 1
-    reb_add_fmt(r, "m a e r inc Omega pomega M", 5. * 3.0e-6, 0.235, 0.01, 2.5 * 4.26e-5, -0.4310 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.));
+    reb_add_fmt(r, "m a e r inc Omega pomega M", 5. * 3.0e-6, 0.173086, 0.01, 2.5 * 4.26e-5, 1 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.)); // Planet 1
+    reb_add_fmt(r, "m a e r inc Omega pomega M", 5. * 3.0e-6, 0.23290608, 0.01, 2.5 * 4.26e-5, 1 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.), 0.0 * (PI / 180.));
     reb_move_to_com(r);
     r->N_active = 3;
 
@@ -481,7 +481,7 @@ int main(int argc, char* argv[]) {
     //clock_t start, end;
     //double cpu_time_used;
 
-   FILE* f = fopen("6_29_exact_sm19_except_a.txt","w");
+   FILE* f = fopen("7_1_exact_sm19_except_inc.txt","w");
    fprintf(f, "t,a1,i1,e1,sx1,sy1,sz1,S1,omega1,Omega1,f1,psi1,x1,y1,z1,a2,i2,e2,sx2,sy2,sz2,S2,omega2,Omega2,f2,psi2,x2,y2,z2\n");
    //fprintf(f, "t,a1,a2\n");
 
