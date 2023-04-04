@@ -892,8 +892,8 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
 
 
     // Default settings
-    ri_bs->eps_abs          = 1e-8;
-    ri_bs->eps_rel          = 1e-8;
+    ri_bs->eps_abs          = 1e-11;
+    ri_bs->eps_rel          = 1e-11;
     ri_bs->max_dt           = 0;
     ri_bs->min_dt           = 0;
     ri_bs->firstOrLastStep  = 1;
