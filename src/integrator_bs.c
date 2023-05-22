@@ -330,7 +330,6 @@ static void nbody_derivatives(struct reb_ode* ode, double* const yDot, const dou
     int start = 0;
     if (r->integrator==REB_INTEGRATOR_MERCURIUS){
       // Kepler Step
-      start = 1; // If we are using MERCURIUS, this is in DH, so star feels no acceleration
       for (int i=1;i<r->N;i++){
           px += r->particles[i].vx*r->particles[i].m; // in dh
           py += r->particles[i].vy*r->particles[i].m;
@@ -348,6 +347,7 @@ static void nbody_derivatives(struct reb_ode* ode, double* const yDot, const dou
       yDot[5] = 0.0;
     }
     int current_L = 0;
+    start = 1; // If we are using MERCURIUS, this is in DH, so star feels no acceleration
     for (int i=start; i<r->N; i++){
       // TLu must be a better way to structure this
         if (r->integrator==REB_INTEGRATOR_MERCURIUS){

@@ -45,6 +45,11 @@
 #include "communication_mpi.h"
 #endif
 
+// TLu temp - needs to go somewhere better.
+int pgindex(int i, int j, int N){
+  return (i-1)*N-((i-1)*(2+i)/2)+j-i-1;
+}
+
 /**
   * @brief The function loops over all trees to call calculate_forces_for_particle_from_cell() tree to calculate forces for each particle.
   * @param r REBOUND simulation to consider
@@ -521,8 +526,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
         // TLu this implements the Levison & Duncan 2000 EoMs - 22 & 23 in Hernandez & Dehnen 2023
         case REB_GRAVITY_MERCURIUS:
         {
-            double (*_L) (const struct reb_simulation* const r, double d, double dcrit) = r->ri_mercurius.L;
-            double cK = r->ri_mercurius.current_K;
+            //double (*_L) (const struct reb_simulation* const r, double d, double dcrit) = r->ri_mercurius.L;
             switch (r->ri_mercurius.mode){
                 case 0: // WHFAST part
                 // Interaction step
@@ -541,7 +545,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double prefact = G * (1 - cK) / (_r*_r*_r);
+                            const double prefact = G * (1 - r->ri_mercurius.current_Ks[pgindex(j, i, N)]) / (_r*_r*_r);
                             const double prefactj = -prefact*particles[j].m;
                             const double prefacti = prefact*particles[i].m;
                             particles[i].ax    += prefactj*dx;
@@ -560,7 +564,8 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double prefact = G * (1 - cK)/(_r*_r*_r);
+                            const double prefact = G * (1 - r->ri_mercurius.current_Ks[pgindex(j, i, N)])/(_r*_r*_r);
+                            //printf("In Gravity WHFast TP: %d %d %d %d\n", j, i, pgindex(j,i,N),r->ri_mercurius.current_Ks[pgindex(j, i, N)]);
                             const double prefactj = -prefact*particles[j].m;
                             particles[i].ax    += prefactj*dx;
                             particles[i].ay    += prefactj*dy;
@@ -589,7 +594,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double prefact = -G*particles[j].m*(1 - cK)/(_r*_r*_r);
+                            const double prefact = -G*particles[j].m*(1 - r->ri_mercurius.current_Ks[pgindex(j, i, N)])/(_r*_r*_r);
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
                             particles[i].az    += prefact*dz;
@@ -602,7 +607,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double prefact = -G*particles[j].m*(1 - cK)/(_r*_r*_r);
+                            const double prefact = -G*particles[j].m*(1 - r->ri_mercurius.current_Ks[pgindex(j, i, N)])/(_r*_r*_r);
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
                             particles[i].az    += prefact*dz;
@@ -651,7 +656,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                               const double dy = particles[mi].y - particles[mj].y;
                               const double dz = particles[mi].z - particles[mj].z;
                               const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                              double prefact = G*cK/(_r*_r*_r);
+                              double prefact = G*r->ri_mercurius.current_Ks[pgindex(j, i, N)]/(_r*_r*_r);
                               double prefactj = -prefact*particles[mj].m;
                               double prefacti = prefact*particles[mi].m;
 
@@ -676,7 +681,8 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[mi].y - particles[mj].y;
                             const double dz = particles[mi].z - particles[mj].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            double prefact = G*cK/(_r*_r*_r);
+                            double prefact = G*r->ri_mercurius.current_Ks[pgindex(j, i, N)]/(_r*_r*_r);
+                            //printf("In Gravity TP BS: %d %d %d %d\n", j, i, pgindex(j,i,N),r->ri_mercurius.current_Ks[pgindex(j, i, N)]);
                             double prefactj = -prefact*particles[mj].m;
                             particles[mi].ax    += prefactj*dx;
                             particles[mi].ay    += prefactj*dy;
@@ -717,7 +723,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = y - particles[mj].y;
                             const double dz = z - particles[mj].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            double prefact = -G*particles[mj].m*cK/(_r*_r*_r);
+                            double prefact = -G*particles[mj].m*r->ri_mercurius.current_Ks[pgindex(j, i, N)]/(_r*_r*_r);
                             particles[mi].ax    += prefact*dx;
                             particles[mi].ay    += prefact*dy;
                             particles[mi].az    += prefact*dz;
@@ -736,7 +742,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = y - particles[mj].y;
                             const double dz = z - particles[mj].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            double prefact = -G*particles[mj].m*cK/(_r*_r*_r);
+                            double prefact = -G*particles[mj].m*r->ri_mercurius.current_Ks[pgindex(j, i, N)]/(_r*_r*_r);
                             particles[mi].ax    += prefact*dx;
                             particles[mi].ay    += prefact*dy;
                             particles[mi].az    += prefact*dz;
