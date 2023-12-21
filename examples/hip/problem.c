@@ -18,7 +18,7 @@ double planet_as[10] = {0.1283,0.2061,0.88,1.06,1.37};
 double planet_aerrs[10] = {1.5e-3, 2.4e-3, 0.01, 0.03, 0.02};
 
 //char title[100] = "low_ob_";
-char title_stats[100] = "stability_stats";
+char title_stats[100] = "2body_stability";
 //char title_remove[100] = "rm -v low_ob_";
 
 int main(int argc, char* argv[]){
@@ -68,14 +68,14 @@ int main(int argc, char* argv[]){
     me = reb_random_uniform(sim, 12. - 5., 12. + 5.) * mearth;
     double ee = 0.14;
     double ae = 1.06;//reb_random_uniform(sim, 1.06 - 0.02, 1.06 + 0.03);
-    double ie = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
+    double ie = reb_random_uniform(sim, -1. * ri, ri);
     double Me = reb_random_uniform(sim, 0, 2 * M_PI);
 
     // This is the one we care abotu
     mf = reb_random_uniform(sim, 12. - 3., 12. + 3.) * mearth;
     double ef = 0.004;
     double af = 1.37;//reb_random_uniform(sim, 1.37 - 0.02, 1.37 + 0.02);
-    double incf = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
+    double incf = reb_random_uniform(sim, -1. * ri, ri);
     double Mf = reb_random_uniform(sim, 0, 2 * M_PI);
 
     //double rhof = 1.0 * pow(1.496e13,3) / (1.989e33); // 1 g/cm^3 to solar masses/AU^3
@@ -83,9 +83,9 @@ int main(int argc, char* argv[]){
 
     double planet_as[10] = {ab, ac, ad, ae, af};
 
-    reb_simulation_add_fmt(sim, "primary m a e inc M", star, mb, ab, eb, ib, Mb);
-    reb_simulation_add_fmt(sim, "primary m a e inc M", star, mc, ac, ec, ic, Mc);
-    reb_simulation_add_fmt(sim, "m a e inc M", md, ad, ed, id, Md);
+    //reb_simulation_add_fmt(sim, "primary m a e inc M", star, mb, ab, eb, ib, Mb);
+    //reb_simulation_add_fmt(sim, "primary m a e inc M", star, mc, ac, ec, ic, Mc);
+    //reb_simulation_add_fmt(sim, "m a e inc M", md, ad, ed, id, Md);
     reb_simulation_add_fmt(sim, "m a e inc M", me, ae, ee, ie, Me);
     reb_simulation_add_fmt(sim, "m a e inc M", mf, af, ef, incf, Mf);
 
@@ -127,7 +127,7 @@ int main(int argc, char* argv[]){
     }
 */
     FILE* sf = fopen(title_stats, "a");
-    fprintf(sf, "%d,%f,%f,%d,%d,%f\n",ind,me,mf,1,-1,sim->t);
+    fprintf(sf, "%d,%f,%f,%d,%d,%f\n",ind,me,mf,1,-1,sim->t/tmax);
     fclose(sf);
 
     //rebx_free(rebx);
@@ -146,7 +146,7 @@ void heartbeat(struct reb_simulation* sim){
 
         if (a < (planet_as[i-1] - 0.1 * planet_as[i-1]) || a > (planet_as[i-1] + 0.1 * planet_as[i-1])){
           FILE* sf = fopen(title_stats, "a");
-          fprintf(sf, "%d,%f,%f,%d,%d,%f\n",ind,me,mf,0,i,sim->t);
+          fprintf(sf, "%d,%f,%f,%d,%d,%f\n",ind,me,mf,0,i,sim->t/tmax);
           fclose(sf);
           exit(1);
         }
