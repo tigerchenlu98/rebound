@@ -50,32 +50,32 @@ int main(int argc, char* argv[]){
     double mb = 6.89 * mearth;
     double eb = 0.07;
     double ab = 0.1283;
-    double ib = 0.0;//reb_random_rayleigh(sim, ri);
+    double ib = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
     double Mb = reb_random_uniform(sim, 0, 2 * M_PI);
 
     double mc = 4.4 * mearth;
     double ec = 0.04;
     double ac = 0.2061;
-    double ic = 0.0;//reb_random_rayleigh(sim, ri);
+    double ic = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
     double Mc = reb_random_uniform(sim, 0, 2 * M_PI);
 
     double md = 4.6 * mearth;
     double ed = 0.06;
     double ad = 0.88;
-    double id = 0.0;//reb_random_rayleigh(sim, ri);
+    double id = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
     double Md = reb_random_uniform(sim, 0, 2 * M_PI);
 
     me = reb_random_uniform(sim, 12. - 5., 12. + 5.) * mearth;
     double ee = 0.14;
     double ae = 1.06;//reb_random_uniform(sim, 1.06 - 0.02, 1.06 + 0.03);
-    double ie = 0.0;//reb_random_rayleigh(sim, ri);
+    double ie = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
     double Me = reb_random_uniform(sim, 0, 2 * M_PI);
 
     // This is the one we care abotu
     mf = reb_random_uniform(sim, 12. - 3., 12. + 3.) * mearth;
     double ef = 0.004;
     double af = 1.37;//reb_random_uniform(sim, 1.37 - 0.02, 1.37 + 0.02);
-    double incf = 0.0;//reb_random_rayleigh(sim, ri);
+    double incf = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
     double Mf = reb_random_uniform(sim, 0, 2 * M_PI);
 
     //double rhof = 1.0 * pow(1.496e13,3) / (1.989e33); // 1 g/cm^3 to solar masses/AU^3
@@ -85,9 +85,9 @@ int main(int argc, char* argv[]){
 
     reb_simulation_add_fmt(sim, "primary m a e inc M", star, mb, ab, eb, ib, Mb);
     reb_simulation_add_fmt(sim, "primary m a e inc M", star, mc, ac, ec, ic, Mc);
-    //reb_simulation_add_fmt(sim, "m a e inc M", md, ad, ed, id, Md);
-    //reb_simulation_add_fmt(sim, "m a e inc M", me, ae, ee, ie, Me);
-    //reb_simulation_add_fmt(sim, "m a e inc M", mf, af, ef, incf, Mf);
+    reb_simulation_add_fmt(sim, "m a e inc M", md, ad, ed, id, Md);
+    reb_simulation_add_fmt(sim, "m a e inc M", me, ae, ee, ie, Me);
+    reb_simulation_add_fmt(sim, "m a e inc M", mf, af, ef, incf, Mf);
 
     //double rin = 1.5 * rf;
     //double rho_ring = 0.5;
@@ -112,7 +112,6 @@ int main(int argc, char* argv[]){
     fclose(of);
     */
     struct reb_orbit o = reb_orbit_from_particle(sim->G, sim->particles[1], sim->particles[0]);
-    printf("%f\n", o.P);
     tmax = o.P * 1e8;
     sim->dt = o.P / 15.12345;
     reb_simulation_integrate(sim, tmax);
@@ -128,7 +127,7 @@ int main(int argc, char* argv[]){
     }
 */
     FILE* sf = fopen(title_stats, "a");
-    fprintf(sf, "%d,%f,%f,%d\n",ind,me,mf,1);
+    fprintf(sf, "%d,%f,%f,%d,%d,%f\n",ind,me,mf,1,-1,sim->t);
     fclose(sf);
 
     //rebx_free(rebx);
@@ -145,9 +144,9 @@ void heartbeat(struct reb_simulation* sim){
         struct reb_orbit o = reb_orbit_from_particle(sim->G, sim->particles[i], sim->particles[0]); // planet orbit
         double a = o.a;
 
-        if (a < (planet_as[i-1] - 0.1 * planet_as[i-1]) || a > (planet_as[i-1] + 0.1 * planet_aerrs[i-1])){
+        if (a < (planet_as[i-1] - 0.1 * planet_as[i-1]) || a > (planet_as[i-1] + 0.1 * planet_as[i-1])){
           FILE* sf = fopen(title_stats, "a");
-          fprintf(sf, "%d,%f,%f,%d,%f\n",ind,me,mf,0,sim->t);
+          fprintf(sf, "%d,%f,%f,%d,%d,%f\n",ind,me,mf,0,i,sim->t);
           fclose(sf);
           exit(1);
         }
@@ -155,7 +154,7 @@ void heartbeat(struct reb_simulation* sim){
     }
 
 
-    //if(reb_simulation_output_check(sim, 1e5)){        // outputs to the screen
+    //if(reb_simulation_output_check(sim, 100.)){        // outputs to the screen
     //    reb_simulation_output_timing(sim, tmax);
     //}
 }
