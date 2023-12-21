@@ -14,11 +14,12 @@ int ntest=3;
 double mf;
 double me;
 
-double planet_as[10] = {0.1283,0.2061,0.88,1.06,1.37};
+//double planet_as[10] = {0.1283,0.2061,0.88,1.06,1.37};
+double planet_as[10] = {0.1283,0.2061,1.06,1.37};
 double planet_aerrs[10] = {1.5e-3, 2.4e-3, 0.01, 0.03, 0.02};
 
 //char title[100] = "low_ob_";
-char title_stats[100] = "2body_stability";
+char title_stats[100] = "remove_d_small_incs";
 //char title_remove[100] = "rm -v low_ob_";
 
 int main(int argc, char* argv[]){
@@ -50,13 +51,13 @@ int main(int argc, char* argv[]){
     double mb = 6.89 * mearth;
     double eb = 0.07;
     double ab = 0.1283;
-    double ib = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
+    double ib = reb_random_uniform(sim, -1. * ri, ri);
     double Mb = reb_random_uniform(sim, 0, 2 * M_PI);
 
     double mc = 4.4 * mearth;
     double ec = 0.04;
     double ac = 0.2061;
-    double ic = 0.0;//reb_random_uniform(sim, -1. * ri, ri);
+    double ic = reb_random_uniform(sim, -1. * ri, ri);
     double Mc = reb_random_uniform(sim, 0, 2 * M_PI);
 
     double md = 4.6 * mearth;
@@ -83,8 +84,8 @@ int main(int argc, char* argv[]){
 
     double planet_as[10] = {ab, ac, ad, ae, af};
 
-    //reb_simulation_add_fmt(sim, "primary m a e inc M", star, mb, ab, eb, ib, Mb);
-    //reb_simulation_add_fmt(sim, "primary m a e inc M", star, mc, ac, ec, ic, Mc);
+    reb_simulation_add_fmt(sim, "primary m a e inc M", star, mb, ab, eb, ib, Mb);
+    reb_simulation_add_fmt(sim, "primary m a e inc M", star, mc, ac, ec, ic, Mc);
     //reb_simulation_add_fmt(sim, "m a e inc M", md, ad, ed, id, Md);
     reb_simulation_add_fmt(sim, "m a e inc M", me, ae, ee, ie, Me);
     reb_simulation_add_fmt(sim, "m a e inc M", mf, af, ef, incf, Mf);
