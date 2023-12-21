@@ -145,9 +145,9 @@ void heartbeat(struct reb_simulation* sim){
         struct reb_orbit o = reb_orbit_from_particle(sim->G, sim->particles[i], sim->particles[0]); // planet orbit
         double a = o.a;
 
-        if (a < planet_as[i-1] - planet_aerrs[i-1] || a > planet_as[i-1] + planet_aerrs[i-1]){
+        if (a < (planet_as[i-1] - 0.1 * planet_as[i-1]) || a > (planet_as[i-1] + 0.1 * planet_aerrs[i-1])){
           FILE* sf = fopen(title_stats, "a");
-          fprintf(sf, "%d,%f,%f,%d\n",ind,me,mf,0);
+          fprintf(sf, "%d,%f,%f,%d,%f\n",ind,me,mf,0,sim->t);
           fclose(sf);
           exit(1);
         }
