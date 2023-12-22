@@ -18,8 +18,8 @@ double me;
 double planet_as[10] = {0.1283,0.2061,1.06,1.37};
 double planet_aerrs[10] = {1.5e-3, 2.4e-3, 0.01, 0.03, 0.02};
 
-//char title[100] = "low_ob_";
-char title_stats[100] = "remove_d_small_incs";
+char title[100] = "small_incs_";
+//char title_stats[100] = "remove_d_small_incs";
 //char title_remove[100] = "rm -v low_ob_";
 
 int main(int argc, char* argv[]){
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]){
 
     ind = 0;
     if (argc == 2){
-      //strcat(title, argv[1]);
+      strcat(title, argv[1]);
       //strcat(title_remove, argv[1]);
       ind = atoi(argv[1]);
     }
@@ -99,10 +99,10 @@ int main(int argc, char* argv[]){
 
     reb_simulation_move_to_com(sim);
 
-    //FILE* of = fopen(title, "w");
-    /*fprintf(of, "t,nx\n");
+    FILE* of = fopen(title, "w");
+    fprintf(of, "t,inc,Omega\n");
     fclose(of);
-
+/*
     system(title_remove);
     FILE* of = fopen(title, "w");
     fprintf(of, "t");
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]){
     fclose(of);
     */
     struct reb_orbit o = reb_orbit_from_particle(sim->G, sim->particles[1], sim->particles[0]);
-    tmax = o.P * 1e8;
+    tmax = 1e5 * 2. * M_PI;//o.P * 1e8;
     sim->dt = o.P / 15.12345;
     reb_simulation_integrate(sim, tmax);
 /*
@@ -127,10 +127,11 @@ int main(int argc, char* argv[]){
       }
     }
 */
+/*
     FILE* sf = fopen(title_stats, "a");
     fprintf(sf, "%d,%f,%f,%d,%d,%f\n",ind,me,mf,1,-1,sim->t/tmax);
     fclose(sf);
-
+*/
     //rebx_free(rebx);
     reb_simulation_free(sim);
 }
@@ -138,9 +139,13 @@ int main(int argc, char* argv[]){
 void heartbeat(struct reb_simulation* sim){
     // Output spin and orbital information to file
 
-    if(reb_simulation_output_check(sim, 1. * 2 * M_PI)){        // outputs every 10 REBOUND years
-      struct rebx_extras* const rebx = sim->extras;
+    if(reb_simulation_output_check(sim, 10. * 2 * M_PI)){        // outputs every 10 REBOUND years
+        struct reb_orbit o = reb_orbit_from_particle(sim->G, sim->particles[4], sim->particles[0]);
+        FILE* sf = fopen(title, "a");
+        fprintf(sf, "%f,%f,%f\n",sim->t,o.inc,o.Omega);
+        fclose(sf);
 
+/*
       for (unsigned int i = 1; i < sim->N; i++){
         struct reb_orbit o = reb_orbit_from_particle(sim->G, sim->particles[i], sim->particles[0]); // planet orbit
         double a = o.a;
@@ -152,6 +157,7 @@ void heartbeat(struct reb_simulation* sim){
           exit(1);
         }
       }
+      */
     }
 
 
