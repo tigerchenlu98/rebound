@@ -170,48 +170,6 @@ int reb_integrator_trace_switch_peri_default(struct reb_simulation* const r, con
 int reb_integrator_trace_switch_peri_debug(struct reb_simulation* const r, const unsigned int j){
   // Use this for debugging purposes
   const struct reb_integrator_trace* const ri_trace = &(r->ri_trace);
-  /*
-  if (r->steps_done < r->ri_trace.turnaround){
-    if (r->steps_done % 20 == 0){
-      printf("Triggered at Step %d\n", r->steps_done);
-      return 1;
-    }
-    else{
-      return 0;
-    }
-  }
-  else{
-    if ((r->steps_done - r->ri_trace.turnaround) % 20 == 0 && r->steps_done != r->ri_trace.turnaround){
-      printf("Backwards triggered at Step %d\n", r->steps_done);
-      return 1;
-    }
-    else{
-      return 0;
-    }
-  }
-  */
-/*
-  if (r->steps_done % 5 == 0 && r->steps_done != 50){
-    printf("Switching at %d\n", r->steps_done);
-    return 1;
-  }
-  else{
-    return 0;
-  }
-*/
-/*
-  if (ri_trace->direction && r->steps_done % 10 == 0){
-    printf("Forwards Switching at %d,%e\n", ri_trace->turnaround - r->steps_done - 1, r->particles[1].x);
-    return 1;
-  }
-  else if (!ri_trace->direction && (ri_trace->turnaround - r->steps_done-1) % 10 == 0){
-    printf("Backwards Switching at %d,%e\n", r->steps_done, r->particles[1].x);
-    return 1;
-  }
-  else{
-    return 0;
-  }
-  */
 }
 
 int reb_integrator_trace_switch_peri_none(struct reb_simulation* const r, const unsigned int j){
@@ -219,10 +177,11 @@ int reb_integrator_trace_switch_peri_none(struct reb_simulation* const r, const 
     return 0;
 }
 
-void reb_integrator_trace_inertial_to_dh(struct reb_simulation* r){
+void reb_integrator_trace_inertial_to_dh(struct reb_simulation* const r){
+    // Now particle 0 is the COM, we will reconstruct the Sun later
     struct reb_particle* restrict const particles = r->particles;
     struct reb_vec3d com_pos = {0};
-    struct reb_vec3d com_vel = {0};
+    struct reb_vec3d com_vel = {0}; // this is momentum now
     double mtot = 0.;
     const int N_active = (r->N_active==-1 || r->testparticle_type==1)?r->N:r->N_active;
     const int N = r->N;
@@ -236,22 +195,53 @@ void reb_integrator_trace_inertial_to_dh(struct reb_simulation* r){
         com_vel.z += m * particles[i].vz;
         mtot += m;
     }
+    struct reb_vec3d P_solar = {0};
+    P_solar.x = com_vel.x - particles[0].m * particles[0].vx;
+    P_solar.y = com_vel.y - particles[0].m * particles[0].vy;
+    P_solar.z = com_vel.z - particles[0].m * particles[0].vz;
     com_pos.x /= mtot; com_pos.y /= mtot; com_pos.z /= mtot;
-    com_vel.x /= mtot; com_vel.y /= mtot; com_vel.z /= mtot;
-    // Particle 0 is also changed to allow for easy collision detection
-    for (int i=N-1;i>=0;i--){
+    // com_vel.x /= mtot; com_vel.y /= mtot; com_vel.z /= mtot;
+    
+    for (int i=N-1;i>=1;i--){
+        double mi = particles[i].m;
         particles[i].x -= particles[0].x;
         particles[i].y -= particles[0].y;
         particles[i].z -= particles[0].z;
-        particles[i].vx -= com_vel.x;
-        particles[i].vy -= com_vel.y;
-        particles[i].vz -= com_vel.z;
+
+	// Momentum now
+	double px = particles[i].vx * mi;
+	double py = particles[i].vy * mi;
+	double pz = particles[i].vz * mi;
+        particles[i].vx = px - (mi/mtot) * com_vel.x;
+        particles[i].vy = py - (mi/mtot) * com_vel.y;
+        particles[i].vz = pz - (mi/mtot) * com_vel.z;
     }
+
+    // Becomes CoM
+    particles[0].x = com_pos.x;
+    particles[0].y = com_pos.y;
+    particles[0].z = com_pos.z;
+    particles[0].vx = com_vel.x;
+    particles[0].vy = com_vel.y;
+    particles[0].vz = com_vel.z;
+
     r->ri_trace.com_pos = com_pos;
     r->ri_trace.com_vel = com_vel;
+
+    // We can keep track of the Sun's motion too
+
+    struct reb_particle sun = {0};
+    sun.x = 0.0;
+    sun.y = 0.0;
+    sun.z = 0.0;
+    sun.vx = P_solar.x;
+    sun.vy = P_solar.y;
+    sun.vz = P_solar.z;
+    r->ri_trace.sun = sun;
 }
 
 void reb_integrator_trace_dh_to_inertial(struct reb_simulation* r){
+    // Sun coordinates reconstructed from COM
     struct reb_particle* restrict const particles = r->particles;
     struct reb_particle temp = {0};
     const int N = r->N;
@@ -261,36 +251,53 @@ void reb_integrator_trace_dh_to_inertial(struct reb_simulation* r){
         temp.x += m * particles[i].x;
         temp.y += m * particles[i].y;
         temp.z += m * particles[i].z;
+
+	//s2
         temp.vx += m * particles[i].vx;
         temp.vy += m * particles[i].vy;
         temp.vz += m * particles[i].vz;
         temp.m += m;
     }
     temp.m += r->particles[0].m;
+    
+    // s1
     temp.x /= temp.m;
     temp.y /= temp.m;
     temp.z /= temp.m;
-    temp.vx /= particles[0].m;
-    temp.vy /= particles[0].m;
-    temp.vz /= particles[0].m;
+    //temp.vx /= particles[0].m;
+    //temp.vy /= particles[0].m;
+    //temp.vz /= particles[0].m;
     // Use com to calculate central object's position.
     // This ignores previous values stored in particles[0].
     // Should not matter unless collisions occured.
-    particles[0].x = r->ri_trace.com_pos.x - temp.x;
-    particles[0].y = r->ri_trace.com_pos.y - temp.y;
-    particles[0].z = r->ri_trace.com_pos.z - temp.z;
+    // particles[0].x = r->ri_trace.com_pos.x - temp.x;
+    // particles[0].y = r->ri_trace.com_pos.y - temp.y;
+    // particles[0].z = r->ri_trace.com_pos.z - temp.z;
+    particles[0].x -= temp.x;
+    particles[0].y -= temp.y;
+    particles[0].z -= temp.z;
 
     for (int i=1;i<N;i++){
         particles[i].x += particles[0].x;
         particles[i].y += particles[0].y;
         particles[i].z += particles[0].z;
-        particles[i].vx += r->ri_trace.com_vel.x;
-        particles[i].vy += r->ri_trace.com_vel.y;
-        particles[i].vz += r->ri_trace.com_vel.z;
+
+	// Convert from momentum to velocity
+	double px = (particles[i].m / temp.m) * particles[0].vx + particles[i].vx;
+	double py = (particles[i].m / temp.m) * particles[0].vy + particles[i].vy;
+	double pz = (particles[i].m / temp.m) * particles[0].vz + particles[i].vz;
+        particles[i].vx = px / particles[i].m;
+        particles[i].vy = px / particles[i].m;
+        particles[i].vz = px / particles[i].m;
     }
-    particles[0].vx = r->ri_trace.com_vel.x - temp.vx;
-    particles[0].vy = r->ri_trace.com_vel.y - temp.vy;
-    particles[0].vz = r->ri_trace.com_vel.z - temp.vz;
+
+    // CoM to Star Velocity
+    double p0x = (r->particles[0].m / temp.m) * particles[0].vx - temp.vx;
+    double p0y = (r->particles[0].m / temp.m) * particles[0].vy - temp.vy;
+    double p0z = (r->particles[0].m / temp.m) * particles[0].vz - temp.vz;
+    particles[0].vx = p0x / r->particles[0].m;
+    particles[0].vy = p0y / r->particles[0].m;
+    particles[0].vz = p0z / r->particles[0].m;
 }
 
 void reb_integrator_trace_interaction_step(struct reb_simulation* const r, double dt){
@@ -328,7 +335,7 @@ void reb_integrator_trace_jump_step(struct reb_simulation* const r, double dt){
     pz *= dt/r->particles[0].m;
 
     const int N_all = r->N;
-    for (int i=1;i<N_all;i++){
+    for (int i=0;i<N_all;i++){
         particles[i].x += px;
         particles[i].y += py;
         particles[i].z += pz;
@@ -339,8 +346,12 @@ void reb_integrator_trace_com_step(struct reb_simulation* const r, double dt){
     r->ri_trace.com_pos.x += dt*r->ri_trace.com_vel.x;
     r->ri_trace.com_pos.y += dt*r->ri_trace.com_vel.y;
     r->ri_trace.com_pos.z += dt*r->ri_trace.com_vel.z;
+    r->particles[0].x += dt*r->ri_trace.com_vel.x;
+    r->particles[0].y += dt*r->ri_trace.com_vel.y;
+    r->particles[0].z += dt*r->ri_trace.com_vel.z;
 }
 
+// Is this an issue?
 void reb_integrator_trace_whfast_step(struct reb_simulation* const r, double dt){
     //struct reb_particle* restrict const particles = r->particles;
     const int N = r->N;
@@ -362,6 +373,10 @@ void reb_integrator_trace_update_particles(struct reb_simulation* r, const doubl
         p->vx = y[i*6+3];
         p->vy = y[i*6+4];
         p->vz = y[i*6+5];
+
+	//if (i == 0 && (p->vx != 0.0 || p->vy != 0.0 || p->vz != 0.0)){
+	//    printf("%f %e %e %e\n", r->t, p->vx, p->vy, p->vz);
+	//}
     }
 }
 
@@ -394,14 +409,8 @@ void reb_integrator_trace_nbody_derivatives(struct reb_ode* ode, double* const y
         pz /= r->particles[0].m;
 
     }
-    yDot[0*6+0] = 0.0;
-    yDot[0*6+1] = 0.0;
-    yDot[0*6+2] = 0.0;
-    yDot[0*6+3] = 0.0;
-    yDot[0*6+4] = 0.0;
-    yDot[0*6+5] = 0.0;
-
-    for (int i=1; i<N; i++){
+    
+    for (int i=0; i<N; i++){
         int mi = map[i];
         const struct reb_particle p = r->particles[mi];
         yDot[i*6+0] = p.vx + px; // Already checked for current_L
@@ -410,6 +419,9 @@ void reb_integrator_trace_nbody_derivatives(struct reb_ode* ode, double* const y
         yDot[i*6+3] = p.ax;
         yDot[i*6+4] = p.ay;
         yDot[i*6+5] = p.az;
+	//if (i == 0){
+	//    printf("%f %f %f %f\n", r->t, p.ax, p.ay, p.az);
+	//}
     }
 }
 
@@ -420,6 +432,8 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
         // No close encounters, skip
         return;
     }
+
+    //printf("BS Step\n");
 
     int i_enc = 0;
     ri_trace->encounter_N_active = 0;
@@ -492,7 +506,8 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
             star.vx = r->particles[0].vx; // keep track of changed star velocity for later collisions
             star.vy = r->particles[0].vy;
             star.vz = r->particles[0].vz;
-            if (r->particles[0].x !=0 || r->particles[0].y !=0 || r->particles[0].z !=0){
+            
+	    if (r->particles[0].x !=0 || r->particles[0].y !=0 || r->particles[0].z !=0){
                 // Collision with star occured
                 // Shift all particles back to heliocentric coordinates
                 // Ignore stars velocity:
@@ -505,6 +520,7 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
                     r->particles[i].z -= r->particles[0].z;
                 }
             }
+	    
         }
         // if only test particles encountered massive bodies, reset the
         // massive body coordinates to their post Kepler step state
@@ -539,17 +555,13 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
 
         // TODO: Support backwards integrations
         while(r->t < t_needed && fabs(dt/old_dt)>1e-14 ){
+	    //double Ei = reb_simulation_energy(r);
             double* y = nbody_ode->y;
 
             // In case of overshoot
             if (r->t + dt >  t_needed){
                 dt = t_needed - r->t;
             }
-
-            struct reb_particle star = r->particles[0]; // backup velocity
-            r->particles[0].vx = 0; // star does not move in dh
-            r->particles[0].vy = 0;
-            r->particles[0].vz = 0;
 
             for (unsigned int i=0; i<ri_trace->encounter_N; i++){
                 const int mi = ri_trace->encounter_map[i];
@@ -568,13 +580,9 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
             }
             dt = r->ri_bs.dt_proposed;
             reb_integrator_trace_update_particles(r, nbody_ode->y);
-
-            r->particles[0].vx = star.vx; // restore every timestep for collisions
-            r->particles[0].vy = star.vy;
-            r->particles[0].vz = star.vz;
-
+            
             reb_collision_search(r);
-
+        
             if (nbody_ode->length != ri_trace->encounter_N*3*2){
                 if (ri_trace->encounter_N*3*2 > nbody_ode->N_allocated){
                     reb_simulation_error(r, "Cannot add particles during encounter step");
@@ -583,33 +591,20 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
                 r->ri_bs.first_or_last_step = 1;
             }
 
-            star.vx = r->particles[0].vx; // keep track of changed star velocity for later collisions
-            star.vy = r->particles[0].vy;
-            star.vz = r->particles[0].vz;
-
-            if (r->particles[0].x !=0 || r->particles[0].y !=0 || r->particles[0].z !=0){
-                // Collision with star occured
-                // Shift all particles back to heliocentric coordinates
-                // Ignore stars velocity:
-                //   - will not be used after this
-                //   - com velocity is unchained. this velocity will be used
-                //     to reconstruct star's velocity later.
-                for (int i=r->N-1; i>=0; i--){
-                    r->particles[i].x -= r->particles[0].x;
-                    r->particles[i].y -= r->particles[0].y;
-                    r->particles[i].z -= r->particles[0].z;
-                }
-            }
+           
+        //printf("Substep Error: %e\n", fabs((reb_simulation_energy(r) - Ei)/Ei));
         }
-
+	//printf("---------------------STEP COMPLETE-------------------\n");
         // if only test particles encountered massive bodies, reset the
         // massive body coordinates to their post Kepler step state
-        if(ri_trace->tponly_encounter){
+        /*
+	if(ri_trace->tponly_encounter){
             for (unsigned int i=1; i < ri_trace->encounter_N_active; i++){
                 unsigned int mi = ri_trace->encounter_map[i];
                 r->particles[mi] = ri_trace->particles_backup_kepler[mi];
             }
         }
+	*/
 
         // Restore odes
         reb_ode_free(nbody_ode);
@@ -714,7 +709,11 @@ void reb_integrator_trace_pre_ts_check(struct reb_simulation* const r){
         for (int i = 1; i < N; i++){
             ri_trace->encounter_map[i] = 1; //  trigger encounter
         }
-
+    //for (int i = 0; i < N; i++){
+     //   for (unsigned int j = i + 1; j < N; j++){
+      //      ri_trace->current_Ks[i*N+j] = 1;
+      //  }
+   // }
     }
 
     // Body-body
@@ -780,6 +779,11 @@ double reb_integrator_trace_post_ts_check(struct reb_simulation* const r){
         for (int i = 0; i < N; i++){
             ri_trace->encounter_map[i] = 1; // trigger encounter
         }
+   // for (int i = 0; i < N; i++){
+   //     for (unsigned int j = i + 1; j < N; j++){
+   //         ri_trace->current_Ks[i*N+j] = 1;
+   //     }
+   // }
     }
 
 
@@ -857,6 +861,7 @@ static void reb_integrator_trace_step(struct reb_simulation* const r){
                 break;
             case REB_TRACE_PERI_FULL_BS:
                 {
+		    //printf("%f\n", r->t);
                     // Run default BS integration
                     // TODO: Syntax should be similar to IAS
                     struct reb_ode* nbody_ode = NULL;
@@ -954,6 +959,7 @@ void reb_integrator_trace_reset(struct reb_simulation* r){
     r->ri_trace.r_crit_hill = 3;
     r->ri_trace.peri_crit_fdot = 17.;
     r->ri_trace.peri_crit_distance = 0.;
+    r->ri_trace.peri_crit_eta = 0.1;
 
     // Internal arrays (only used within one timestep)
     free(r->ri_trace.particles_backup);
