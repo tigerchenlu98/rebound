@@ -181,7 +181,7 @@ void reb_integrator_trace_inertial_to_dh(struct reb_simulation* const r){
     // Now particle 0 is the COM, we will reconstruct the Sun later
     struct reb_particle* restrict const particles = r->particles;
     struct reb_vec3d com_pos = {0};
-    struct reb_vec3d com_vel = {0}; // this is momentum now
+    struct reb_vec3d com_vel = {0};
     double mtot = 0.;
     const int N_active = (r->N_active==-1 || r->testparticle_type==1)?r->N:r->N_active;
     const int N = r->N;
@@ -200,7 +200,7 @@ void reb_integrator_trace_inertial_to_dh(struct reb_simulation* const r){
     P_solar.y = com_vel.y - particles[0].m * particles[0].vy;
     P_solar.z = com_vel.z - particles[0].m * particles[0].vz;
     com_pos.x /= mtot; com_pos.y /= mtot; com_pos.z /= mtot;
-    // com_vel.x /= mtot; com_vel.y /= mtot; com_vel.z /= mtot;
+    com_vel.x /= mtot; com_vel.y /= mtot; com_vel.z /= mtot;
     
     for (int i=N-1;i>=1;i--){
         double mi = particles[i].m;
@@ -209,12 +209,12 @@ void reb_integrator_trace_inertial_to_dh(struct reb_simulation* const r){
         particles[i].z -= particles[0].z;
 
 	// Momentum now
-	double px = particles[i].vx * mi;
-	double py = particles[i].vy * mi;
-	double pz = particles[i].vz * mi;
-        particles[i].vx = px - (mi/mtot) * com_vel.x;
-        particles[i].vy = py - (mi/mtot) * com_vel.y;
-        particles[i].vz = pz - (mi/mtot) * com_vel.z;
+//	double px = particles[i].vx * mi;
+//	double py = particles[i].vy * mi;
+//	double pz = particles[i].vz * mi;
+        particles[i].vx -= com_vel.x / mtot;
+        particles[i].vy -= com_vel.y / mtot;
+        particles[i].vz -= com_vel.z / mtot;
     }
 
     // Becomes CoM
@@ -234,10 +234,11 @@ void reb_integrator_trace_inertial_to_dh(struct reb_simulation* const r){
     sun.x = 0.0;
     sun.y = 0.0;
     sun.z = 0.0;
-    sun.vx = P_solar.x;
-    sun.vy = P_solar.y;
-    sun.vz = P_solar.z;
+    sun.vx = P_solar.x / r->particles[0].m;
+    sun.vy = P_solar.y / r->particles[0].m;
+    sun.vz = P_solar.z / r->particles[0].m;
     r->ri_trace.sun = sun;
+    //printf("Sun pos: %e %e %e\n", sun.x, sun.y, sun.z
 }
 
 void reb_integrator_trace_dh_to_inertial(struct reb_simulation* r){
@@ -264,40 +265,47 @@ void reb_integrator_trace_dh_to_inertial(struct reb_simulation* r){
     temp.x /= temp.m;
     temp.y /= temp.m;
     temp.z /= temp.m;
-    //temp.vx /= particles[0].m;
-    //temp.vy /= particles[0].m;
-    //temp.vz /= particles[0].m;
-    // Use com to calculate central object's position.
-    // This ignores previous values stored in particles[0].
-    // Should not matter unless collisions occured.
-    // particles[0].x = r->ri_trace.com_pos.x - temp.x;
-    // particles[0].y = r->ri_trace.com_pos.y - temp.y;
-    // particles[0].z = r->ri_trace.com_pos.z - temp.z;
+    temp.vx /= r->particles[0].m;
+    temp.vy /= r->particles[0].m;
+    temp.vz /= r->particles[0].m;
+
+    // First recover Solar position
     particles[0].x -= temp.x;
     particles[0].y -= temp.y;
     particles[0].z -= temp.z;
 
     for (int i=1;i<N;i++){
+	// Particle positions: Qi + x0
         particles[i].x += particles[0].x;
         particles[i].y += particles[0].y;
         particles[i].z += particles[0].z;
 
-	// Convert from momentum to velocity
-	double px = (particles[i].m / temp.m) * particles[0].vx + particles[i].vx;
-	double py = (particles[i].m / temp.m) * particles[0].vy + particles[i].vy;
-	double pz = (particles[i].m / temp.m) * particles[0].vz + particles[i].vz;
-        particles[i].vx = px / particles[i].m;
-        particles[i].vy = px / particles[i].m;
-        particles[i].vz = px / particles[i].m;
+	// Particle Momenta: (mi / mtot) * P0 + Pi
+	//double px = (particles[i].m / temp.m) * particles[0].vx + particles[i].vx;
+	//double py = (particles[i].m / temp.m) * particles[0].vy + particles[i].vy;
+	//double pz = (particles[i].m / temp.m) * particles[0].vz + particles[i].vz;
+
+	// convert from momenta back to velocity: v = p/m
+        //particles[i].vx = px / particles[i].m;
+        //particles[i].vy = py / particles[i].m;
+        //particles[i].vz = pz / particles[i].m;
+        
+	particles[i].vx -= particles[0].vx;
+        particles[i].vy -= particles[0].vy;
+        particles[i].vz -= particles[0].vz;
     }
 
     // CoM to Star Velocity
-    double p0x = (r->particles[0].m / temp.m) * particles[0].vx - temp.vx;
-    double p0y = (r->particles[0].m / temp.m) * particles[0].vy - temp.vy;
-    double p0z = (r->particles[0].m / temp.m) * particles[0].vz - temp.vz;
-    particles[0].vx = p0x / r->particles[0].m;
-    particles[0].vy = p0y / r->particles[0].m;
-    particles[0].vz = p0z / r->particles[0].m;
+    //double p0x = (r->particles[0].m / temp.m) * particles[0].vx - temp.vx;
+    //double p0y = (r->particles[0].m / temp.m) * particles[0].vy - temp.vy;
+    //double p0z = (r->particles[0].m / temp.m) * particles[0].vz - temp.vz;
+    //particles[0].vx = p0x / r->particles[0].m;
+    //particles[0].vy = p0y / r->particles[0].m;
+    //particles[0].vz = p0z / r->particles[0].m;
+    
+    particles[0].vx -= temp.vx;
+    particles[0].vy -= temp.vy;
+    particles[0].vz -= temp.vz;
 }
 
 void reb_integrator_trace_interaction_step(struct reb_simulation* const r, double dt){
@@ -343,20 +351,38 @@ void reb_integrator_trace_jump_step(struct reb_simulation* const r, double dt){
 }
 
 void reb_integrator_trace_com_step(struct reb_simulation* const r, double dt){
-    r->ri_trace.com_pos.x += dt*r->ri_trace.com_vel.x;
-    r->ri_trace.com_pos.y += dt*r->ri_trace.com_vel.y;
-    r->ri_trace.com_pos.z += dt*r->ri_trace.com_vel.z;
-    r->particles[0].x += dt*r->ri_trace.com_vel.x;
-    r->particles[0].y += dt*r->ri_trace.com_vel.y;
-    r->particles[0].z += dt*r->ri_trace.com_vel.z;
+    //r->ri_trace.com_pos.x += dt*r->ri_trace.com_vel.x;
+    //r->ri_trace.com_pos.y += dt*r->ri_trace.com_vel.y;
+    //r->ri_trace.com_pos.z += dt*r->ri_trace.com_vel.z;
+    //use mtot a lot, can probably store it somewhere
+    //
+    const int N_active = r->N_active==-1?r->N:r->N_active;
+    //double mtot = 0;
+    //for (int i = 0; i < N_active; i++){
+    //    mtot += r->particles[i].m;
+    //}
+    r->particles[0].x += dt*r->particles[0].vx;
+    r->particles[0].y += dt*r->particles[0].vy;
+    r->particles[0].z += dt*r->particles[0].vz;
 }
 
-// Is this an issue?
 void reb_integrator_trace_whfast_step(struct reb_simulation* const r, double dt){
     //struct reb_particle* restrict const particles = r->particles;
     const int N = r->N;
     for (int i=1;i<N;i++){
+
+	// Transform from momenta to velocities and back
+//	double mi = r->particles[i].m;
+//	double invm = 1. / mi;
+//	r->particles[i].vx *= invm; 
+//	r->particles[i].vy *= invm; 
+//	r->particles[i].vz *= invm;
+
         reb_whfast_kepler_solver(r,r->particles,r->G*r->particles[0].m,i,dt);
+	
+//	r->particles[i].vx *= mi; 
+//	r->particles[i].vy *= mi; 
+//	r->particles[i].vz *= mi; 
     }
 }
 
@@ -413,15 +439,13 @@ void reb_integrator_trace_nbody_derivatives(struct reb_ode* ode, double* const y
     for (int i=0; i<N; i++){
         int mi = map[i];
         const struct reb_particle p = r->particles[mi];
+	const double pm = r->particles[mi].m;
         yDot[i*6+0] = p.vx + px; // Already checked for current_L
         yDot[i*6+1] = p.vy + py;
         yDot[i*6+2] = p.vz + pz;
         yDot[i*6+3] = p.ax;
         yDot[i*6+4] = p.ay;
         yDot[i*6+5] = p.az;
-	//if (i == 0){
-	//    printf("%f %f %f %f\n", r->t, p.ax, p.ay, p.az);
-	//}
     }
 }
 
@@ -433,7 +457,7 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
         return;
     }
 
-    //printf("BS Step\n");
+//    printf("BS Step\n");
 
     int i_enc = 0;
     ri_trace->encounter_N_active = 0;
@@ -566,6 +590,7 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
             for (unsigned int i=0; i<ri_trace->encounter_N; i++){
                 const int mi = ri_trace->encounter_map[i];
                 const struct reb_particle p = r->particles[mi];
+		//printf("i: %d mi: %d\n", i, mi);
                 y[i*6+0] = p.x;
                 y[i*6+1] = p.y;
                 y[i*6+2] = p.z;
@@ -833,7 +858,11 @@ static void nbody_derivatives(struct reb_ode* ode, double* const yDot, const dou
 
 static void reb_integrator_trace_step(struct reb_simulation* const r){
     if (r->ri_trace.current_C == 0 || r->ri_trace.peri_mode == REB_TRACE_PERI_PARTIAL_BS){
-        reb_integrator_trace_interaction_step(r, r->dt/2.);
+        //for (int i = 0; i < r->N; i++){
+        //    const struct reb_particle p = r->particles[i];
+	//    printf("Pre Interaction %d %e %e %e %e\n", i, p.x, p.y, p.vx, p.vy);
+	//}
+	reb_integrator_trace_interaction_step(r, r->dt/2.);
         reb_integrator_trace_jump_step(r, r->dt/2.);
         reb_integrator_trace_kepler_step(r, r->dt);
         reb_integrator_trace_com_step(r,r->dt);
@@ -917,7 +946,7 @@ void reb_integrator_trace_part2(struct reb_simulation* const r){
     const int N = r->N;
     
     reb_integrator_trace_inertial_to_dh(r);
-                        
+
     // This will be set to 1 if a collision occured.
     ri_trace->force_accept = 0;
 
