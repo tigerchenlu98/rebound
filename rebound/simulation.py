@@ -1,4 +1,4 @@
-from ctypes import Structure, c_double, POINTER, c_uint32, c_float, c_int, c_uint, c_int64, c_uint64, c_void_p, c_char_p, CFUNCTYPE, byref, create_string_buffer, addressof, pointer, c_char, c_size_t, string_at 
+from ctypes import Structure, c_double, POINTER, c_uint32, c_int, c_uint, c_int64, c_uint64, c_void_p, c_char_p, CFUNCTYPE, byref, create_string_buffer, addressof, c_char, c_size_t, string_at 
 from . import clibrebound, Escape, NoParticles, Encounter, Collision, GenericError 
 from .citations import cite
 from .units import units_convert_particle, check_units, convert_G, hash_to_unit
@@ -26,7 +26,7 @@ BINARY_WARNINGS = [
     (True,  16, "Error while reading binary file (file was closed).",),
     (True,  32, "Index out of range.",),
     (True,  64, "Error while trying to seek file.",),
-    (False, 128, "Encountered unkown field in file. File might have been saved with a different version of REBOUND."),
+    (False, 128, "Encountered unknown field in file. File might have been saved with a different version of REBOUND."),
     (True,  256, "Integrator type is not supported by this simulationarchive version."),
     (False,  512, "The binary file seems to be corrupted. An attempt has been made to read the uncorrupted parts of it."),
     (True, 1024, "Reading old Simulationarchives (version < 2) is no longer supported. If you need to read such an archive, use a REBOUND version <= 3.26.3"),
@@ -1417,6 +1417,7 @@ class Simulation(Structure):
         Call this function if safe-mode is disabled and you need to synchronize particle positions and velocities between timesteps.
         """
         clibrebound.reb_simulation_synchronize(byref(self))
+        self.process_messages()
     
     def tree_update(self):
         """
