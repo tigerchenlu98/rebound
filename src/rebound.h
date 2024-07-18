@@ -291,6 +291,9 @@ struct reb_integrator_trace {
     struct reb_particle* REB_RESTRICT particles_backup; //  Contains coordinates before the entire step
     struct reb_particle* REB_RESTRICT particles_backup_kepler; //  Contains coordinates before kepler step
     struct reb_particle* REB_RESTRICT particles_backup_additional_forces; // For additional forces
+    
+    struct reb_particle* REB_RESTRICT particles_pre; //  Contains coordinates before the entire step
+    struct reb_particle* REB_RESTRICT particles_post; //  Contains coordinates before the entire step
 
     int* encounter_map;             // Map to represent which particles are integrated with BS
     struct reb_vec3d com_pos;       // Used to keep track of the centre of mass during the timestep
@@ -299,6 +302,9 @@ struct reb_integrator_trace {
     int* current_Ks; // Tracking K_ij for the entire timestep
     unsigned int current_C; // Tracking C for the entire timestep
     unsigned int force_accept; // Force accept for irreversible steps: collisions and adding particles
+    
+    unsigned int peri_encounters;
+    unsigned int close_encounters;
 };
 
 // SABA Integrator (Laskar & Robutel 2001)
@@ -850,10 +856,12 @@ DLLEXPORT double reb_integrator_mercurius_L_C5(const struct reb_simulation* cons
 // Built in trace switching functions
 
 DLLEXPORT int reb_integrator_trace_switch_peri_default(struct reb_simulation* const r, const unsigned int j);
+DLLEXPORT int reb_integrator_trace_ep_accels(struct reb_simulation* const r, const unsigned int j);
 DLLEXPORT int reb_integrator_trace_switch_peri_fdot(struct reb_simulation* const r, const unsigned int j);
 DLLEXPORT int reb_integrator_trace_switch_peri_distance(struct reb_simulation* const r, const unsigned int j);
 DLLEXPORT int reb_integrator_trace_switch_peri_none(struct reb_simulation* const r, const unsigned int j);
 DLLEXPORT int reb_integrator_trace_switch_default(struct reb_simulation* const r, const unsigned int i, const unsigned int j);
+DLLEXPORT int reb_integrator_trace_encounter_predict(struct reb_simulation* const r, const unsigned int i, const unsigned int j);
 
 
 // Built in collision resolve functions

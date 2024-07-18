@@ -611,6 +611,8 @@ void reb_simulation_init(struct reb_simulation* r){
     r->ri_trace.peri_crit_distance = 0.; // User should set this to appropriate value for system, but not strictly needed
     r->ri_trace.force_accept = 0;
     r->ri_trace.last_dt_ias15 = 0;
+    r->ri_trace.peri_encounters = 0;
+    r->ri_trace.close_encounters = 0;
 
     // ********** EOS
     r->ri_eos.n = 2;
