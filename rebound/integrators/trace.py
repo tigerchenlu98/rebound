@@ -66,6 +66,8 @@ class IntegratorTRACE(ctypes.Structure):
                 ("_current_Ks", ctypes.POINTER(ctypes.c_int)),
                 ("_current_C", ctypes.c_uint),
                 ("_force_accept", ctypes.c_uint),
+                ("_peri_encounters", ctypes.c_uint),
+                ("_close_encounters", ctypes.c_uint),
                 ]
     # To be honest I'm not sure what these do: do we need this? - Tiger
     @property

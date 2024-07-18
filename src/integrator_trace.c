@@ -75,7 +75,7 @@ int reb_integrator_trace_switch_default(struct reb_simulation* const r, const un
     return d2*d2*d2 < dcritmax6;
 }
 
-int reb_integrator_trace_encounter_predict(struct reb_simulation* const r, const unsigned int i, const unsigned int j){
+int reb_integrator_trace_switch_encounter_predict(struct reb_simulation* const r, const unsigned int i, const unsigned int j){
     const struct reb_integrator_trace* const ri_trace = &(r->ri_trace);
     const double dt = r->dt;
 
@@ -152,11 +152,11 @@ int reb_integrator_trace_encounter_predict(struct reb_simulation* const r, const
         dcritj6 = dj2*dj2*dj2*mr*mr;
     }
 
-    const double dx = r->particles[i].x - r->particles[j].x;
-    const double dy = r->particles[i].y - r->particles[j].y;
-    const double dz = r->particles[i].z - r->particles[j].z;
+    //const double dx = r->particles[i].x - r->particles[j].x;
+    //const double dy = r->particles[i].y - r->particles[j].y;
+    //const double dz = r->particles[i].z - r->particles[j].z;
     //const double d2 = dx*dx + dy*dy + dz*dz;
-    rmin = dx * dx + dy * dy + dz * dz;
+    //rmin = dx * dx + dy * dy + dz * dz;
 
     double r_crit_hill2 = ri_trace->r_crit_hill*ri_trace->r_crit_hill;
     double dcritmax6 = r_crit_hill2 * r_crit_hill2 * r_crit_hill2 * MAX(dcriti6,dcritj6);
@@ -204,7 +204,7 @@ int reb_integrator_trace_switch_peri_fdot(struct reb_simulation* const r, const 
 
     return peff2 < pfdot*pfdot * r->dt*r->dt;
 }
-int reb_integrator_trace_ep_accels(struct reb_simulation* const r, const unsigned int j){
+int reb_integrator_trace_switch_peri_ep_accels(struct reb_simulation* const r, const unsigned int j){
     const struct reb_integrator_trace* const ri_trace = &(r->ri_trace);
     double GM = r->G*r->particles[0].m; // Not sure if this is the right mass to use.
     double h2 = r->dt/2.;
