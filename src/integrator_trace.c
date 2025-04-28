@@ -440,8 +440,6 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
             }
 
             int success = reb_integrator_bs_step(r, dt);
-            
-	    dt = r->ri_bs.dt_proposed;
             reb_integrator_trace_update_particles(r, nbody_ode->y); // Should this only happen for successful step?
             
 	    if (success){
@@ -480,6 +478,7 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
 		    }
 		}
             }
+	    dt = r->ri_bs.dt_proposed;
         }
   
         // if only test particles encountered massive bodies, reset the
@@ -773,8 +772,6 @@ static void reb_integrator_trace_step(struct reb_simulation* const r){
                         }
 
                         int success = reb_integrator_bs_step(r, r->dt);
-                        
-			r->dt = r->ri_bs.dt_proposed;
                         reb_integrator_bs_update_particles(r, nbody_ode->y); // Should this only happen for a successful step too?
 
                         if (success){
@@ -782,6 +779,7 @@ static void reb_integrator_trace_step(struct reb_simulation* const r){
                             reb_collision_search(r);
 	                    if (r->collisions_N) r->ri_trace.force_accept = 1;
                         }
+			r->dt = r->ri_bs.dt_proposed;
                     }
                     reb_ode_free(nbody_ode);
                     // Resetting BS here reduces binary file size
