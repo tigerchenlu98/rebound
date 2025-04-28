@@ -440,44 +440,45 @@ void reb_integrator_trace_bs_step(struct reb_simulation* const r, double dt){
             }
 
             int success = reb_integrator_bs_step(r, dt);
-            if (success){
-                r->t += dt;
-            }
-            dt = r->ri_bs.dt_proposed;
-            reb_integrator_trace_update_particles(r, nbody_ode->y);
-
-            r->particles[0].vx = star.vx; // restore every timestep for collisions
-            r->particles[0].vy = star.vy;
-            r->particles[0].vz = star.vz;
             
-	    reb_collision_search(r);
-	    if (r->collisions_N) r->ri_trace.force_accept = 1;
+	    dt = r->ri_bs.dt_proposed;
+            reb_integrator_trace_update_particles(r, nbody_ode->y); // Should this only happen for successful step?
+            
+	    if (success){
+                r->t += dt;
+		r->particles[0].vx = star.vx; // restore every timestep for collisions
+		r->particles[0].vy = star.vy;
+		r->particles[0].vz = star.vz;
+		    
+		reb_collision_search(r);
+		if (r->collisions_N) r->ri_trace.force_accept = 1;
 
-            if (nbody_ode->length != ri_trace->encounter_N*3*2){
-		// Just re-create the ODE
-		reb_ode_free(nbody_ode);
-		nbody_ode = reb_ode_create(r, ri_trace->encounter_N*3*2);
-                nbody_ode->derivatives = reb_integrator_trace_nbody_derivatives;
-                nbody_ode->needs_nbody = 0;
-                r->ri_bs.first_or_last_step = 1;
-            }
+		if (nbody_ode->length != ri_trace->encounter_N*3*2){
+		    // Just re-create the ODE
+		    reb_ode_free(nbody_ode);
+		    nbody_ode = reb_ode_create(r, ri_trace->encounter_N*3*2);
+		    nbody_ode->derivatives = reb_integrator_trace_nbody_derivatives;
+		    nbody_ode->needs_nbody = 0;
+		    r->ri_bs.first_or_last_step = 1;
+		}
 
-            star.vx = r->particles[0].vx; // keep track of changed star velocity for later collisions
-            star.vy = r->particles[0].vy;
-            star.vz = r->particles[0].vz;
+		star.vx = r->particles[0].vx; // keep track of changed star velocity for later collisions
+		star.vy = r->particles[0].vy;
+		star.vz = r->particles[0].vz;
 
-            if (r->particles[0].x !=0 || r->particles[0].y !=0 || r->particles[0].z !=0){
-                // Collision with star occured
-                // Shift all particles back to heliocentric coordinates
-                // Ignore stars velocity:
-                //   - will not be used after this
-                //   - com velocity is unchained. this velocity will be used
-                //     to reconstruct star's velocity later.
-                for (int i=r->N-1; i>=0; i--){
-                    r->particles[i].x -= r->particles[0].x;
-                    r->particles[i].y -= r->particles[0].y;
-                    r->particles[i].z -= r->particles[0].z;
-                }
+		if (r->particles[0].x !=0 || r->particles[0].y !=0 || r->particles[0].z !=0){
+		    // Collision with star occured
+		    // Shift all particles back to heliocentric coordinates
+		    // Ignore stars velocity:
+		    //   - will not be used after this
+		    //   - com velocity is unchained. this velocity will be used
+		    //     to reconstruct star's velocity later.
+		    for (int i=r->N-1; i>=0; i--){
+			r->particles[i].x -= r->particles[0].x;
+			r->particles[i].y -= r->particles[0].y;
+			r->particles[i].z -= r->particles[0].z;
+		    }
+		}
             }
         }
   
@@ -772,15 +773,15 @@ static void reb_integrator_trace_step(struct reb_simulation* const r){
                         }
 
                         int success = reb_integrator_bs_step(r, r->dt);
+                        
+			r->dt = r->ri_bs.dt_proposed;
+                        reb_integrator_bs_update_particles(r, nbody_ode->y); // Should this only happen for a successful step too?
+
                         if (success){
                             r->t += r->dt;
+                            reb_collision_search(r);
+	                    if (r->collisions_N) r->ri_trace.force_accept = 1;
                         }
-                        r->dt = r->ri_bs.dt_proposed;
-
-                        reb_integrator_bs_update_particles(r, nbody_ode->y);
-
-                        reb_collision_search(r);
-	                if (r->collisions_N) r->ri_trace.force_accept = 1;
                     }
                     reb_ode_free(nbody_ode);
                     // Resetting BS here reduces binary file size
@@ -826,6 +827,7 @@ void reb_integrator_trace_part2(struct reb_simulation* const r){
 
             // Do step again
             reb_integrator_trace_step(r);
+	    ri_trace->step_rejections += 1;
         }
     }
     reb_integrator_trace_dh_to_inertial(r);
