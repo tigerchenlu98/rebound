@@ -172,7 +172,7 @@ int reb_integrator_trace_switch_peri_default(struct reb_simulation* const r, con
             // reb_integrator_trace_wb_to_inertial(r);
             const int idxB = reb_simulation_particle_index(reb_simulation_particle_by_hash(r, reb_hash("widebinary"))); // star B assumed to be last active particle
             const int has_binary = (idxB != -1);
-            if (has_binary){
+            if (has_binary && j != idxB){
                 double bx = r->particles[idxB].x;
                 double by = r->particles[idxB].y;
                 double bz = r->particles[idxB].z;
@@ -186,9 +186,6 @@ int reb_integrator_trace_switch_peri_default(struct reb_simulation* const r, con
                 double dyb = r->particles[j].y - r->particles[idxB].y;
                 double dzb = r->particles[j].z - r->particles[idxB].z;
                 double d2b = dxb*dxb + dyb*dyb + dzb*dzb;
-
-                //printf("this happening??? %f %d %d %f %f\n", r->t, j, idxB, sqrt(d2b), pow(rhillb6,1./6.));
-                //    exit(1);
 
                 if (d2b*d2b*d2b < rhillb6){
                     return 1;
